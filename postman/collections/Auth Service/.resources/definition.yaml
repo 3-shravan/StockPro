@@ -1,0 +1,6 @@
+$kind: collection
+description: Endpoints related to User Registration, Authentication, and Role Management
+order: 1000
+variables:
+  base_url: http://localhost:8081
+  token: ""

@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "fullName": "Admin User",
+      "email": "admin@stockpro.com",
+      "password": "password123",
+      "phone": "1234567890",
+      "role": "ADMIN",
+      "department": "IT"
+    }
+order: 1000

@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/auth/profile/1"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "fullName": "Updated Admin Name",
+      "phone": "9876543210",
+      "department": "Management"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000

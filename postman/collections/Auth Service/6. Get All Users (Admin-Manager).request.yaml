@@ -1,0 +1,9 @@
+$kind: http-request
+name: 6. Get All Users (Admin/Manager)
+url: "{{base_url}}/auth/users"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

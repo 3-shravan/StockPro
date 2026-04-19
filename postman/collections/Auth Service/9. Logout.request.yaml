@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{base_url}}/auth/logout"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+scripts:
+  - type: afterResponse
+    code: pm.environment.unset("token");
+    language: text/javascript
+order: 9000
