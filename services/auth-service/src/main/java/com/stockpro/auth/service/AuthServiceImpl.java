@@ -3,6 +3,7 @@ package com.stockpro.auth.service;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -21,22 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * AuthServiceImpl — implements all authentication and user management operations.
- *
- * <p><b>Patterns used:</b>
- * <ul>
- *   <li>Service Layer — all business logic lives here, away from the controller and repository.</li>
- *   <li>Constructor Injection — dependencies declared {@code final} and injected via
- *       Lombok's {@code @RequiredArgsConstructor}, making the class fully testable.</li>
- *   <li>Fail Fast — all precondition checks happen at the top of each method.</li>
- * </ul>
- *
- * <p><b>JWT strategy:</b>
- * <ul>
- *   <li>Tokens are stateless and short-lived (default 24 h).</li>
- *   <li>Logout is implemented via an in-memory blacklist (thread-safe {@code ConcurrentHashSet}).</li>
- *   <li>Blacklist is cleared on restart — acceptable for single-instance deployments.</li>
- * </ul>
+ * AuthServiceImpl — implements all authentication and user management
  */
 @Slf4j
 @Service
@@ -55,10 +41,10 @@ public class AuthServiceImpl implements AuthService {
 
     /**
      * In-memory JWT blacklist — thread-safe.
-     * Tokens are added on logout and on token refresh (so old tokens cannot be reused).
+     * Tokens are added on logout and on token refresh (so old tokens cannot be
+     * reused).
      */
-    private final Set<String> blacklistedTokens =
-            Collections.synchronizedSet(new HashSet<>());
+    private final Set<String> blacklistedTokens = Collections.synchronizedSet(new HashSet<>());
 
     // ─── Register ────────────────────────────────────────────────────────────
 
@@ -120,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getUserId(),
-                user.getRole(),
+                user.getRole().name(),
                 user.getDepartment());
 
         log.info("Login successful — userId={}, role={}", user.getUserId(), user.getRole());
@@ -166,7 +152,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         Claims claims = jwtUtil.extractAllClaims(token);
-        String email  = claims.getSubject();
+        String email = claims.getSubject();
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
@@ -180,7 +166,7 @@ public class AuthServiceImpl implements AuthService {
         String newToken = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getUserId(),
-                user.getRole(),
+                user.getRole().name(),
                 user.getDepartment());
 
         log.info("Token refreshed successfully for userId={}", user.getUserId());
@@ -257,7 +243,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void deactivateUser(int id) {
+    public void deactivate(int id) {
         log.info("Deactivation requested for userId={}", id);
 
         User user = getUserById(id);
@@ -275,4 +261,10 @@ public class AuthServiceImpl implements AuthService {
         log.info("User deactivated — userId={}", id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<User> getAllUsers() {
+        log.debug("Fetching all users from repository");
+        return userRepository.findAll();
+    }
 }

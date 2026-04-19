@@ -1,5 +1,5 @@
 $kind: http-request
-name: 6. Get All Users (Admin/Manager)
+name: 6. List All Users (Admin)
 url: "{{base_url}}/auth/users"
 method: GET
 auth:

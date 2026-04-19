@@ -1,21 +1,22 @@
 package com.stockpro.auth.service;
 
+import java.util.List;
 import com.stockpro.auth.model.User;
 
 /**
- * AuthService — declares all business operations for authentication and user management.
+ * AuthService — declares all business operations for authentication and user
+ * management.
  *
- * <p><b>Pattern:</b> Service Layer + Interface / Implementation separation.
- * Controllers depend only on this interface, never on {@code AuthServiceImpl},
- * which makes swapping implementations (e.g. for tests) trivial.
  */
 public interface AuthService {
 
     /**
-     * Register a new user account and return a sanitized (no passwordHash) view.
+     * Register a new user account.
      *
-     * @param user User entity built from the registration DTO (passwordHash = raw password)
-     * @return persisted {@link User} with passwordHash cleared
+     * @param user User entity. The 'passwordHash' field should carry the raw
+     *             password,
+     *             which will be encoded by the service before persistence.
+     * @return the persisted {@link User} entity
      */
     User register(User user);
 
@@ -90,5 +91,12 @@ public interface AuthService {
      *
      * @param id userId to deactivate
      */
-    void deactivateUser(int id);
+    void deactivate(int id);
+ 
+    /**
+     * Retrieve all registered users.
+     *
+     * @return List of {@link User} entities
+     */
+    List<User> getAllUsers();
 }

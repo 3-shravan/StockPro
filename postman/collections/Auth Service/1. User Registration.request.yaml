@@ -1,4 +1,5 @@
 $kind: http-request
+name: 1. User Registration
 url: "{{base_url}}/auth/register"
 method: POST
 headers:
@@ -7,10 +8,10 @@ body:
   type: text
   content: |-
     {
-      "fullName": "Admin User",
-      "email": "admin@stockpro.com",
-      "password": "password123",
-      "phone": "1234567890",
+      "fullName": "Shantanu",
+      "email": "shantanu@stockpro.com",
+      "password": "shantanu",
+      "phone": "7983364149",
       "role": "ADMIN",
       "department": "IT"
     }

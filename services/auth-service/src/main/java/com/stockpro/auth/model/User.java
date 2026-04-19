@@ -1,5 +1,6 @@
 package com.stockpro.auth.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -35,6 +36,7 @@ public class User {
     private String email;
 
     /** BCrypt-hashed password — never returned in API responses */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false)
     private String passwordHash;
 
@@ -42,10 +44,10 @@ public class User {
 
     /**
      * User role controlling access levels.
-     * Stored as VARCHAR.
      */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String role;
+    private Role role;
 
     /** Department enables department-level data scoping across services */
     private String department;
@@ -66,7 +68,7 @@ public class User {
         createdAt = LocalDateTime.now();
         isActive = true;
         if (role == null) {
-            role = "STAFF";
+            role = Role.STAFF;
         }
     }
 }

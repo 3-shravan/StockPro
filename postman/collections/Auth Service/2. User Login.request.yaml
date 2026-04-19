@@ -8,8 +8,8 @@ body:
   type: text
   content: |-
     {
-      "email": "admin@stockpro.com",
-      "password": "newPassword123"
+        "email": "shantanu@stockpro.com",
+      "password": "shantanu"
     }
 scripts:
   - type: afterResponse

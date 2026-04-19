@@ -25,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.stockpro.auth.config.JwtUtil;
 import com.stockpro.auth.exception.CustomException;
+import com.stockpro.auth.model.Role;
 import com.stockpro.auth.model.User;
 import com.stockpro.auth.repository.UserRepository;
 
@@ -38,9 +39,12 @@ import com.stockpro.auth.repository.UserRepository;
 @DisplayName("AuthServiceImpl")
 class AuthServiceImplTest {
 
-    @Mock private UserRepository  userRepository;
-    @Mock private PasswordEncoder passwordEncoder;
-    @Mock private JwtUtil         jwtUtil;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private JwtUtil jwtUtil;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -56,7 +60,7 @@ class AuthServiceImplTest {
                 .fullName("Alice Smith")
                 .email("alice@example.com")
                 .passwordHash("$2a$hashed")
-                .role("STAFF")
+                .role(Role.STAFF)
                 .department("IT")
                 .isActive(true)
                 .build();
@@ -110,9 +114,9 @@ class AuthServiceImplTest {
             when(jwtUtil.generateToken(anyString(), anyInt(), anyString(), anyString()))
                     .thenReturn("mock.jwt.token");
             when(userRepository.save(any())).thenReturn(activeUser);
- 
+
             String token = authService.login("alice@example.com", "rawPass");
- 
+
             assertThat(token).isEqualTo("mock.jwt.token");
         }
 
@@ -172,7 +176,8 @@ class AuthServiceImplTest {
             when(jwtUtil.isTokenStructurallyValid(token)).thenReturn(true);
             assertThat(authService.validateToken(token)).isTrue();
 
-            // After logout — token is blacklisted, must return false regardless of structure
+            // After logout — token is blacklisted, must return false regardless of
+            // structure
             authService.logout(token);
             assertThat(authService.validateToken(token)).isFalse();
         }
@@ -222,7 +227,7 @@ class AuthServiceImplTest {
             when(userRepository.findByUserId(1)).thenReturn(activeUser);
             when(userRepository.save(any())).thenReturn(activeUser);
 
-            authService.deactivateUser(1);
+            authService.deactivate(1);
 
             assertThat(activeUser.isActive()).isFalse();
         }
@@ -234,7 +239,7 @@ class AuthServiceImplTest {
             when(userRepository.findByUserId(1)).thenReturn(activeUser);
 
             CustomException ex = catchThrowableOfType(
-                    () -> authService.deactivateUser(1), CustomException.class);
+                    () -> authService.deactivate(1), CustomException.class);
 
             assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
         }

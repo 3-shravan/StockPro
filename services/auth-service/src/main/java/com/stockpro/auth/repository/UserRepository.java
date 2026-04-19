@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stockpro.auth.model.Role;
 import com.stockpro.auth.model.User;
 
 /**
@@ -25,7 +26,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     boolean existsByEmail(String email);
 
     /** Retrieve all users with a specific role */
-    List<User> findAllByRole(String role);
+    List<User> findAllByRole(Role role);
 
     /** Retrieve all users belonging to a department */
     List<User> findByDepartment(String department);
