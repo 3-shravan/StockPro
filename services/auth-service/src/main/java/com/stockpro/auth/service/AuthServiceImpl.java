@@ -1,24 +1,24 @@
 package com.stockpro.auth.service;
 
-import com.stockpro.auth.config.JwtUtil;
-import com.stockpro.auth.dto.AuthResponse;
-import com.stockpro.auth.dto.UpdateProfileRequest;
-import com.stockpro.auth.exception.CustomException;
-import com.stockpro.auth.model.User;
-import com.stockpro.auth.repository.UserRepository;
-import io.jsonwebtoken.Claims;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import com.stockpro.auth.config.JwtUtil;
+import com.stockpro.auth.exception.CustomException;
+import com.stockpro.auth.model.User;
+import com.stockpro.auth.repository.UserRepository;
+
+import io.jsonwebtoken.Claims;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * AuthServiceImpl — implements all authentication and user management operations.
@@ -46,6 +46,12 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration}")
+    private long tokenExpiry;
 
     /**
      * In-memory JWT blacklist — thread-safe.
@@ -85,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     @Transactional
-    public AuthResponse login(String email, String password) {
+    public String login(String email, String password) {
         log.info("Login attempt for email: {}", email);
 
         User user = userRepository.findByEmail(email)
@@ -114,18 +120,12 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getUserId(),
-                user.getRole().name(),
+                user.getRole(),
                 user.getDepartment());
 
         log.info("Login successful — userId={}, role={}", user.getUserId(), user.getRole());
 
-        return AuthResponse.builder()
-                .token(token)
-                .userId(user.getUserId())
-                .role(user.getRole().name())
-                .department(user.getDepartment())
-                .message("Login successful")
-                .build();
+        return token;
     }
 
     // ─── Logout ──────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ public class AuthServiceImpl implements AuthService {
         String newToken = jwtUtil.generateToken(
                 user.getEmail(),
                 user.getUserId(),
-                user.getRole().name(),
+                user.getRole(),
                 user.getDepartment());
 
         log.info("Token refreshed successfully for userId={}", user.getUserId());
@@ -193,12 +193,13 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public User getUserById(int id) {
         log.debug("Fetching user by id={}", id);
-        return userRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.warn("User not found — id={}", id);
-                    return new CustomException(
-                            "User not found with ID: " + id, HttpStatus.NOT_FOUND);
-                });
+        User user = userRepository.findByUserId(id);
+        if (user == null) {
+            log.warn("User not found — id={}", id);
+            throw new CustomException(
+                    "User not found with ID: " + id, HttpStatus.NOT_FOUND);
+        }
+        return user;
     }
 
     @Override
@@ -217,7 +218,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public User updateProfile(int id, UpdateProfileRequest request) {
+    public User updateProfile(int id, User request) {
         log.info("Updating profile for userId={}", id);
 
         User user = getUserById(id);
@@ -241,15 +242,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void changePassword(int id, String oldPassword, String newPassword) {
+    public void changePassword(int id, String newPassword) {
         log.info("Password change requested for userId={}", id);
 
         User user = getUserById(id);
-
-        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
-            log.warn("Password change failed — incorrect current password for userId={}", id);
-            throw new CustomException("Current password is incorrect.", HttpStatus.BAD_REQUEST);
-        }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
@@ -279,14 +275,4 @@ public class AuthServiceImpl implements AuthService {
         log.info("User deactivated — userId={}", id);
     }
 
-    // ─── Get All Users ───────────────────────────────────────────────────────
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<User> getAllUsers() {
-        log.debug("Fetching all users");
-        List<User> users = userRepository.findAll();
-        log.debug("Found {} users", users.size());
-        return users;
-    }
 }

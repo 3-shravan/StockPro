@@ -1,12 +1,17 @@
 package com.stockpro.auth.service;
 
-import com.stockpro.auth.config.JwtUtil;
-import com.stockpro.auth.dto.AuthResponse;
-import com.stockpro.auth.dto.UpdateProfileRequest;
-import com.stockpro.auth.exception.CustomException;
-import com.stockpro.auth.model.Role;
-import com.stockpro.auth.model.User;
-import com.stockpro.auth.repository.UserRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -18,12 +23,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import com.stockpro.auth.config.JwtUtil;
+import com.stockpro.auth.exception.CustomException;
+import com.stockpro.auth.model.User;
+import com.stockpro.auth.repository.UserRepository;
 
 /**
  * Unit tests for {@link AuthServiceImpl}.
@@ -53,9 +56,9 @@ class AuthServiceImplTest {
                 .fullName("Alice Smith")
                 .email("alice@example.com")
                 .passwordHash("$2a$hashed")
-                .role(Role.STAFF)
+                .role("STAFF")
                 .department("IT")
-                .active(true)
+                .isActive(true)
                 .build();
     }
 
@@ -107,11 +110,10 @@ class AuthServiceImplTest {
             when(jwtUtil.generateToken(anyString(), anyInt(), anyString(), anyString()))
                     .thenReturn("mock.jwt.token");
             when(userRepository.save(any())).thenReturn(activeUser);
-
-            AuthResponse response = authService.login("alice@example.com", "rawPass");
-
-            assertThat(response.getToken()).isEqualTo("mock.jwt.token");
-            assertThat(response.getRole()).isEqualTo("STAFF");
+ 
+            String token = authService.login("alice@example.com", "rawPass");
+ 
+            assertThat(token).isEqualTo("mock.jwt.token");
         }
 
         @Test
@@ -183,30 +185,28 @@ class AuthServiceImplTest {
     class ChangePassword {
 
         @Test
-        @DisplayName("updates passwordHash when old password matches")
+        @DisplayName("updates passwordHash")
         void success() {
-            when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
-            when(passwordEncoder.matches("oldPass", "$2a$hashed")).thenReturn(true);
+            when(userRepository.findByUserId(1)).thenReturn(activeUser);
             when(passwordEncoder.encode("newPass")).thenReturn("$2a$newHashed");
             when(userRepository.save(any())).thenReturn(activeUser);
 
             assertThatNoException()
-                    .isThrownBy(() -> authService.changePassword(1, "oldPass", "newPass"));
+                    .isThrownBy(() -> authService.changePassword(1, "newPass"));
 
             assertThat(activeUser.getPasswordHash()).isEqualTo("$2a$newHashed");
         }
 
         @Test
-        @DisplayName("throws BAD_REQUEST when old password is incorrect")
-        void wrongOldPassword_throwsBadRequest() {
-            when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
-            when(passwordEncoder.matches("wrongOld", "$2a$hashed")).thenReturn(false);
+        @DisplayName("throws NOT_FOUND when user does not exist")
+        void userNotFound_throwsNotFound() {
+            when(userRepository.findByUserId(1)).thenReturn(null);
 
             CustomException ex = catchThrowableOfType(
-                    () -> authService.changePassword(1, "wrongOld", "newPass"),
+                    () -> authService.changePassword(1, "newPass"),
                     CustomException.class);
 
-            assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -219,7 +219,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("sets active=false for an active user")
         void success() {
-            when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
+            when(userRepository.findByUserId(1)).thenReturn(activeUser);
             when(userRepository.save(any())).thenReturn(activeUser);
 
             authService.deactivateUser(1);
@@ -231,7 +231,7 @@ class AuthServiceImplTest {
         @DisplayName("throws BAD_REQUEST when user is already inactive")
         void alreadyInactive_throwsBadRequest() {
             activeUser.setActive(false);
-            when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
+            when(userRepository.findByUserId(1)).thenReturn(activeUser);
 
             CustomException ex = catchThrowableOfType(
                     () -> authService.deactivateUser(1), CustomException.class);
@@ -249,33 +249,19 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("returns user when found")
         void found() {
-            when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
+            when(userRepository.findByUserId(1)).thenReturn(activeUser);
             assertThat(authService.getUserById(1).getEmail()).isEqualTo("alice@example.com");
         }
 
         @Test
         @DisplayName("throws NOT_FOUND when id does not exist")
         void notFound_throwsNotFound() {
-            when(userRepository.findById(999)).thenReturn(Optional.empty());
+            when(userRepository.findByUserId(999)).thenReturn(null);
 
             CustomException ex = catchThrowableOfType(
                     () -> authService.getUserById(999), CustomException.class);
 
             assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    // ─── getAllUsers() ────────────────────────────────────────────────────────
-
-    @Nested
-    @DisplayName("getAllUsers()")
-    class GetAllUsers {
-
-        @Test
-        @DisplayName("returns all users from the repository")
-        void returnsAll() {
-            when(userRepository.findAll()).thenReturn(List.of(activeUser));
-            assertThat(authService.getAllUsers()).hasSize(1);
         }
     }
 
@@ -288,11 +274,12 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("updates only non-null fields")
         void partialUpdate() {
-            when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
+            when(userRepository.findByUserId(1)).thenReturn(activeUser);
             when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            UpdateProfileRequest req = new UpdateProfileRequest();
-            req.setFullName("Alice Updated");
+            User req = User.builder()
+                    .fullName("Alice Updated")
+                    .build();
 
             User result = authService.updateProfile(1, req);
 

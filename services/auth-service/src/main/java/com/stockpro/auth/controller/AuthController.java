@@ -1,34 +1,30 @@
 package com.stockpro.auth.controller;
 
-import com.stockpro.auth.dto.*;
-import com.stockpro.auth.exception.CustomException;
-import com.stockpro.auth.mapper.UserMapper;
-import com.stockpro.auth.model.User;
-import com.stockpro.auth.service.AuthService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
+import com.stockpro.auth.dto.TokenRequest;
+import com.stockpro.auth.exception.CustomException;
+import com.stockpro.auth.model.User;
+import com.stockpro.auth.service.AuthService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * AuthController — REST facade for the Auth/User-Service.
- *
- * <p><b>Pattern:</b> Thin Controller.
- * This class does <em>nothing</em> except:
- * <ol>
- *   <li>Validate the incoming HTTP request ({@code @Valid}).</li>
- *   <li>Delegate to the service layer.</li>
- *   <li>Wrap the result in the correct HTTP response.</li>
- * </ol>
  * All business logic, DB access, and security decisions live in {@link AuthService}.
- *
- * <pre>
  * ┌─────────────────────────────┬────────────┬────────────────────────┐
  * │ Endpoint                    │ Method     │ Access                 │
  * ├─────────────────────────────┼────────────┼────────────────────────┤
@@ -42,7 +38,6 @@ import java.util.Map;
  * │ /auth/deactivate/{id}       │ PUT        │ ADMIN only             │
  * │ /auth/users                 │ GET        │ ADMIN or MANAGER       │
  * └─────────────────────────────┴────────────┴────────────────────────┘
- * </pre>
  */
 @Slf4j
 @RestController
@@ -60,44 +55,48 @@ public class AuthController {
      * ADMIN can POST with an explicit role to create privileged accounts.
      */
     @PostMapping("/register")
-    public ResponseEntity<User> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("POST /auth/register — email={}", request.getEmail());
+    public ResponseEntity<User> register(@RequestBody User user) {
+        log.info("POST /auth/register — email={}", user.getEmail());
 
-        User saved = authService.register(UserMapper.toEntity(request));
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserMapper.sanitize(saved));
+        User saved = authService.register(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     // ─── POST /auth/login ────────────────────────────────────────────────────
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("POST /auth/login — email={}", request.getEmail());
+    public ResponseEntity<String> login(@RequestBody Map<String, String> credentials) {
+        log.info("POST /auth/login — email={}", credentials.get("email"));
 
         // Single service call — no double DB round-trip
-        AuthResponse response = authService.login(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(response);
+        String token = authService.login(credentials.get("email"), credentials.get("password"));
+        return ResponseEntity.ok(token);
     }
 
     // ─── POST /auth/logout ───────────────────────────────────────────────────
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout(
-            @RequestHeader("Authorization") String authHeader) {
-
+    public ResponseEntity<String> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) TokenRequest request) {
+ 
         log.info("POST /auth/logout");
-        authService.logout(extractBearerToken(authHeader));
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+        String token = resolveToken(authHeader, request);
+        authService.logout(token);
+        return ResponseEntity.ok("Logged out successfully");
     }
-
+ 
     // ─── POST /auth/refresh ──────────────────────────────────────────────────
-
+ 
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String, String>> refresh(
-            @RequestHeader("Authorization") String authHeader) {
-
+    public ResponseEntity<String> refresh(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) TokenRequest request) {
+ 
         log.info("POST /auth/refresh");
-        String newToken = authService.refreshToken(extractBearerToken(authHeader));
-        return ResponseEntity.ok(Map.of("token", newToken));
+        String token = resolveToken(authHeader, request);
+        String newToken = authService.refreshToken(token);
+        return ResponseEntity.ok(newToken);
     }
 
     // ─── GET /auth/profile/{id} ──────────────────────────────────────────────
@@ -105,7 +104,7 @@ public class AuthController {
     @GetMapping("/profile/{id}")
     public ResponseEntity<User> getProfile(@PathVariable int id) {
         log.info("GET /auth/profile/{}", id);
-        return ResponseEntity.ok(UserMapper.sanitize(authService.getUserById(id)));
+        return ResponseEntity.ok(authService.getUserById(id));
     }
 
     // ─── PUT /auth/profile/{id} ──────────────────────────────────────────────
@@ -113,25 +112,22 @@ public class AuthController {
     @PutMapping("/profile/{id}")
     public ResponseEntity<User> updateProfile(
             @PathVariable int id,
-            @RequestBody UpdateProfileRequest request) {
+            @RequestBody User user) {
 
         log.info("PUT /auth/profile/{}", id);
-        return ResponseEntity.ok(UserMapper.sanitize(authService.updateProfile(id, request)));
+        return ResponseEntity.ok(authService.updateProfile(id, user));
     }
 
     // ─── PUT /auth/password ──────────────────────────────────────────────────
 
-    @PutMapping("/password")
-    public ResponseEntity<Map<String, String>> changePassword(
-            @Valid @RequestBody ChangePasswordRequest request) {
+    @PutMapping("/password/{id}")
+    public ResponseEntity<Void> changePassword(
+            @PathVariable int id, @RequestBody Map<String, String> body) {
 
-        log.info("PUT /auth/password — userId={}", request.getUserId());
-        authService.changePassword(
-                request.getUserId(),
-                request.getOldPassword(),
-                request.getNewPassword());
+        log.info("PUT /auth/password — userId={}", id);
+        authService.changePassword(id, body.get("newPassword"));
 
-        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+        return ResponseEntity.ok().build();
     }
 
     // ─── PUT /auth/deactivate/{id} ───────────────────────────────────────────
@@ -139,42 +135,37 @@ public class AuthController {
     /**
      * Soft-deactivate a user account. Requires ADMIN role.
      */
-    @PutMapping("/deactivate/{id}")
+    @PostMapping("/deactivate/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, String>> deactivateUser(@PathVariable int id) {
-        log.info("PUT /auth/deactivate/{}", id);
+    public ResponseEntity<Void> deactivateUser(@PathVariable int id) {
+        log.info("POST /auth/deactivate/{}", id);
         authService.deactivateUser(id);
-        return ResponseEntity.ok(Map.of("message", "User deactivated successfully"));
+        return ResponseEntity.ok().build();
     }
-
-    // ─── GET /auth/users ─────────────────────────────────────────────────────
-
+ 
+    // ─── Private Helper ──────────────────────────────────────────────────────
+ 
     /**
-     * List all users. Requires ADMIN or MANAGER role.
-     */
-    @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    public ResponseEntity<List<User>> getAllUsers() {
-        log.info("GET /auth/users");
-        List<User> users = authService.getAllUsers();
-        users.forEach(UserMapper::sanitize);
-        return ResponseEntity.ok(users);
-    }
-
-    // ─── Private helper ──────────────────────────────────────────────────────
-
-    /**
-     * Extracts the raw JWT from a {@code "Bearer <token>"} Authorization header.
+     * Resolves a JWT token from either the Authorization header (Bearer)
+     * or the TokenRequest body.
      *
-     * @throws CustomException 400 if the header is absent or not prefixed with "Bearer "
+     * @throws CustomException 400 if no token is found in either source.
      */
-    private String extractBearerToken(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.warn("Malformed or missing Authorization header");
-            throw new CustomException(
-                    "Missing or malformed Authorization header",
-                    HttpStatus.BAD_REQUEST);
+    private String resolveToken(String authHeader, TokenRequest request) {
+        // 1. Check Header
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
         }
-        return authHeader.substring(7);
+ 
+        // 2. Check Body
+        if (request != null && request.getToken() != null && !request.getToken().isBlank()) {
+            return request.getToken();
+        }
+ 
+        log.warn("Token resolution failed — no token in header or body");
+        throw new CustomException(
+                "JWT Token is required. Please provide it in the Authorization header or request body.",
+                HttpStatus.BAD_REQUEST);
     }
+ 
 }

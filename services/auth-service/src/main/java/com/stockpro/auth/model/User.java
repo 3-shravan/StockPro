@@ -42,18 +42,17 @@ public class User {
 
     /**
      * User role controlling access levels.
-     * Stored as VARCHAR — impossible to persist an invalid role.
+     * Stored as VARCHAR.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private Role role;
+    @Column(nullable = false, length = 20)
+    private String role;
 
     /** Department enables department-level data scoping across services */
     private String department;
 
     /** Soft-delete flag — deactivated users cannot log in */
     @Column(name = "is_active")
-    private boolean active;
+    private boolean isActive;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -65,9 +64,9 @@ public class User {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        active = true;
+        isActive = true;
         if (role == null) {
-            role = Role.STAFF;
+            role = "STAFF";
         }
     }
 }

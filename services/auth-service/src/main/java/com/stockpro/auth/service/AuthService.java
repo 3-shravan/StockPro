@@ -1,10 +1,6 @@
 package com.stockpro.auth.service;
 
-import com.stockpro.auth.dto.AuthResponse;
-import com.stockpro.auth.dto.UpdateProfileRequest;
 import com.stockpro.auth.model.User;
-
-import java.util.List;
 
 /**
  * AuthService — declares all business operations for authentication and user management.
@@ -24,14 +20,13 @@ public interface AuthService {
     User register(User user);
 
     /**
-     * Authenticate a user via email + password and return a full {@link AuthResponse}.
-     * A single service call so the controller does not make two DB round-trips.
+     * Authenticate a user via email + password and return a JWT token string.
      *
      * @param email    user email
      * @param password raw password
-     * @return populated {@link AuthResponse} (token + user metadata)
+     * @return JWT token string
      */
-    AuthResponse login(String email, String password);
+    String login(String email, String password);
 
     /**
      * Invalidate a JWT token by adding it to the in-memory blacklist.
@@ -73,22 +68,21 @@ public interface AuthService {
     User getUserByEmail(String email);
 
     /**
-     * Apply non-sensitive profile field updates (fullName, phone, department).
+     * Apply profile field updates.
      *
-     * @param id      userId of the user to update
-     * @param request DTO carrying the new field values
-     * @return updated and sanitized {@link User} entity
+     * @param id   userId of the user to update
+     * @param user User entity carrying the new values
+     * @return updated {@link User} entity
      */
-    User updateProfile(int id, UpdateProfileRequest request);
+    User updateProfile(int id, User user);
 
     /**
-     * Change a user's password with old-password verification.
+     * Change a user's password.
      *
      * @param id          userId
-     * @param oldPassword current raw password (for verification)
      * @param newPassword new raw password to set
      */
-    void changePassword(int id, String oldPassword, String newPassword);
+    void changePassword(int id, String newPassword);
 
     /**
      * Soft-deactivate a user by setting isActive = false.
@@ -97,11 +91,4 @@ public interface AuthService {
      * @param id userId to deactivate
      */
     void deactivateUser(int id);
-
-    /**
-     * Retrieve all registered users (passwordHash cleared on each).
-     *
-     * @return list of all sanitized {@link User} entities
-     */
-    List<User> getAllUsers();
 }
