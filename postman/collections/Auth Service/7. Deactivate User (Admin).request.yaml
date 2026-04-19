@@ -1,0 +1,9 @@
+$kind: http-request
+name: 7. Deactivate User (Admin)
+url: "{{base_url}}/auth/deactivate/1"
+method: PUT
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 7000

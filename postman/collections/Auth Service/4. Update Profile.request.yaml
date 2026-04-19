@@ -1,0 +1,19 @@
+$kind: http-request
+name: 4. Update Profile
+url: "{{base_url}}/auth/profile/1"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "fullName": "Shravan Yadav",
+      "phone": "7983364149",
+      "department": "Management"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000
