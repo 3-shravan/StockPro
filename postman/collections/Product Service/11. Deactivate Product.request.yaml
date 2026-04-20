@@ -1,0 +1,9 @@
+$kind: http-request
+name: 11. Deactivate Product
+url: "{{base_url}}/products/1/deactivate"
+method: PUT
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 11000

@@ -1,0 +1,44 @@
+$kind: http-request
+name: 10. Update Product
+url: "{{base_url}}/products/1"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: "{\r
+
+    \ \"sku\": \"PROD-001\",\r
+
+    \ \"name\": \"Wireless Mouse RGBL\",\r
+
+    \ \"description\": \"Updated description\",\r
+
+    \ \"category\": \"Electronics\",\r
+
+    \ \"brand\": \"Logitech\",\r
+
+    \ \"unitOfMeasure\": \"PCS\",\r
+
+    \ \"costPrice\": 16.00,\r
+
+    \ \"sellingPrice\": 29.99,\r
+
+    \ \"reorderLevel\": 15,\r
+
+    \ \"maxStockLevel\": 120,\r
+
+    \ \"leadTimeDays\": 2,\r
+
+    \ \"barcode\": \"1234567890123\",\r
+
+    \ \"imageUrl\": \"http://example.com/mouse_new.jpg\",\r
+
+    \ \"currentQuantity\": 45\r
+
+    \ }"
+order: 10000

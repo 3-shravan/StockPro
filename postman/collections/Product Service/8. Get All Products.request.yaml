@@ -1,0 +1,9 @@
+$kind: http-request
+name: 8. Get All Products
+url: "{{base_url}}/products"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 8000

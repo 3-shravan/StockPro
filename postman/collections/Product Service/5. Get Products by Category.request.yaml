@@ -1,0 +1,9 @@
+$kind: http-request
+name: 5. Get Products by Category
+url: "{{base_url}}/products/category/Electronics"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 5000
