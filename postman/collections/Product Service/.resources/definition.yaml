@@ -1,0 +1,6 @@
+$kind: collection
+description: Endpoints for managing the product catalog, inventory levels, and search.
+order: 2000
+variables:
+  base_url: http://localhost:8082
+  token: ""

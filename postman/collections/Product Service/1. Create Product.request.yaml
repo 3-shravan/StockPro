@@ -1,0 +1,30 @@
+$kind: http-request
+name: 1. Create Product
+url: "{{base_url}}/products"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "sku": "PROD-001",
+      "name": "Wireless Mouse",
+      "description": "Ergonomic wireless mouse",
+      "category": "Electronics",
+      "brand": "Logitech",
+      "unitOfMeasure": "PCS",
+      "costPrice": 15.50,
+      "sellingPrice": 25.99,
+      "reorderLevel": 10,
+      "maxStockLevel": 100,
+      "leadTimeDays": 3,
+      "barcode": "1234567890123",
+      "imageUrl": "http://example.com/mouse.jpg",
+      "currentQuantity": 50
+    }
+order: 1000

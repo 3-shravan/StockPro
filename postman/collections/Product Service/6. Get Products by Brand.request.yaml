@@ -1,0 +1,9 @@
+$kind: http-request
+name: 6. Get Products by Brand
+url: "{{base_url}}/products/brand/Logitech"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

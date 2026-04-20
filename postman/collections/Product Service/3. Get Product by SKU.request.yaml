@@ -1,0 +1,9 @@
+$kind: http-request
+name: 3. Get Product by SKU
+url: "{{base_url}}/products/sku/PROD-001"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000
