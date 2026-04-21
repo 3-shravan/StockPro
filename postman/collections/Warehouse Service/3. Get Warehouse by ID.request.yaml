@@ -1,0 +1,9 @@
+$kind: http-request
+name: 3. Get Warehouse by ID
+url: "{{base_url}}/warehouses/1"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

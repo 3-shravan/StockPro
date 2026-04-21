@@ -1,0 +1,19 @@
+$kind: http-request
+name: 8. Reserve Stock
+url: "{{base_url}}/stock/reserve"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "warehouseId": 1,
+      "productId": 1,
+      "quantity": 20
+    }
+order: 8000

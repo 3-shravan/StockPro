@@ -1,0 +1,23 @@
+$kind: http-request
+name: 4. Update Warehouse
+url: "{{base_url}}/warehouses/1"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "name": "Updated Distribution Center",
+      "location": "North America",
+      "address": "456 New Logistics Way, Chicago, IL",
+      "managerId": 102,
+      "capacity": 6000,
+      "phone": "+1-555-0200",
+      "active": true
+    }
+order: 4000
