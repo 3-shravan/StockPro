@@ -1,0 +1,19 @@
+$kind: http-request
+name: 7. Update Stock
+url: "{{base_url}}/stock/update"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "warehouseId": 1,
+      "productId": 1,
+      "quantity": 100
+    }
+order: 7000

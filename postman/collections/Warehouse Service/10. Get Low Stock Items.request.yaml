@@ -1,0 +1,9 @@
+$kind: http-request
+name: 10. Get Low Stock Items
+url: "{{base_url}}/stock/low/1"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 10000

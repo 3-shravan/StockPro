@@ -1,0 +1,9 @@
+$kind: http-request
+name: 5. Deactivate Warehouse
+url: "{{base_url}}/warehouses/1"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 5000

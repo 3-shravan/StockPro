@@ -1,0 +1,9 @@
+$kind: http-request
+name: 6. Get Stock Level
+url: "{{base_url}}/stock/1/1"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

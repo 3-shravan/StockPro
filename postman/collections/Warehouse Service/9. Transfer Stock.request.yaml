@@ -1,0 +1,21 @@
+$kind: http-request
+name: 9. Transfer Stock
+url: "{{base_url}}/stock/transfer"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "fromWarehouseId": 1,
+      "toWarehouseId": 2,
+      "productId": 1,
+      "quantity": 10,
+      "managerId": 101
+    }
+order: 9000

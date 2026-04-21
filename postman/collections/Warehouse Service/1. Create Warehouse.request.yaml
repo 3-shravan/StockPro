@@ -1,0 +1,23 @@
+$kind: http-request
+name: 1. Create Warehouse
+url: "{{base_url}}/warehouses"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "name": "Main Distribution Center",
+      "location": "North America",
+      "address": "123 Logistics Way, Chicago, IL",
+      "managerId": 101,
+      "capacity": 5000,
+      "phone": "+1-555-0199",
+      "active": true
+    }
+order: 1000
