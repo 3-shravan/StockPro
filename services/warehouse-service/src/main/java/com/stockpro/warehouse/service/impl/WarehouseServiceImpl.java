@@ -43,12 +43,14 @@ public class WarehouseServiceImpl implements WarehouseService {
 
     @Override
     public Optional<WarehouseResponse> getById(int warehouseId) {
+        log.debug("Service: Fetching warehouse by ID: {}", warehouseId);
         return warehouseRepository.findByWarehouseId(warehouseId)
                 .map(warehouseMapper::toResponse);
     }
 
     @Override
     public List<WarehouseResponse> getAllWarehouses() {
+        log.debug("Service: Fetching all active warehouses");
         return warehouseRepository.findAll().stream()
                 .map(warehouseMapper::toResponse)
                 .collect(Collectors.toList());
@@ -83,6 +85,7 @@ public class WarehouseServiceImpl implements WarehouseService {
 
     @Override
     public Optional<StockLevelResponse> getStockLevel(int warehouseId, int productId) {
+        log.debug("Service: Fetching stock level for warehouse {} and product {}", warehouseId, productId);
         return stockLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)
                 .map(stockMapper::toResponse);
     }
@@ -172,6 +175,7 @@ public class WarehouseServiceImpl implements WarehouseService {
 
     @Override
     public List<StockLevelResponse> getLowStockItems(int warehouseId) {
+        log.debug("Service: Fetching low stock items for warehouse ID: {}", warehouseId);
         return warehouseRepository.findLowStockItems(warehouseId).stream()
                 .map(stockMapper::toResponse)
                 .collect(Collectors.toList());
