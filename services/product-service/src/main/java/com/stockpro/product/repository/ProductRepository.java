@@ -23,12 +23,13 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Query("SELECT p FROM Product p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Product> searchByName(@Param("name") String name);
 
-    List<Product> findByIsActive(boolean isActive);
+    List<Product> findByActive(boolean active);
 
     Optional<Product> findByBarcode(String barcode);
 
     int countByCategory(String category);
 
-    @Query("SELECT p FROM Product p WHERE p.currentQuantity <= p.reorderLevel AND p.isActive = true")
+    @Query("SELECT p FROM Product p WHERE p.currentQuantity <= p.reorderLevel AND p.active = true")
     List<Product> findLowStockProducts();
 }
+
