@@ -1,0 +1,33 @@
+$kind: http-request
+name: 1. Create Purchase Order
+url: "{{base_url}}/purchase-orders"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "supplierId": 1,
+      "warehouseId": 1,
+      "expectedDate": "2026-05-01",
+      "notes": "Urgent procurement for Q2 inventory",
+      "referenceNumber": "PO-2026-001",
+      "lineItems": [
+        {
+          "productId": 1,
+          "quantity": 100,
+          "unitCost": 15.50
+        },
+        {
+          "productId": 2,
+          "quantity": 50,
+          "unitCost": 25.00
+        }
+      ]
+    }
+order: 1000

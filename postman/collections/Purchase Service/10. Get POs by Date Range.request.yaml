@@ -1,0 +1,9 @@
+$kind: http-request
+name: 10. Get POs by Date Range
+url: "{{base_url}}/purchase-orders/date-range?start=2026-04-01&end=2026-04-30"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 10000

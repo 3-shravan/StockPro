@@ -1,6 +1,6 @@
 $kind: http-request
-name: 2. Get Product by ID
-url: "{{base_url}}/products/2"
+name: 2. Get All Purchase Orders
+url: "{{base_url}}/purchase-orders"
 method: GET
 auth:
   type: bearer
