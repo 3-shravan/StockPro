@@ -1,0 +1,33 @@
+$kind: http-request
+name: 11. Update Draft PO
+url: "{{base_url}}/purchase-orders/1"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "supplierId": 1,
+      "warehouseId": 1,
+      "expectedDate": "2026-05-15",
+      "notes": "Updated notes: revised quantity for product 2",
+      "referenceNumber": "PO-2026-001-REV",
+      "lineItems": [
+        {
+          "productId": 1,
+          "quantity": 100,
+          "unitCost": 15.50
+        },
+        {
+          "productId": 2,
+          "quantity": 75,
+          "unitCost": 25.00
+        }
+      ]
+    }
+order: 11000

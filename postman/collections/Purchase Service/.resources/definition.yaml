@@ -1,0 +1,6 @@
+$kind: collection
+description: Endpoints for managing purchase orders and supplier management.
+order: 4000
+variables:
+  base_url: http://localhost:8084
+  token: ""

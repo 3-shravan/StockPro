@@ -1,0 +1,26 @@
+$kind: http-request
+name: 5. Record Goods Receipt
+url: "{{base_url}}/purchase-orders/1/receive"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "items": [
+        {
+          "productId": 1,
+          "quantity": 100
+        },
+        {
+          "productId": 2,
+          "quantity": 25
+        }
+      ]
+    }
+order: 5000
