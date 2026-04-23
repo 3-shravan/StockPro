@@ -1,0 +1,9 @@
+$kind: http-request
+name: 6. Update Supplier Rating
+url: "{{base_url}}/api/suppliers/1/rating?rating=4.5"
+method: PUT
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

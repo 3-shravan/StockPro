@@ -1,0 +1,9 @@
+$kind: http-request
+name: 7. Search Suppliers
+url: "{{base_url}}/api/suppliers/search?q=global"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 7000
