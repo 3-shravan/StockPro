@@ -1,0 +1,6 @@
+$kind: collection
+description: Endpoints for managing suppliers, supplier search, and supplier status.
+order: 5000
+variables:
+  base_url: http://localhost:8085
+  token: ""

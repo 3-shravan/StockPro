@@ -1,0 +1,9 @@
+$kind: http-request
+name: 8. Get Suppliers by City
+url: "{{base_url}}/api/suppliers/city/Bengaluru"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 8000

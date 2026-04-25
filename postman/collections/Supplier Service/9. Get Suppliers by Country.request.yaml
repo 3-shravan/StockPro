@@ -1,0 +1,9 @@
+$kind: http-request
+name: 9. Get Suppliers by Country
+url: "{{base_url}}/api/suppliers/country/India"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 9000

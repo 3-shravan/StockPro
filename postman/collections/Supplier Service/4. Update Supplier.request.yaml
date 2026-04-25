@@ -1,0 +1,26 @@
+$kind: http-request
+name: 4. Update Supplier
+url: "{{base_url}}/api/suppliers/1"
+method: PUT
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "name": "SHravan Yadav",
+      "contactPerson": "Ravi Menon",
+      "email": "supplydesk@globalcomponents.com",
+      "phone": "+91-9876500000",
+      "address": "89 Industrial Estate, Phase 2",
+      "city": "Bengaluru",
+      "country": "India",
+      "taxId": "GSTIN29ABCDE1234F1Z6",
+      "paymentTerms": "NET 45",
+      "leadTimeDays": 10
+    }
+order: 4000

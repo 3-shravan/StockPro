@@ -1,0 +1,26 @@
+$kind: http-request
+name: 1. Create Supplier
+url: "{{base_url}}/api/suppliers"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "name": "XYZ",
+      "contactPerson": "Shravan",
+      "email": "procurement@globalcomponents.com",
+      "phone": "+91-9876543210",
+      "address": "88 Industrial Estate, Phase 2",
+      "city": "Bengaluru",
+      "country": "India",
+      "taxId": "GSTIN29ABCDE1234F1Z6",
+      "paymentTerms": "NET 30",
+      "leadTimeDays": 7
+    }
+order: 1000
