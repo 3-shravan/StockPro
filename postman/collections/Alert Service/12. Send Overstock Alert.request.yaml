@@ -1,0 +1,9 @@
+$kind: http-request
+name: 12. Send Overstock Alert
+url: "{{base_url}}/api/v1/alerts/overstock?productId=105&warehouseId=1&currentQty=250"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 12000

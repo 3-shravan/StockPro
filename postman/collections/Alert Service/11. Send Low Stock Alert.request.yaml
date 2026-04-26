@@ -1,0 +1,9 @@
+$kind: http-request
+name: 11. Send Low Stock Alert
+url: "{{base_url}}/api/v1/alerts/low-stock?productId=105&warehouseId=1&currentQty=4"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 11000

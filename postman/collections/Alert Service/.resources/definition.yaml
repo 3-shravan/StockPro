@@ -1,0 +1,6 @@
+$kind: collection
+description: Endpoints for alert dispatch, read/acknowledge workflow, and notification retrieval.
+order: 7000
+variables:
+  base_url: http://localhost:8087
+  token: ""

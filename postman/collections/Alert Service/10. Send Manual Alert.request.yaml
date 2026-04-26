@@ -1,0 +1,22 @@
+$kind: http-request
+name: 10. Send Manual Alert
+url: "{{base_url}}/api/v1/alerts"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "recipientId": 1,
+      "title": "Manual Test Alert",
+      "message": "This is a manually triggered alert for testing.",
+      "severity": "INFO",
+      "type": "SYSTEM",
+      "channel": "IN_APP"
+    }
+order: 10000
