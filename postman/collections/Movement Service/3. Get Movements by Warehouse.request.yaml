@@ -1,0 +1,9 @@
+$kind: http-request
+name: 3. Get Movements by Warehouse
+url: "{{base_url}}/api/movements/warehouse/1"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

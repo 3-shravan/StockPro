@@ -1,0 +1,26 @@
+$kind: http-request
+name: 1. Record Movement
+url: "{{base_url}}/api/movements"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "productId": 101,
+      "warehouseId": 1,
+      "movementType": "STOCK_IN",
+      "quantity": 50,
+      "referenceId": 5001,
+      "referenceType": "PO",
+      "unitCost": 12.75,
+      "performedBy": 1001,
+      "notes": "GRN received against PO-5001",
+      "balanceAfter": 250
+    }
+order: 1000

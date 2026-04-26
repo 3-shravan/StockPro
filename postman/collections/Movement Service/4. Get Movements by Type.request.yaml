@@ -1,0 +1,9 @@
+$kind: http-request
+name: 4. Get Movements by Type
+url: "{{base_url}}/api/movements/type/STOCK_IN"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000
