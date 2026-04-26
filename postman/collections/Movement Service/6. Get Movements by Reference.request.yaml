@@ -1,0 +1,9 @@
+$kind: http-request
+name: 6. Get Movements by Reference
+url: "{{base_url}}/api/movements/reference/5001"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000

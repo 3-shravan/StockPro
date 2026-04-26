@@ -1,0 +1,6 @@
+$kind: collection
+description: Endpoints for immutable stock movement audit trail, lookup, and stock-in/out aggregation.
+order: 6000
+variables:
+  base_url: http://localhost:8086
+  token: ""

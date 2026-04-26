@@ -1,0 +1,9 @@
+$kind: http-request
+name: 8. Get Stock In Total
+url: "{{base_url}}/api/movements/stock-in/101"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 8000
