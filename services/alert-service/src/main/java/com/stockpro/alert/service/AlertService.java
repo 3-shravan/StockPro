@@ -33,6 +33,8 @@ public interface AlertService {
   void sendEmail(String toEmail, String subject, String body);
 
   void sendOverduePoAlert(int poId, int supplierId, String referenceNumber);
+  
+  void sendTestEmail();
 
   List<AlertResponse> getAll();
 }

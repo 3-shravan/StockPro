@@ -1,0 +1,7 @@
+name: 13. Send Test Email
+method: GET
+url: http://localhost:8087/api/v1/alerts/test-email
+headers:
+  - key: Content-Type
+    value: application/json
+description: Sends a test email to verify SMTP configuration.

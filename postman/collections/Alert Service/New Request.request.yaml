@@ -1,0 +1,5 @@
+$kind: http-request
+name: New Request
+url: http://localhost:8087/api/v1/alerts/test-email
+method: GET
+order: 3509099088052223

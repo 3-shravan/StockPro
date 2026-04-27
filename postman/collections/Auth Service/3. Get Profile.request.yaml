@@ -1,5 +1,6 @@
 $kind: http-request
-url: "{{base_url}}/auth/profile/1"
+name: 3. Get Profile
+url: "{{base_url}}/auth/profile"
 method: GET
 auth:
   type: bearer

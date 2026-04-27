@@ -95,4 +95,10 @@ public class AlertResource {
   public ResponseEntity<ApiResponse<List<AlertResponse>>> getAll() {
     return ResponseEntity.ok(ApiResponse.success("All alerts retrieved successfully", alertService.getAll()));
   }
+  
+  @GetMapping("/test-email")
+  public ResponseEntity<ApiResponse<String>> testEmail() {
+    alertService.sendTestEmail();
+    return ResponseEntity.ok(ApiResponse.success("Test email dispatch initiated. Check logs and inbox.", "Check your email."));
+  }
 }

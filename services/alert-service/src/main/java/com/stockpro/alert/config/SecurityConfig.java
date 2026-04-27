@@ -42,6 +42,7 @@ public class SecurityConfig {
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/v1/alerts/test-email").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/alerts/low-stock", "/api/v1/alerts/overstock").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/v1/alerts/unacknowledged").hasAnyAuthority("MANAGER", "ADMIN")
             .requestMatchers(HttpMethod.POST, "/api/v1/alerts/bulk").hasAuthority("ADMIN")

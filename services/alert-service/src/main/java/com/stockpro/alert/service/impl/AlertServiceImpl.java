@@ -50,7 +50,7 @@ public class AlertServiceImpl implements AlertService {
   @Value("${alert.default.email.to:alerts@stockpro.local}")
   private String defaultEmailTo;
 
-  @Value("${spring.mail.username:noreply@stockpro.local}")
+  @Value("${spring.mail.from:noreply@stockpro.local}")
   private String emailFrom;
 
   @Override
@@ -250,6 +250,12 @@ public class AlertServiceImpl implements AlertService {
     } catch (Exception ex) {
       log.warn("Email dispatch failed: {}", ex.getMessage());
     }
+  }
+
+  @Override
+  public void sendTestEmail() {
+    sendEmail(defaultEmailTo, "TEST ALERT: Connection Verification",
+        "This is a test email to verify that the StockPro Alert Service mail configuration is working correctly.");
   }
 
   @Override
