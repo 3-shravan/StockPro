@@ -1,0 +1,9 @@
+$kind: http-request
+name: 8. Get PO Summary
+url: "{{base_url}}/api/v1/reports/po-summary?start=2026-01-01&end=2026-04-27"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 8000

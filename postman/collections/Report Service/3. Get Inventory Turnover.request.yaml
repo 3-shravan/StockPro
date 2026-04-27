@@ -1,0 +1,9 @@
+$kind: http-request
+name: 3. Get Inventory Turnover
+url: "{{base_url}}/api/v1/reports/turnover/1?start=2026-01-01&end=2026-04-27"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000
