@@ -1,9 +1,9 @@
 $kind: http-request
-name: 3. Get Profile
-url: "{{base_url}}/auth/profile"
+name: 9. Get All Alerts
+url: "{{base_url}}/api/v1/alerts"
 method: GET
 auth:
   type: bearer
   credentials:
     token: "{{token}}"
-order: 3000
+order: 9000

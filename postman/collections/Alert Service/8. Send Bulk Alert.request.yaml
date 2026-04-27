@@ -1,0 +1,22 @@
+$kind: http-request
+name: 8. Send Bulk Alert
+url: "{{base_url}}/api/v1/alerts/bulk"
+method: POST
+headers:
+  Content-Type: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+body:
+  type: text
+  content: |-
+    {
+      "recipientIds": [1, 2, 3],
+      "title": "System Maintenance",
+      "message": "Inventory sync will run at 11:30 PM.",
+      "severity": "INFO",
+      "type": "SYSTEM",
+      "channel": "IN_APP"
+    }
+order: 8000

@@ -30,4 +30,6 @@ public interface PurchaseService {
     List<PurchaseOrder> getPOsByDateRange(LocalDate start, LocalDate end);
 
     List<PurchaseOrder> getAllPOs();
+
+    void dispatchOverdueReceiptAlerts();
 }

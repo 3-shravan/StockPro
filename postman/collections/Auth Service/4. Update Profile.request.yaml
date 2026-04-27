@@ -11,6 +11,7 @@ body:
       "fullName": "Shravan Yadav",
       "phone": "7983364149",
       "department": "Management"
+      "email":"sravan.kumar_cs22@gla.ac.in"
     }
 auth:
   type: bearer

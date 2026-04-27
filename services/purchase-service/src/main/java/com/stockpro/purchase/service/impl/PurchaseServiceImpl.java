@@ -22,10 +22,13 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * PurchaseServiceImpl implements the business logic for the procurement lifecycle.
- * It coordinates between internal database state and external service updates (Warehouse/Product).
+ * PurchaseServiceImpl implements the business logic for the procurement
+ * lifecycle.
+ * It coordinates between internal database state and external service updates
+ * (Warehouse/Product).
  * 
- * Why: This implementation centralizes the "Brain" of the purchase microservice,
+ * Why: This implementation centralizes the "Brain" of the purchase
+ * microservice,
  * ensuring that all status transitions and stock updates happen atomically.
  */
 @Service
@@ -39,9 +42,13 @@ public class PurchaseServiceImpl implements PurchaseService {
     @Value("${services.warehouse.url}")
     private String warehouseServiceUrl;
 
+    @Value("${services.alert.url}")
+    private String alertServiceUrl;
+
     /**
      * Initializes a new Purchase Order in the database.
-     * What: Sets baseline status and calculates monetary totals for the entire order.
+     * What: Sets baseline status and calculates monetary totals for the entire
+     * order.
      */
     @Override
     @Transactional // What: Ensures the PO and all its Line Items are saved together or not at all.
@@ -52,8 +59,10 @@ public class PurchaseServiceImpl implements PurchaseService {
         // Why: Every new order must be a Draft until reviewed by a manager.
         order.setStatus(PurchaseOrderStatus.DRAFT);
 
-        // What: Iterates through line items to set relationships and calculate individual costs.
-        // Why: JPA requires the "Child" items to have a reference to the "Parent" order.
+        // What: Iterates through line items to set relationships and calculate
+        // individual costs.
+        // Why: JPA requires the "Child" items to have a reference to the "Parent"
+        // order.
         double total = order.getLineItems().stream()
                 .peek(item -> {
                     // Link to parent for database foreign key mapping.
@@ -66,9 +75,13 @@ public class PurchaseServiceImpl implements PurchaseService {
                 .mapToDouble(POLineItem::getTotalCost)
                 .sum();
 
-        // Why: Storing a pre-calculated total on the header makes reporting and UI display faster.
+        // Why: Storing a pre-calculated total on the header makes reporting and UI
+        // display faster.
         order.setTotalAmount(total);
-        return purchaseRepository.save(order);
+        PurchaseOrder saved = purchaseRepository.save(order);
+
+        sendPoPendingAlert(saved);
+        return saved;
     }
 
     @Override
@@ -92,16 +105,18 @@ public class PurchaseServiceImpl implements PurchaseService {
     /**
      * Transitions a PO to APPROVED status.
      * What: Validates current status and persists the transition.
-     * Why: Approval is the gatekeeper that allows inventory to be received and money to be spent.
+     * Why: Approval is the gatekeeper that allows inventory to be received and
+     * money to be spent.
      */
     @Override
     @Transactional // Why: Ensures status change is atomic.
     public void approvePO(int poId) {
         log.info("Approving PO ID: {}", poId);
-        
+
         // Fetch the order.
         PurchaseOrder order = purchaseRepository.findById(poId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Purchase Order not found with ID: " + poId));
+                .orElseThrow(
+                        () -> new CustomException(HttpStatus.NOT_FOUND, "Purchase Order not found with ID: " + poId));
 
         // Validation: Only orders that haven't been processed yet can be approved.
         if (order.getStatus() != PurchaseOrderStatus.PENDING_APPROVAL
@@ -112,19 +127,26 @@ public class PurchaseServiceImpl implements PurchaseService {
         // Logic: Move to Approved.
         order.setStatus(PurchaseOrderStatus.APPROVED);
         purchaseRepository.save(order);
+
+        sendPoPendingAlert(order);
     }
 
     /**
-     * Processes physical goods receipt and triggers stock updates in the Warehouse Service.
-     * What: Updates received quantities and makes synchronous REST calls to the warehouse service.
-     * Why: This is the critical integration point where physical stock becomes digital inventory.
+     * Processes physical goods receipt and triggers stock updates in the Warehouse
+     * Service.
+     * What: Updates received quantities and makes synchronous REST calls to the
+     * warehouse service.
+     * Why: This is the critical integration point where physical stock becomes
+     * digital inventory.
      */
     @Override
-    @Transactional // Why: If the warehouse-service call fails, we MUST roll back the database arrival entry.
+    @Transactional // Why: If the warehouse-service call fails, we MUST roll back the database
+                   // arrival entry.
     public void receiveGoods(int poId, List<POLineItem> receivedItems) {
         log.info("Receiving goods for PO ID: {}", poId);
         PurchaseOrder order = purchaseRepository.findById(poId)
-                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Purchase Order not found with ID: " + poId));
+                .orElseThrow(
+                        () -> new CustomException(HttpStatus.NOT_FOUND, "Purchase Order not found with ID: " + poId));
 
         // Security check: Only approved or partially received orders can accept goods.
         if (order.getStatus() != PurchaseOrderStatus.APPROVED
@@ -153,7 +175,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             existingItem.setReceivedQty(newReceivedQty);
 
             // Integration: Call the Warehouse Service to increment the actual stock level.
-            // Why: Inventory balance is owned by the warehouse-service, not the purchase-service.
+            // Why: Inventory balance is owned by the warehouse-service, not the
+            // purchase-service.
             updateWarehouseStock(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity());
         }
 
@@ -176,7 +199,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     /**
      * Internal helper to synchronize stock levels with the Warehouse Service.
      * What: Sends a synchronous PUT request to the external warehouse microservice.
-     * Why: This ensures that our procurement data and the warehouse's inventory data stay in sync.
+     * Why: This ensures that our procurement data and the warehouse's inventory
+     * data stay in sync.
      */
     private void updateWarehouseStock(int warehouseId, int productId, int quantity) {
         log.info("Incrementing stock in warehouse {} for product {}: +{}", warehouseId, productId, quantity);
@@ -193,7 +217,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             restTemplate.put(url, request);
         } catch (Exception e) {
             log.error("Failed to update stock in warehouse-service: {}", e.getMessage());
-            // Why: We throw a CustomException here so the @Transactional receiver (receiveGoods) 
+            // Why: We throw a CustomException here so the @Transactional receiver
+            // (receiveGoods)
             // can catch it and trigger a database rollback.
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Failed to update stock level in warehouse-service");
@@ -209,13 +234,14 @@ public class PurchaseServiceImpl implements PurchaseService {
     @Transactional
     public void cancelPO(int poId) {
         log.info("Cancelling PO ID: {}", poId);
-        
+
         // Fetch order.
         PurchaseOrder order = purchaseRepository.findById(poId)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found with ID: " + poId));
 
         // Logic: Preventing cancellation of fulfilled orders.
-        // Why: If goods are already received, you can't "un-buy" them via simple cancellation.
+        // Why: If goods are already received, you can't "un-buy" them via simple
+        // cancellation.
         if (order.getStatus() == PurchaseOrderStatus.FULLY_RECEIVED
                 || order.getStatus() == PurchaseOrderStatus.PARTIALLY_RECEIVED) {
             throw new CustomException(HttpStatus.BAD_REQUEST, "Cannot cancel already received POs");
@@ -250,7 +276,8 @@ public class PurchaseServiceImpl implements PurchaseService {
         existingOrder.setReferenceNumber(updatedOrder.getReferenceNumber());
 
         // What: Clear and replace line items.
-        // Why: It's safer to rebuild the items list and recalculate totals than to try and sync individual rows.
+        // Why: It's safer to rebuild the items list and recalculate totals than to try
+        // and sync individual rows.
         existingOrder.getLineItems().clear();
         double total = 0;
         for (POLineItem item : updatedOrder.getLineItems()) {
@@ -258,7 +285,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             item.setPurchaseOrder(existingOrder);
             item.setTotalCost(item.getQuantity() * item.getUnitCost());
             item.setReceivedQty(0);
-            
+
             existingOrder.getLineItems().add(item);
             total += item.getTotalCost();
         }
@@ -283,5 +310,50 @@ public class PurchaseServiceImpl implements PurchaseService {
     @Transactional(readOnly = true)
     public List<PurchaseOrder> getAllPOs() {
         return purchaseRepository.findAll();
+    }
+
+    private void sendPoPendingAlert(PurchaseOrder order) {
+        try {
+            String url = alertServiceUrl + "/alerts";
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("recipientId", 1);
+            payload.put("type", "PO_PENDING");
+            payload.put("severity", "INFO");
+            payload.put("title", "PO pending approval");
+            payload.put("message", "PO " + order.getPoId() + " requires/has gone through approval workflow.");
+            payload.put("relatedWarehouseId", order.getWarehouseId());
+            payload.put("channel", "IN_APP");
+            restTemplate.postForEntity(url, payload, Object.class);
+        } catch (Exception ex) {
+            log.warn("PO pending alert dispatch failed for PO {}: {}", order.getPoId(), ex.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public void dispatchOverdueReceiptAlerts() {
+        LocalDate today = LocalDate.now();
+        List<PurchaseOrder> approvedOrders = purchaseRepository.findByStatus(PurchaseOrderStatus.APPROVED);
+
+        approvedOrders.stream()
+                .filter(order -> order.getExpectedDate() != null && order.getExpectedDate().isBefore(today))
+                .forEach(this::sendOverdueReceiptAlert);
+    }
+
+    private void sendOverdueReceiptAlert(PurchaseOrder order) {
+        try {
+            String url = alertServiceUrl + "/alerts";
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("recipientId", 1);
+            payload.put("type", "OVERDUE_RECEIPT");
+            payload.put("severity", "CRITICAL");
+            payload.put("title", "Overdue PO receipt");
+            payload.put("message",
+                    "PO " + order.getPoId() + " is overdue. Expected date was " + order.getExpectedDate() + ".");
+            payload.put("relatedWarehouseId", order.getWarehouseId());
+            payload.put("channel", "BOTH");
+            restTemplate.postForEntity(url, payload, Object.class);
+        } catch (Exception ex) {
+            log.warn("Overdue receipt alert dispatch failed for PO {}: {}", order.getPoId(), ex.getMessage());
+        }
     }
 }

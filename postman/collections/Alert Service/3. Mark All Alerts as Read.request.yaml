@@ -1,0 +1,9 @@
+$kind: http-request
+name: 3. Mark All Alerts as Read
+url: "{{base_url}}/api/v1/alerts/recipient/1/read-all"
+method: PUT
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

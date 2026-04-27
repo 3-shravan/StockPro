@@ -1,0 +1,9 @@
+$kind: http-request
+name: 4. Acknowledge Alert
+url: "{{base_url}}/api/v1/alerts/2/acknowledge"
+method: PUT
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000

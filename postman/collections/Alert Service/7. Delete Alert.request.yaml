@@ -1,0 +1,9 @@
+$kind: http-request
+name: 7. Delete Alert
+url: "{{base_url}}/api/v1/alerts/1"
+method: DELETE
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 7000
