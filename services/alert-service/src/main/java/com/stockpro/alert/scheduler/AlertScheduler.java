@@ -1,9 +1,12 @@
 package com.stockpro.alert.scheduler;
 
+import com.stockpro.alert.common.response.ApiResponse;
 import com.stockpro.alert.service.AlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -13,6 +16,12 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * AlertScheduler — Periodically scans other services for conditions that require alerts.
+ * 
+ * <p>Uses the standardized ApiResponse and RestTemplate with ParameterizedTypeReference
+ * to ensure type safety and consistent communication between microservices.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -36,13 +45,22 @@ public class AlertScheduler {
         log.info("Starting scheduled low-stock scan...");
         try {
             String url = warehouseServiceUrl + "/api/v1/stock/low-stock";
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             
-            if (response.getBody() != null && response.getBody().get("data") != null) {
-                List<Map> lowStockItems = (List<Map>) response.getBody().get("data");
+            // Use ParameterizedTypeReference to safely handle the generic ApiResponse<List<Map<String, Object>>>
+            ResponseEntity<ApiResponse<List<Map<String, Object>>>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
+            );
+            
+            ApiResponse<List<Map<String, Object>>> apiResponse = response.getBody();
+            
+            if (apiResponse != null && apiResponse.getData() != null) {
+                List<Map<String, Object>> lowStockItems = apiResponse.getData();
                 log.info("Found {} low stock items", lowStockItems.size());
                 
-                for (Map item : lowStockItems) {
+                for (Map<String, Object> item : lowStockItems) {
                     int productId = (Integer) item.get("productId");
                     int warehouseId = (Integer) item.get("warehouseId");
                     int quantity = (Integer) item.get("quantity");
@@ -63,13 +81,22 @@ public class AlertScheduler {
         try {
             // Get all approved POs
             String url = purchaseServiceUrl + "/api/v1/purchase-orders/status/APPROVED";
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             
-            if (response.getBody() != null && response.getBody().get("data") != null) {
-                List<Map> pos = (List<Map>) response.getBody().get("data");
+            // Use ParameterizedTypeReference for type safety
+            ResponseEntity<ApiResponse<List<Map<String, Object>>>> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
+            );
+            
+            ApiResponse<List<Map<String, Object>>> apiResponse = response.getBody();
+            
+            if (apiResponse != null && apiResponse.getData() != null) {
+                List<Map<String, Object>> pos = apiResponse.getData();
                 LocalDate today = LocalDate.now();
                 
-                for (Map po : pos) {
+                for (Map<String, Object> po : pos) {
                     String expectedDateStr = (String) po.get("expectedDate");
                     if (expectedDateStr != null) {
                         LocalDate expectedDate = LocalDate.parse(expectedDateStr);

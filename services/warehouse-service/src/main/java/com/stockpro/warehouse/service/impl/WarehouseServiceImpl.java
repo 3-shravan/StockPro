@@ -106,16 +106,32 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Transactional
     public void updateStock(int warehouseId, int productId, int quantity) {
         log.info("Updating stock for warehouse {} product {}: new quantity {}", warehouseId, productId, quantity);
-        StockLevel stockLevel = stockLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)
-                .orElse(StockLevel.builder()
-                        .warehouseId(warehouseId)
-                        .productId(productId)
-                        .build());
-
+        StockLevel stockLevel = getOrCreateStockLevel(warehouseId, productId);
         stockLevel.setQuantity(quantity);
         stockLevel.setLastUpdated(LocalDateTime.now());
         StockLevel saved = stockLevelRepository.save(stockLevel);
         evaluateAndDispatchStockAlerts(saved);
+    }
+
+    @Override
+    @Transactional
+    public void adjustStock(int warehouseId, int productId, int delta) {
+        log.info("Adjusting stock for warehouse {} product {}: delta {}", warehouseId, productId, delta);
+        StockLevel stockLevel = getOrCreateStockLevel(warehouseId, productId);
+        stockLevel.setQuantity(stockLevel.getQuantity() + delta);
+        stockLevel.setLastUpdated(LocalDateTime.now());
+        StockLevel saved = stockLevelRepository.save(stockLevel);
+        evaluateAndDispatchStockAlerts(saved);
+    }
+
+    private StockLevel getOrCreateStockLevel(int warehouseId, int productId) {
+        return stockLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)
+                .orElse(StockLevel.builder()
+                        .warehouseId(warehouseId)
+                        .productId(productId)
+                        .quantity(0)
+                        .reservedQuantity(0)
+                        .build());
     }
 
     @Override

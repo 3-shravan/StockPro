@@ -20,6 +20,7 @@ public interface PurchaseMapper {
     @Mapping(target = "receivedDate", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "orderDate", ignore = true) // Handled by @PrePersist in entity
     @Mapping(target = "createdById", ignore = true) // Will be set from SecurityContext
     PurchaseOrder toEntity(PurchaseOrderRequest request);
 
@@ -29,6 +30,8 @@ public interface PurchaseMapper {
     @Mapping(target = "receivedQty", ignore = true)
     POLineItem toEntity(POLineItemRequest request);
 
+    @Mapping(target = "supplierName", ignore = true)
+    @Mapping(target = "warehouseName", ignore = true)
     PurchaseOrderResponse toResponse(PurchaseOrder order);
 
     @Mapping(target = "productName", ignore = true)

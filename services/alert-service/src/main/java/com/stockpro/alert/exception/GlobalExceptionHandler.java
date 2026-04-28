@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import org.springframework.security.access.AccessDeniedException;
 import java.util.stream.Collectors;
+
 
 @Slf4j
 @RestControllerAdvice
@@ -41,6 +43,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiResponse<Void>> handleNoHandlerFound(NoHandlerFoundException ex) {
     log.warn("No mapping for {} {}", ex.getHttpMethod(), ex.getRequestURL());
     return build(HttpStatus.NOT_FOUND, "No endpoint " + ex.getHttpMethod() + " " + ex.getRequestURL() + ".");
+  }
+
+  @ExceptionHandler(AccessDeniedException.class)
+  public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+    log.warn("Access denied: {}", ex.getMessage());
+    return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action.");
   }
 
   @ExceptionHandler(Exception.class)

@@ -1,0 +1,8 @@
+$kind: http-request
+url: http://localhost:8080/api/v1/auth/users
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{jwt_token}}"
+order: 2000

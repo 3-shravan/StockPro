@@ -1,0 +1,4 @@
+$kind: collection
+description: Collection to test the centralized API Gateway (port 8080) and its routing to various microservices.
+variables:
+  jwt_token: ""

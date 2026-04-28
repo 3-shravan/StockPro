@@ -15,6 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import com.stockpro.purchase.common.response.ApiResponse;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +48,9 @@ public class PurchaseServiceImpl implements PurchaseService {
 
     @Value("${services.alert.url}")
     private String alertServiceUrl;
+
+    @Value("${services.movement.url}")
+    private String movementServiceUrl;
 
     /**
      * Initializes a new Purchase Order in the database.
@@ -177,7 +184,10 @@ public class PurchaseServiceImpl implements PurchaseService {
             // Integration: Call the Warehouse Service to increment the actual stock level.
             // Why: Inventory balance is owned by the warehouse-service, not the
             // purchase-service.
-            updateWarehouseStock(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity());
+            int finalQty = adjustWarehouseStock(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity());
+
+            // Integration: Record the movement in the Movement Service.
+            recordStockMovement(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity(), order.getPoId(), finalQty, existingItem.getUnitCost());
         }
 
         // Status Logic: Check if the entire order is now complete.
@@ -202,9 +212,10 @@ public class PurchaseServiceImpl implements PurchaseService {
      * Why: This ensures that our procurement data and the warehouse's inventory
      * data stay in sync.
      */
-    private void updateWarehouseStock(int warehouseId, int productId, int quantity) {
-        log.info("Incrementing stock in warehouse {} for product {}: +{}", warehouseId, productId, quantity);
-        String url = warehouseServiceUrl + "/stock/update";
+    private int adjustWarehouseStock(int warehouseId, int productId, int quantity) {
+        log.info("Adjusting stock in warehouse {} for product {}: +{}", warehouseId, productId, quantity);
+        String url = warehouseServiceUrl + "/warehouses/stock/adjust";
+        String getUrl = warehouseServiceUrl + "/warehouses/" + warehouseId + "/stock/" + productId;
 
         // Build the payload for the external API.
         Map<String, Object> request = new HashMap<>();
@@ -215,13 +226,51 @@ public class PurchaseServiceImpl implements PurchaseService {
         try {
             // Logic: Perform the update.
             restTemplate.put(url, request);
+
+            // Fetch final quantity for movement record
+            ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+                getUrl,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+            );
+            
+            if (response.getBody() != null && response.getBody().getData() != null) {
+                return (Integer) response.getBody().getData().get("quantity");
+            }
+            return 0;
         } catch (Exception e) {
-            log.error("Failed to update stock in warehouse-service: {}", e.getMessage());
+            log.error("Failed to adjust stock in warehouse-service: {}", e.getMessage());
             // Why: We throw a CustomException here so the @Transactional receiver
             // (receiveGoods)
             // can catch it and trigger a database rollback.
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Failed to update stock level in warehouse-service");
+        }
+    }
+
+    private void recordStockMovement(int warehouseId, int productId, int quantity, int poId, int balanceAfter, double unitCost) {
+        log.info("Recording stock movement for PO {}: product {}, qty {}", poId, productId, quantity);
+        String url = movementServiceUrl + "/movements";
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("productId", productId);
+        request.put("warehouseId", warehouseId);
+        request.put("quantity", quantity);
+        request.put("movementType", "STOCK_IN");
+        request.put("referenceId", poId);
+        request.put("referenceType", "PURCHASE_ORDER");
+        request.put("unitCost", unitCost);
+        request.put("performedBy", 1); // System/Default user
+        request.put("balanceAfter", balanceAfter);
+        request.put("notes", "Received from PO #" + poId);
+
+        try {
+            restTemplate.postForEntity(url, request, Object.class);
+        } catch (Exception e) {
+            log.warn("Failed to record stock movement: {}", e.getMessage());
+            // We don't fail the whole transaction for a movement log failure, 
+            // but in a production system we might want to ensure consistency.
         }
     }
 

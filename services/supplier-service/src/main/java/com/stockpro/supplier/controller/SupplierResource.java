@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/suppliers")
+@RequestMapping("/suppliers")
 @RequiredArgsConstructor
 @Slf4j
 public class SupplierResource {
@@ -82,7 +82,7 @@ public class SupplierResource {
     }
 
     @PutMapping("/{id}/rating")
-    @PreAuthorize("hasRole('OFFICER')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> updateRating(@PathVariable int id, @RequestParam double rating) {
         log.info("API: Updating supplier rating ID={}, rating={}", id, rating);
         supplierService.updateRating(id, rating);
