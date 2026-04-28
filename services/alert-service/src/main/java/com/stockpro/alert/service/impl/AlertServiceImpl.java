@@ -11,9 +11,12 @@ import com.stockpro.alert.exception.CustomException;
 import com.stockpro.alert.mapper.AlertMapper;
 import com.stockpro.alert.repository.AlertRepository;
 import com.stockpro.alert.service.AlertService;
+import com.stockpro.alert.common.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
@@ -267,10 +270,16 @@ public class AlertServiceImpl implements AlertService {
 
   private String getProductName(int productId) {
     try {
-      String url = productServiceUrl + "/api/v1/products/" + productId;
-      ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-      if (response.getBody() != null && response.getBody().get("data") != null) {
-        Map data = (Map) response.getBody().get("data");
+      String url = productServiceUrl + "/products/" + productId;
+      ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          null,
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+      );
+      ApiResponse<Map<String, Object>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        Map<String, Object> data = apiResponse.getData();
         return (String) data.get("name");
       }
     } catch (Exception e) {
@@ -281,10 +290,16 @@ public class AlertServiceImpl implements AlertService {
 
   private String getWarehouseName(int warehouseId) {
     try {
-      String url = warehouseServiceUrl + "/api/v1/warehouses/" + warehouseId;
-      ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-      if (response.getBody() != null && response.getBody().get("data") != null) {
-        Map data = (Map) response.getBody().get("data");
+      String url = warehouseServiceUrl + "/warehouses/" + warehouseId;
+      ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          null,
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+      );
+      ApiResponse<Map<String, Object>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        Map<String, Object> data = apiResponse.getData();
         return (String) data.get("name");
       }
     } catch (Exception e) {
@@ -295,10 +310,18 @@ public class AlertServiceImpl implements AlertService {
 
   private String getSupplierName(int supplierId) {
     try {
-      String url = supplierServiceUrl + "/api/v1/suppliers/" + supplierId;
-      ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-      if (response.getBody() != null && response.getBody().get("data") != null) {
-        Map data = (Map) response.getBody().get("data");
+      String url = supplierServiceUrl + "/suppliers/" + supplierId;
+      
+      ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          null,
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+      );
+
+      ApiResponse<Map<String, Object>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        Map<String, Object> data = apiResponse.getData();
         return (String) data.get("name");
       }
     } catch (Exception e) {
@@ -309,10 +332,18 @@ public class AlertServiceImpl implements AlertService {
 
   private List<Integer> getAdminAndManagerIds() {
     try {
-      String url = authServiceUrl + "/api/v1/auth/users";
-      ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-      if (response.getBody() != null && response.getBody().get("data") != null) {
-        List<Map> users = (List<Map>) response.getBody().get("data");
+      String url = authServiceUrl + "/auth/users";
+      
+      ResponseEntity<ApiResponse<List<Map<String, Object>>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          null,
+          new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
+      );
+
+      ApiResponse<List<Map<String, Object>>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        List<Map<String, Object>> users = apiResponse.getData();
         return users.stream()
             .filter(u -> "ADMIN".equals(u.get("role")) || "MANAGER".equals(u.get("role")))
             .map(u -> (Integer) u.get("userId"))

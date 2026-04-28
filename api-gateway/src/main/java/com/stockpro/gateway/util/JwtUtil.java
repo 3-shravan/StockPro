@@ -1,4 +1,4 @@
-package com.stockpro.purchase.common.util;
+package com.stockpro.gateway.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -31,31 +31,12 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public String extractEmail(String token) {
-        return extractAllClaims(token).getSubject();
-    }
-
-    public String extractRole(String token) {
-        return extractAllClaims(token).get("role", String.class);
-    }
-
-    public Integer extractUserId(String token) {
-        return extractAllClaims(token).get("userId", Integer.class);
-    }
-
-    public boolean isTokenStructurallyValid(String token) {
+    public boolean isTokenValid(String token) {
         try {
             Claims claims = extractAllClaims(token);
-            boolean valid = claims.getExpiration().after(new Date());
-            if (!valid) {
-                log.debug("Token structural check failed — token is expired");
-            }
-            return valid;
+            return claims.getExpiration().after(new Date());
         } catch (JwtException ex) {
-            log.debug("Token structural check failed — {}", ex.getMessage());
-            return false;
-        } catch (Exception ex) {
-            log.warn("Unexpected error during token structural validation: {}", ex.getMessage());
+            log.debug("Token validation failed: {}", ex.getMessage());
             return false;
         }
     }

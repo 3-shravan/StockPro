@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping({ "/api/v1/movements", "/api/movements" })
+@RequestMapping("/movements")
 @RequiredArgsConstructor
 @Slf4j
 public class MovementController {

@@ -7,6 +7,7 @@ import com.stockpro.alert.dto.response.AlertResponse;
 import com.stockpro.alert.service.AlertService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -14,8 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/alerts")
+@RequestMapping("/alerts")
 @RequiredArgsConstructor
+@Slf4j
 public class AlertResource {
 
   private final AlertService alertService;

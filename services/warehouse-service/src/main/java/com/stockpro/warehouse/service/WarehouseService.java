@@ -22,7 +22,7 @@ public interface WarehouseService {
     Optional<StockLevelResponse> getStockLevel(int warehouseId, int productId);
 
     void updateStock(int warehouseId, int productId, int quantity);
-
+    void adjustStock(int warehouseId, int productId, int delta);
     void reserveStock(int warehouseId, int productId, int quantity);
 
     void releaseReservation(int warehouseId, int productId, int quantity);

@@ -9,6 +9,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -289,8 +291,15 @@ public class PurchaseResource {
                 try {
                     // Fetch product details from product-service
                     String url = productServiceUrl + "/" + item.getProductId();
-                    ApiResponse<Map<String, Object>> productResponse = restTemplate.getForObject(url,
-                            ApiResponse.class);
+                    // Use ParameterizedTypeReference for type-safe enrichment
+                    ResponseEntity<ApiResponse<Map<String, Object>>> productResponseEntity = restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        null,
+                        new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+                    );
+                    
+                    ApiResponse<Map<String, Object>> productResponse = productResponseEntity.getBody();
                     if (productResponse != null && productResponse.getData() != null) {
                         Map<String, Object> productData = productResponse.getData();
                         item.setProductName((String) productData.get("name"));
@@ -313,7 +322,8 @@ public class PurchaseResource {
     private Integer getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getDetails() instanceof Map) {
-            Map<?, ?> details = (Map<?, ?>) auth.getDetails();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> details = (Map<String, Object>) auth.getDetails();
             Object userIdObj = details.get("userId");
             if (userIdObj instanceof Integer) {
                 return (Integer) userIdObj;
