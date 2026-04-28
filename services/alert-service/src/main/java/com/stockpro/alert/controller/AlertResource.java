@@ -23,7 +23,7 @@ public class AlertResource {
   private final AlertService alertService;
 
   @PostMapping
-  @PreAuthorize("hasAnyAuthority('MANAGER', 'ADMIN')")
+  @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
   public ResponseEntity<ApiResponse<AlertResponse>> sendAlert(@Valid @RequestBody AlertRequest request) {
     return ResponseEntity.ok(ApiResponse.success("Alert sent successfully", alertService.sendAlert(request)));
   }
@@ -73,27 +73,27 @@ public class AlertResource {
   }
 
   @GetMapping("/unacknowledged")
-  @PreAuthorize("hasAnyAuthority('MANAGER', 'ADMIN')")
+  @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
   public ResponseEntity<ApiResponse<List<AlertResponse>>> getUnacknowledged() {
     return ResponseEntity.ok(ApiResponse.success("Unacknowledged alerts retrieved", alertService.getUnacknowledged()));
   }
 
   @DeleteMapping("/{id}")
-  @PreAuthorize("hasAuthority('ADMIN')")
+  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<ApiResponse<Void>> delete(@PathVariable int id) {
     alertService.deleteAlert(id);
     return ResponseEntity.ok(ApiResponse.success("Alert deleted successfully", null));
   }
 
   @PostMapping("/bulk")
-  @PreAuthorize("hasAuthority('ADMIN')")
+  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<ApiResponse<Void>> sendBulk(@Valid @RequestBody BulkAlertRequest request) {
     alertService.sendBulk(request);
     return ResponseEntity.ok(ApiResponse.success("Bulk alerts sent successfully", null));
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('ADMIN')")
+  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<ApiResponse<List<AlertResponse>>> getAll() {
     return ResponseEntity.ok(ApiResponse.success("All alerts retrieved successfully", alertService.getAll()));
   }

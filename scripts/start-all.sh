@@ -17,17 +17,36 @@ fi
 # Resolve project root relative to script location
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# --- Cleanup existing services ---
+echo "Cleaning up existing StockPro services..."
+for port in 8761 8080 8081 8082 8083 8084 8085 8086 8087; do
+  PIDS=$(lsof -ti:$port)
+  if [ ! -z "$PIDS" ]; then
+    echo "  Killing processes on port $port (PIDs: $(echo $PIDS | xargs))"
+    echo "$PIDS" | xargs kill -9 2>/dev/null
+  fi
+done
+echo ""
+
 start_service() {
   local name=$1
   local jar_path=$2
   local port=$3
   local log_file="$ROOT/logs/$name.log"
+  
+  # Determine service root for .env loading
+  local service_root=$(dirname "$(dirname "$jar_path")")
 
   mkdir -p "$ROOT/logs"
 
   echo "Starting $name on port $port..."
+  # Change to service directory, start jar, then change back
+  cd "$service_root"
   nohup java -jar "$jar_path" > "$log_file" 2>&1 &
-  echo "  PID=$! | Log: $log_file"
+  local pid=$!
+  cd - > /dev/null
+  
+  echo "  PID=$pid | Log: $log_file"
 }
 
 echo "========================================="
