@@ -1,23 +1,44 @@
 #!/bin/bash
-export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home
-# Resolve project root relative to script location
+# ============================================================
+# StockPro — Build All Services
+# Usage: chmod +x build-all.sh && ./build-all.sh
+# ============================================================
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo "🔨 Building All Services..."
+echo "========================================="
+echo " StockPro Microservices Build"
+echo "========================================="
+echo ""
 
-build_service() {
-  echo "Building $1..."
-  mvn clean package -DskipTests -f "$ROOT/$2/pom.xml"
+build_module() {
+  local path=$1
+  local name=$(basename "$path")
+  echo "Building $name..."
+  cd "$ROOT/$path" || exit
+  mvn clean install -DskipTests
+  if [ $? -ne 0 ]; then
+    echo "❌ Build failed for $name"
+    exit 1
+  fi
+  cd - > /dev/null
+  echo "✅ Finished $name"
+  echo ""
 }
 
-build_service "discovery-server" "discovery-server"
-build_service "api-gateway" "api-gateway"
-build_service "auth-service" "services/auth-service"
-build_service "product-service" "services/product-service"
-build_service "warehouse-service" "services/warehouse-service"
-build_service "purchase-service" "services/purchase-service"
-build_service "supplier-service" "services/supplier-service"
-build_service "movement-service" "services/movement-service"
-build_service "alert-service" "services/alert-service"
+# 1. Infrastructure
+build_module "discovery-server"
+build_module "api-gateway"
 
-echo "✅ All builds completed."
+# 2. Services
+build_module "services/auth-service"
+build_module "services/product-service"
+build_module "services/warehouse-service"
+build_module "services/purchase-service"
+build_module "services/supplier-service"
+build_module "services/movement-service"
+build_module "services/alert-service"
+
+echo "========================================="
+echo " All services built successfully!"
+echo "========================================="
