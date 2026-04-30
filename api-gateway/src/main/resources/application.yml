@@ -99,6 +99,15 @@ spring:
             - name: AuthenticationFilter
             - StripPrefix=2
 
+        # Report Service
+        - id: report-service
+          uri: lb://report-service
+          predicates:
+            - Path=/api/v1/reports/**
+          filters:
+            - name: AuthenticationFilter
+            - StripPrefix=2
+
 # ── Eureka Service Discovery ────────────────────────────────────────────────
 eureka:
   client:

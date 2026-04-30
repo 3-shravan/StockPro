@@ -5,7 +5,7 @@
 # ============================================================
 
 echo "Stopping all StockPro microservices..."
-for port in 8761 8080 8081 8082 8083 8084 8085 8086 8087; do
+for port in 8761 8080 8081 8082 8083 8084 8085 8086 8087 8088; do
   PIDS=$(lsof -ti:$port)
   if [ ! -z "$PIDS" ]; then
     echo "  Stopping processes on port $port (PIDs: $(echo $PIDS | xargs))"

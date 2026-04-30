@@ -12,3 +12,17 @@ logs/
 .vscode/
 .idea/
 *.iml
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Mac
+.DS_Store
+
+# Frontend
+dist/
+build/
+.next/
+.vite/
+/scratch

@@ -19,7 +19,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # --- Cleanup existing services ---
 echo "Cleaning up existing StockPro services..."
-for port in 8761 8080 8081 8082 8083 8084 8085 8086 8087; do
+for port in 8761 8080 8081 8082 8083 8084 8085 8086 8087 8088; do
   PIDS=$(lsof -ti:$port)
   if [ ! -z "$PIDS" ]; then
     echo "  Killing processes on port $port (PIDs: $(echo $PIDS | xargs))"
@@ -72,6 +72,7 @@ start_service "purchase-service" "$ROOT/services/purchase-service/target/purchas
 start_service "supplier-service" "$ROOT/services/supplier-service/target/supplier-service-0.0.1-SNAPSHOT.jar" 8085
 start_service "movement-service" "$ROOT/services/movement-service/target/movement-service-0.0.1-SNAPSHOT.jar" 8086
 start_service "alert-service"    "$ROOT/services/alert-service/target/alert-service-0.0.1-SNAPSHOT.jar"       8087
+start_service "report-service"   "$ROOT/services/report-service/target/report-service-0.0.1-SNAPSHOT.jar"      8088
 
 echo ""
 echo "========================================="
