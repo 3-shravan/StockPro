@@ -22,5 +22,6 @@ clean_service "purchase-service" "services/purchase-service"
 clean_service "supplier-service" "services/supplier-service"
 clean_service "movement-service" "services/movement-service"
 clean_service "alert-service" "services/alert-service"
+clean_service "report-service" "services/report-service"
 
 echo "✅ All clean operations completed."

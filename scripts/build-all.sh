@@ -38,6 +38,7 @@ build_module "services/purchase-service"
 build_module "services/supplier-service"
 build_module "services/movement-service"
 build_module "services/alert-service"
+build_module "services/report-service"
 
 echo "========================================="
 echo " All services built successfully!"
