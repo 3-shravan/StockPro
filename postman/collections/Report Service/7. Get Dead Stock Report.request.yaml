@@ -1,0 +1,9 @@
+$kind: http-request
+name: 7. Get Dead Stock Report
+url: "{{base_url}}/api/v1/reports/dead-stock"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 7000

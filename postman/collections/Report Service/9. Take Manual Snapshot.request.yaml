@@ -1,0 +1,9 @@
+$kind: http-request
+name: 9. Take Manual Snapshot
+url: "{{base_url}}/api/v1/reports/snapshot/1?productId=1"
+method: POST
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 9000

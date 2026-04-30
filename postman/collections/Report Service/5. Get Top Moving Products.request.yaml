@@ -1,0 +1,9 @@
+$kind: http-request
+name: 5. Get Top Moving Products
+url: "{{base_url}}/api/v1/reports/top-moving?limit=10"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 5000

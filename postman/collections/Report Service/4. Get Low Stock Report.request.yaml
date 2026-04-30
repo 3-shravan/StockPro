@@ -1,0 +1,9 @@
+$kind: http-request
+name: 4. Get Low Stock Report
+url: "{{base_url}}/api/v1/reports/low-stock"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 4000

@@ -1,0 +1,9 @@
+$kind: http-request
+name: 1. Get Total Stock Value
+url: "{{base_url}}/api/v1/reports/total-value"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 1000

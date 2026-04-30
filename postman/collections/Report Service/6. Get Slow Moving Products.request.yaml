@@ -1,0 +1,9 @@
+$kind: http-request
+name: 6. Get Slow Moving Products
+url: "{{base_url}}/api/v1/reports/slow-moving?limit=10"
+method: GET
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 6000
