@@ -12,3 +12,9 @@ logs/
 .vscode/
 .idea/
 *.iml
+.m2/
+
+
+node_modules/
+dist/
+

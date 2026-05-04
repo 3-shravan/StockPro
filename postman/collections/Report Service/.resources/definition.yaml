@@ -1,0 +1,6 @@
+$kind: collection
+description: Endpoints for generating inventory and purchase reports.
+order: 8000
+variables:
+  base_url: http://localhost:8088
+  token: ""
