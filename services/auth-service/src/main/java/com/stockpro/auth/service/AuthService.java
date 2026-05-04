@@ -2,6 +2,8 @@ package com.stockpro.auth.service;
 
 import java.util.List;
 
+import com.stockpro.auth.dto.AuthResponse;
+import com.stockpro.auth.dto.UserUpdateRequest;
 import com.stockpro.auth.model.User;
 
 /**
@@ -22,13 +24,14 @@ public interface AuthService {
     User register(User user);
 
     /**
-     * Authenticate a user via email + password and return a JWT token string.
+     * Authenticate a user via email + password and return the frontend auth
+     * contract.
      *
      * @param email    user email
      * @param password raw password
-     * @return JWT token string
+     * @return token, role, and user id
      */
-    String login(String email, String password);
+    AuthResponse login(String email, String password);
 
     /**
      * Invalidate a JWT token by adding it to the in-memory blacklist.
@@ -79,6 +82,15 @@ public interface AuthService {
     User updateProfile(int id, User user);
 
     /**
+     * Admin-only update for managed users.
+     *
+     * @param id   userId of the user to update
+     * @param user User entity carrying updated fields
+     * @return updated {@link User} entity
+     */
+    User updateUser(int id, UserUpdateRequest user);
+
+    /**
      * Change a user's password.
      *
      * @param id          userId
@@ -93,6 +105,13 @@ public interface AuthService {
      * @param id userId to deactivate
      */
     void deactivate(int id);
+
+    /**
+     * Hard-delete a user account.
+     *
+     * @param id userId to delete
+     */
+    void deleteUser(int id);
  
     /**
      * Retrieve all registered users.

@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,6 +20,7 @@ import com.stockpro.auth.common.response.ApiResponse;
 import com.stockpro.auth.dto.AuthResponse;
 import com.stockpro.auth.dto.RegisterRequest;
 import com.stockpro.auth.dto.TokenRequest;
+import com.stockpro.auth.dto.UserUpdateRequest;
 import com.stockpro.auth.exception.CustomException;
 import com.stockpro.auth.model.User;
 import com.stockpro.auth.service.AuthService;
@@ -39,6 +41,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<User>> register(@Valid @RequestBody RegisterRequest request) {
         log.info("POST /auth/register — email={}", request.getEmail());
 
@@ -59,8 +62,8 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody Map<String, String> credentials) {
         log.info("POST /auth/login — email={}", credentials.get("email"));
-        String token = authService.login(credentials.get("email"), credentials.get("password"));
-        return ResponseEntity.ok(ApiResponse.success("Login successful", new AuthResponse(token)));
+        AuthResponse response = authService.login(credentials.get("email"), credentials.get("password"));
+        return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
     @PostMapping("/logout")
@@ -82,7 +85,9 @@ public class AuthController {
         log.info("POST /auth/refresh");
         String token = resolveToken(authHeader, request);
         String newToken = authService.refreshToken(token);
-        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", new AuthResponse(newToken)));
+        return ResponseEntity.ok(ApiResponse.success(
+                "Token refreshed successfully",
+                AuthResponse.builder().token(newToken).build()));
     }
 
     @GetMapping("/profile/{id}")
@@ -119,10 +124,28 @@ public class AuthController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
         log.info("GET /auth/users");
         return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", authService.getAllUsers()));
+    }
+
+    @PutMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<User>> updateUser(
+            @PathVariable int id,
+            @RequestBody UserUpdateRequest user) {
+
+        log.info("PUT /auth/users/{}", id);
+        return ResponseEntity.ok(ApiResponse.success("User updated successfully", authService.updateUser(id, user)));
+    }
+
+    @DeleteMapping("/users/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable int id) {
+        log.info("DELETE /auth/users/{}", id);
+        authService.deleteUser(id);
+        return ResponseEntity.ok(ApiResponse.success("User deleted successfully", null));
     }
 
     @GetMapping("/me")

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.stockpro.auth.config.JwtUtil;
 import com.stockpro.auth.dto.AuthResponse;
+import com.stockpro.auth.dto.UserUpdateRequest;
 import com.stockpro.auth.exception.CustomException;
 import com.stockpro.auth.model.User;
 import com.stockpro.auth.repository.UserRepository;
@@ -78,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     @Transactional
-    public String login(String email, String password) {
+    public AuthResponse login(String email, String password) {
         log.info("Login attempt for email: {}", email);
 
         User user = userRepository.findByEmail(email)
@@ -112,7 +113,11 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Login successful — userId={}, role={}", user.getUserId(), user.getRole());
 
-        return token;
+        return AuthResponse.builder()
+                .token(token)
+                .role(user.getRole().name())
+                .userId(user.getUserId())
+                .build();
     }
 
     // ─── Logout ──────────────────────────────────────────────────────────────
@@ -225,6 +230,44 @@ public class AuthServiceImpl implements AuthService {
         return updated;
     }
 
+    @Override
+    @Transactional
+    public User updateUser(int id, UserUpdateRequest request) {
+        log.info("Admin user update requested for userId={}", id);
+
+        User user = getUserById(id);
+
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName());
+        }
+        if (request.getEmail() != null && !request.getEmail().isBlank()
+                && !request.getEmail().equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new CustomException(
+                        "Email is already registered: " + request.getEmail(),
+                        HttpStatus.CONFLICT);
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getDepartment() != null) {
+            user.setDepartment(request.getDepartment());
+        }
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+
+        if (request.getIsActive() != null) {
+            user.setActive(request.getIsActive());
+        }
+
+        User updated = userRepository.save(user);
+        log.info("Admin user update completed for userId={}", id);
+        return updated;
+    }
+
     // ─── Change Password ─────────────────────────────────────────────────────
 
     @Override
@@ -260,6 +303,17 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         log.info("User deactivated — userId={}", id);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(int id) {
+        log.info("Hard delete requested for userId={}", id);
+
+        User user = getUserById(id);
+        userRepository.delete(user);
+
+        log.info("User deleted — userId={}", id);
     }
 
     @Override
