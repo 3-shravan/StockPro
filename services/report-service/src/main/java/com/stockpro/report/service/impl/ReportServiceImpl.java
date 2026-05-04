@@ -1,19 +1,20 @@
 package com.stockpro.report.service.impl;
 
-import com.stockpro.report.entity.InventorySnapshot;
-import com.stockpro.report.repository.ReportRepository;
-import com.stockpro.report.service.ReportService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.stockpro.report.entity.InventorySnapshot;
+import com.stockpro.report.repository.ReportRepository;
+import com.stockpro.report.service.ReportService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor

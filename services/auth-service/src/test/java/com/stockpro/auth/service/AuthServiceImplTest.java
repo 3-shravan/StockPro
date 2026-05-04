@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.stockpro.auth.config.JwtUtil;
+import com.stockpro.auth.dto.AuthResponse;
 import com.stockpro.auth.exception.CustomException;
 import com.stockpro.auth.model.Role;
 import com.stockpro.auth.model.User;
@@ -115,9 +116,10 @@ class AuthServiceImplTest {
                     .thenReturn("mock.jwt.token");
             when(userRepository.save(any())).thenReturn(activeUser);
 
-            String token = authService.login("alice@example.com", "rawPass");
+            AuthResponse response = authService.login("alice@example.com", "rawPass");
 
-            assertThat(token).isEqualTo("mock.jwt.token");
+            assertThat(response.getToken()).isEqualTo("mock.jwt.token");
+            assertThat(response.getUserId()).isEqualTo(activeUser.getUserId());
         }
 
         @Test

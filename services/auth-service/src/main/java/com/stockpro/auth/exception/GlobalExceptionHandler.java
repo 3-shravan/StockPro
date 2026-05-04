@@ -65,6 +65,13 @@ public class GlobalExceptionHandler {
                 "Data conflict: a record with the same unique value already exists.", request);
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(
+            org.springframework.web.servlet.NoHandlerFoundException ex, HttpServletRequest request) {
+        log.warn("No handler found for {} {}", request.getMethod(), request.getRequestURI());
+        return build(HttpStatus.NOT_FOUND, "Endpoint not found: " + request.getRequestURI(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(
             Exception ex, HttpServletRequest request) {
