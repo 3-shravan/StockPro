@@ -1,9 +1,8 @@
 /**
  * ─── App Root ───────────────────────────────────────────────────────────────
- * Renders the router. All providers are in main.tsx.
+ * Renders the route tree. All providers are in main.tsx.
  */
-import { RouterProvider } from 'react-router-dom';
-import { router } from '@/router';
+import { AppRoutes } from '@/router';
 import { useThemeStore } from '@/stores/theme.store';
 import { useEffect } from 'react';
 
@@ -15,5 +14,5 @@ export default function App() {
     initTheme();
   }, [initTheme]);
 
-  return <RouterProvider router={router} />;
+  return <AppRoutes />;
 }

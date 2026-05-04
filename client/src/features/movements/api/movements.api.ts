@@ -9,28 +9,28 @@ import type { ApiResponse, StockMovement, StockMovementRequest } from '@/types';
 export const movementsApi = {
   getAll: async () => {
     const { data } = await apiClient.get<ApiResponse<StockMovement[]>>('/movements');
-    return data;
+    return data.data;
   },
 
   getByProduct: async (productId: number) => {
     const { data } = await apiClient.get<ApiResponse<StockMovement[]>>(
       `/movements/product/${productId}`,
     );
-    return data;
+    return data.data;
   },
 
   getByWarehouse: async (warehouseId: number) => {
     const { data } = await apiClient.get<ApiResponse<StockMovement[]>>(
       `/movements/warehouse/${warehouseId}`,
     );
-    return data;
+    return data.data;
   },
 
   getByType: async (movementType: string) => {
     const { data } = await apiClient.get<ApiResponse<StockMovement[]>>(
       `/movements/type/${movementType}`,
     );
-    return data;
+    return data.data;
   },
 
   getByDateRange: async (start: string, end: string) => {
@@ -38,14 +38,14 @@ export const movementsApi = {
       '/movements/date-range',
       { params: { start, end } },
     );
-    return data;
+    return data.data;
   },
 
   getByReference: async (referenceId: number) => {
     const { data } = await apiClient.get<ApiResponse<StockMovement[]>>(
       `/movements/reference/${referenceId}`,
     );
-    return data;
+    return data.data;
   },
 
   /** GET /movements/history/:productId/:warehouseId → full history */
@@ -53,7 +53,7 @@ export const movementsApi = {
     const { data } = await apiClient.get<ApiResponse<StockMovement[]>>(
       `/movements/history/${productId}/${warehouseId}`,
     );
-    return data;
+    return data.data;
   },
 
   /** GET /movements/stock-in/:productId → total units received */
@@ -61,7 +61,7 @@ export const movementsApi = {
     const { data } = await apiClient.get<ApiResponse<number>>(
       `/movements/stock-in/${productId}`,
     );
-    return data;
+    return data.data;
   },
 
   /** GET /movements/stock-out/:productId → total units dispatched */
@@ -69,12 +69,12 @@ export const movementsApi = {
     const { data } = await apiClient.get<ApiResponse<number>>(
       `/movements/stock-out/${productId}`,
     );
-    return data;
+    return data.data;
   },
 
   /** POST /movements → create manual movement entry */
   create: async (payload: StockMovementRequest) => {
     const { data } = await apiClient.post<ApiResponse<StockMovement>>('/movements', payload);
-    return data;
+    return data.data;
   },
 };

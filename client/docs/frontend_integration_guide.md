@@ -17,8 +17,9 @@
 10. [API Reference — Supplier Service](#10-supplier-service)
 11. [API Reference — Movement Service](#11-movement-service)
 12. [API Reference — Alert Service](#12-alert-service)
-13. [Enums & Allowed Values](#13-enums--allowed-values)
-14. [Error Handling](#14-error-handling)
+13. [API Reference — Report Service](#13-report-service)
+14. [Enums & Allowed Values](#14-enums--allowed-values)
+15. [Error Handling](#15-error-handling)
 
 ---
 
@@ -40,7 +41,8 @@ API Gateway (http://localhost:8080)
      ├──► Purchase Service  (:8084)  →  /api/v1/purchase-orders/**
      ├──► Supplier Service  (:8085)  →  /api/v1/suppliers/**
      ├──► Movement Service  (:8086)  →  /api/v1/movements/**
-     └──► Alert Service     (:8087)  →  /api/v1/alerts/**
+     ├──► Alert Service     (:8087)  →  /api/v1/alerts/**
+     └──► Report Service    (:8088)  →  /api/v1/reports/**
 ```
 
 **Rule**: Your base URL is always `http://localhost:8080/api/v1`. Every request is prefixed with this.
@@ -900,7 +902,88 @@ POST /api/v1/alerts/low-stock?productId=5&warehouseId=1&currentQty=8
 
 ---
 
-## 13. Enums & Allowed Values
+## 13. Report Service
+
+**Base path:** `/api/v1/reports`  All endpoints require `MANAGER` or `ADMIN` roles.
+
+### Get Total Stock Value
+```
+GET /api/v1/reports/total-value
+```
+**Response `data`:** Double (Total value across all warehouses)
+
+### Get Stock Value by Warehouse
+```
+GET /api/v1/reports/value/warehouse/{id}
+```
+**Response `data`:** Double
+
+### Get Inventory Turnover
+```
+GET /api/v1/reports/turnover/{productId}?start=2026-04-01&end=2026-04-30
+```
+**Response `data`:** Double (Turnover ratio)
+
+### Get Low Stock Report
+```
+GET /api/v1/reports/low-stock
+```
+**Response `data`:** Array of `InventorySnapshot` objects.
+
+### Get Top Moving Products
+```
+GET /api/v1/reports/top-moving?limit=10
+```
+**Response `data`:** Array of Product IDs (Integers).
+
+### Get Slow Moving Products
+```
+GET /api/v1/reports/slow-moving?limit=10
+```
+**Response `data`:** Array of Product IDs (Integers).
+
+### Get Dead Stock
+```
+GET /api/v1/reports/dead-stock
+```
+**Response `data`:** Array of Product IDs (no movement for > 90 days).
+
+### Get PO Summary
+```
+GET /api/v1/reports/po-summary?start=2026-04-01&end=2026-04-30
+```
+**Response `data`:**
+```json
+{
+  "totalOrders": 25,
+  "totalAmount": 150000.50,
+  "pendingApproval": 3,
+  "completed": 20,
+  "cancelled": 2
+}
+```
+
+### Take Manual Snapshot *(ADMIN only)*
+```
+POST /api/v1/reports/snapshot/{warehouseId}?productId=5
+```
+
+### Inventory Snapshot Schema
+```json
+{
+  "snapshotId": 101,
+  "warehouseId": 1,
+  "productId": 5,
+  "quantity": 150,
+  "stockValue": 2325.00,
+  "snapshotDate": "2026-04-28",
+  "createdAt": "2026-04-28T23:59:59"
+}
+```
+
+---
+
+## 14. Enums & Allowed Values
 
 ### User Roles
 | Value | Description |
@@ -948,7 +1031,7 @@ POST /api/v1/alerts/low-stock?productId=5&warehouseId=1&currentQty=8
 
 ---
 
-## 14. Error Handling
+## 15. Error Handling
 
 ### HTTP Status Codes
 

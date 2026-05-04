@@ -13,11 +13,12 @@
  */
 import axios from 'axios';
 import { toast } from 'sonner';
+import { env } from '@/config/env';
 import { useAuthStore } from '@/stores/auth.store';
 
 // ── Instance ────────────────────────────────────────────────────────────────
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
+  baseURL: env.API_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15_000, // 15 seconds max
 });
@@ -49,9 +50,14 @@ apiClient.interceptors.response.use(
       error.response.data?.message || 'Something went wrong';
 
     switch (status) {
+      case 400:
+        toast.error(message || 'Invalid request — please check your inputs.');
+        break;
+
       case 401:
-        // Avoid double-toast on login page failures
-        if (!window.location.pathname.includes('/login')) {
+        if (window.location.pathname.includes('/login')) {
+          toast.error(message || 'Invalid email or password.');
+        } else {
           toast.error('Session expired. Please log in again.');
           useAuthStore.getState().logout();
         }
@@ -61,6 +67,10 @@ apiClient.interceptors.response.use(
         toast.error('Access denied — insufficient permissions.');
         break;
 
+      case 404:
+        toast.error(message || 'Resource not found.');
+        break;
+
       case 409:
         toast.error(`Conflict: ${message}`);
         break;
@@ -68,10 +78,6 @@ apiClient.interceptors.response.use(
       case 500:
         toast.error('Internal server error — please try again later.');
         break;
-
-      // 400 and 404 are intentionally NOT toasted here.
-      // They are handled at the feature/hook level so the caller
-      // can provide context-aware messages (e.g., "Product not found").
     }
 
     return Promise.reject(error);

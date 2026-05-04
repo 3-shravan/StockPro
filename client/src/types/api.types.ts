@@ -6,6 +6,7 @@
 
 /** Standard success/error envelope from the backend */
 export interface ApiResponse<T> {
+  token: any;
   status: number;
   message: string;
   data: T;

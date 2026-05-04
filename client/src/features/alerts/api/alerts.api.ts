@@ -9,7 +9,7 @@ export const alertsApi = {
   /** GET /alerts/recipient/:userId → alerts for a specific user */
   getByUser: async (userId: number) => {
     const { data } = await apiClient.get<ApiResponse<Alert[]>>(`/alerts/recipient/${userId}`);
-    return data;
+    return data.data;
   },
 
   /** GET /alerts/recipient/:userId/unread-count → integer count */
@@ -17,13 +17,13 @@ export const alertsApi = {
     const { data } = await apiClient.get<ApiResponse<number>>(
       `/alerts/recipient/${userId}/unread-count`,
     );
-    return data;
+    return data.data;
   },
 
   /** PUT /alerts/:alertId/read → mark single alert as read */
   markAsRead: async (alertId: number) => {
     const { data } = await apiClient.put<ApiResponse<void>>(`/alerts/${alertId}/read`);
-    return data;
+    return data.data;
   },
 
   /** PUT /alerts/recipient/:userId/read-all → mark all alerts as read */
@@ -31,31 +31,31 @@ export const alertsApi = {
     const { data } = await apiClient.put<ApiResponse<void>>(
       `/alerts/recipient/${userId}/read-all`,
     );
-    return data;
+    return data.data;
   },
 
   /** PUT /alerts/:alertId/acknowledge → acknowledge alert */
   acknowledge: async (alertId: number) => {
     const { data } = await apiClient.put<ApiResponse<void>>(`/alerts/${alertId}/acknowledge`);
-    return data;
+    return data.data;
   },
 
   /** GET /alerts/unacknowledged → all unacknowledged alerts (MANAGER/ADMIN) */
   getUnacknowledged: async () => {
     const { data } = await apiClient.get<ApiResponse<Alert[]>>('/alerts/unacknowledged');
-    return data;
+    return data.data;
   },
 
   /** GET /alerts → all alerts (ADMIN only) */
   getAll: async () => {
     const { data } = await apiClient.get<ApiResponse<Alert[]>>('/alerts');
-    return data;
+    return data.data;
   },
 
   /** POST /alerts → send a new alert (MANAGER/ADMIN) */
   send: async (payload: AlertRequest) => {
     const { data } = await apiClient.post<ApiResponse<Alert>>('/alerts', payload);
-    return data;
+    return data.data;
   },
 
   /** DELETE /alerts/:alertId → delete alert (ADMIN) */

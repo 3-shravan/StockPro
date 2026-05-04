@@ -17,7 +17,7 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      theme: 'dark', // Default dark for premium feel
+      theme: 'dark',
 
       toggleTheme: () => {
         const next = get().theme === 'light' ? 'dark' : 'light';

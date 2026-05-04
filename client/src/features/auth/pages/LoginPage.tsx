@@ -1,10 +1,27 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Mail01Icon, LockPasswordIcon, ArrowRight01Icon, PackageIcon } from 'hugeicons-react';
 import { Button } from '@/components/ui/button';
-import { authApi } from '../api/auth.api';
+import { authApi } from '@/features/auth/api/auth.api';
 import { useAuthStore } from '@/stores/auth.store';
 import { showToast } from '@/lib/toast';
+import { Role, type User } from '@/types';
+
+const decodeJwtPayload = (token: string): Partial<Pick<User, 'role' | 'userId' | 'email'>> => {
+  try {
+    const payload = token.split('.')[1];
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decodedPayload = JSON.parse(atob(normalizedPayload));
+
+    return {
+      email: decodedPayload.sub,
+      role: decodedPayload.role,
+      userId: Number(decodedPayload.userId),
+    };
+  } catch {
+    return {};
+  }
+};
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -12,7 +29,14 @@ export const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
-  const setAuth = useAuthStore((s) => s.setAuth);
+  const setAuth = useAuthStore((state) => state.setAuth);
+
+  const redirectPathByRole: Record<Role, string> = {
+    [Role.ADMIN]: '/admin',
+    [Role.MANAGER]: '/manager',
+    [Role.STAFF]: '/warehouse',
+    [Role.OFFICER]: '/purchase',
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,46 +48,43 @@ export const LoginPage = () => {
     setIsLoading(true);
     try {
       const response = await authApi.login({ email, password });
-      const token = response.token;
+      const tokenClaims = decodeJwtPayload(response.token);
+      const role = response.role ?? tokenClaims.role;
+      const userId = response.userId ?? tokenClaims.userId;
 
-      // Since we don't have jwt-decode in this environment, 
-      // we'll fetch all users and find the one that matches this email
-      // OR ideally the backend would return user info in the login response.
-      // For now, we fetch users as a workaround to get the userId and role.
+      if (!response.token || !role || !userId) {
+        throw new Error('Login response is missing token, role, or userId.');
+      }
+
+      const fallbackUser: User = {
+        userId,
+        fullName: 'StockPro User',
+        email: tokenClaims.email ?? email,
+        role,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      setAuth(fallbackUser, response.token);
+
       try {
-        const users = await authApi.getAll();
-        const loggedUser = users.find(u => u.email === email);
-
-        if (loggedUser) {
-          setAuth(loggedUser, token);
-        } else {
-          // Fallback if user not found in list (shouldn't happen)
-          setAuth({
-            userId: 0,
-            fullName: 'StockPro User',
-            email,
-            role: 'STAFF',
-            isActive: true,
-            createdAt: new Date().toISOString()
-          }, token);
+        const profile = await authApi.getMe(response.token);
+        setAuth(profile, response.token);
+      } catch {
+        try {
+          const profile = await authApi.getProfile(userId);
+          setAuth(profile, response.token);
+        } catch {
+          // Keep the fallback session when profile endpoints are unavailable.
         }
-      } catch (e) {
-        // Fallback for demo if getAll fails (e.g. permission issues)
-        setAuth({
-          userId: 0,
-          fullName: 'StockPro Admin',
-          email,
-          role: 'ADMIN',
-          isActive: true,
-          createdAt: new Date().toISOString()
-        }, token);
       }
 
       showToast.success('Welcome back to StockPro!');
-      navigate('/dashboard');
+      navigate(redirectPathByRole[role], { replace: true });
     } catch (error: any) {
-      // Error is already toasted by the apiClient interceptor in most cases
+      // Handled globally by apiClient interceptor
       console.error('Login failed:', error);
+      showToast.error(error?.message ?? 'Unable to sign in. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -78,14 +99,14 @@ export const LoginPage = () => {
 
       <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
         <div className="text-center mb-10">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+          <div className="inline-flex items-center gap-2 mb-6">
             <div className="bg-primary p-2 rounded-xl">
               <PackageIcon className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="text-2xl font-bold tracking-tight font-heading">StockPro</span>
-          </Link>
+          </div>
           <h1 className="text-3xl font-bold font-heading">Sign In</h1>
-          <p className="text-muted-foreground mt-2">Enter your credentials to access your warehouse</p>
+          <p className="text-muted-foreground mt-2">Enter your credentials to access your workspace</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -132,13 +153,6 @@ export const LoginPage = () => {
             {!isLoading && <ArrowRight01Icon className="w-5 h-5 ml-2" />}
           </Button>
         </form>
-
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-primary font-semibold hover:underline">
-            Create one for free
-          </Link>
-        </div>
       </div>
     </div>
   );

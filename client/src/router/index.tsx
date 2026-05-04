@@ -1,79 +1,236 @@
-/**
- * ─── Application Router ─────────────────────────────────────────────────────
- * Defines all routes for the StockPro client.
- *
- * Route structure:
- *   /login            → Public (login page)
- *   /register         → Public (register page)
- *   /unauthorized     → Public (403 page)
- *   /                 → Protected → redirects to /dashboard
- *   /dashboard        → Protected (any authenticated user)
- *   /products         → Protected (any authenticated user)
- *   /warehouses       → Protected (any authenticated user)
- *   /purchase-orders  → Protected (OFFICER, MANAGER, ADMIN)
- *   /suppliers        → Protected (OFFICER, MANAGER, ADMIN)
- *   /movements        → Protected (MANAGER, ADMIN)
- *   /alerts           → Protected (any authenticated user)
- *   /users            → Protected (ADMIN, MANAGER)
- */
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from './ProtectedRoute';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ProtectedRoute } from '@/router/ProtectedRoute';
+import { LoginPage } from '@/features/auth/pages/LoginPage';
+import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
 import { Role } from '@/types';
 
-// ── Page Placeholders (replace with real pages when building UI) ─────────
-import { LandingPage } from '@/features/landing/pages/LandingPage';
-import { LoginPage } from '@/features/auth/pages/LoginPage';
-import { RegisterPage } from '@/features/auth/pages/RegisterPage';
-import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { ProductsPage } from '@/features/products/pages/ProductsPage';
 import { WarehousesPage } from '@/features/warehouses/pages/WarehousesPage';
 import { PurchaseOrdersPage } from '@/features/purchases/pages/PurchaseOrdersPage';
 import { SuppliersPage } from '@/features/suppliers/pages/SuppliersPage';
 import { MovementsPage } from '@/features/movements/pages/MovementsPage';
+import { ReceivePage } from '@/features/movements/pages/ReceivePage';
+import { IssuePage } from '@/features/movements/pages/IssuePage';
+import { TransferPage } from '@/features/movements/pages/TransferPage';
 import { AlertsPage } from '@/features/alerts/pages/AlertsPage';
+import { ReportsPage } from '@/features/reports/pages/ReportsPage';
+import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
+import { ProfilePage } from '@/features/profile/pages/ProfilePage';
 
-export const router = createBrowserRouter([
-  // ── Public Routes ───────────────────────────────────────────────────────
-  { path: '/', element: <LandingPage /> },
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
-  { path: '/unauthorized', element: <UnauthorizedPage /> },
+const DashboardHome = ({ role }: { role: Role }) => <DashboardPage role={role} />;
 
-  // ── Protected Routes ────────────────────────────────────────────────────
-  {
-    element: <ProtectedRoute />,
-    children: [
-      {
-        element: <DashboardLayout />,
-        children: [
-          // Basic Access
-          { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/products', element: <ProductsPage /> },
-          { path: '/warehouses', element: <WarehousesPage /> },
-          { path: '/alerts', element: <AlertsPage /> },
+export const defaultPathByRole: Record<Role, string> = {
+  [Role.ADMIN]: '/admin',
+  [Role.MANAGER]: '/manager',
+  [Role.STAFF]: '/warehouse',
+  [Role.OFFICER]: '/purchase',
+};
 
-          // Restricted Access (OFFICER, MANAGER, ADMIN)
-          { 
-            path: '/purchase-orders', 
-            element: <ProtectedRoute roles={[Role.OFFICER, Role.MANAGER, Role.ADMIN]}><PurchaseOrdersPage /></ProtectedRoute> 
-          },
-          { 
-            path: '/suppliers', 
-            element: <ProtectedRoute roles={[Role.OFFICER, Role.MANAGER, Role.ADMIN]}><SuppliersPage /></ProtectedRoute> 
-          },
+export const AppRoutes = () => (
+  <Routes>
+    <Route path="/" element={<Navigate to="/login" replace />} />
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-          // Management Access (MANAGER, ADMIN)
-          { 
-            path: '/movements', 
-            element: <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN]}><MovementsPage /></ProtectedRoute> 
-          },
-        ],
-      },
-    ],
-  },
+    <Route element={<DashboardLayout />}>
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN]}>
+            <DashboardHome role={Role.ADMIN} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN]}>
+            <AdminUsersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/warehouses"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN]}>
+            <WarehousesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN]}>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/alerts"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN]}>
+            <AlertsPage />
+          </ProtectedRoute>
+        }
+      />
 
-  // ── Fallback ──────────────────────────────────────────────────────────
-  { path: '*', element: <Navigate to="/" replace /> },
-]);
+      <Route
+        path="/manager"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER]}>
+            <DashboardHome role={Role.MANAGER} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/products"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER]}>
+            <ProductsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/reports"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER]}>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/stock"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER]}>
+            <WarehousesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/movements"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER]}>
+            <MovementsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/alerts"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER]}>
+            <AlertsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/warehouse"
+        element={
+          <ProtectedRoute roles={[Role.STAFF]}>
+            <DashboardHome role={Role.STAFF} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/products"
+        element={
+          <ProtectedRoute roles={[Role.STAFF]}>
+            <ProductsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/receive"
+        element={
+          <ProtectedRoute roles={[Role.STAFF]}>
+            <ReceivePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/issue"
+        element={
+          <ProtectedRoute roles={[Role.STAFF]}>
+            <IssuePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/transfer"
+        element={
+          <ProtectedRoute roles={[Role.STAFF]}>
+            <TransferPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/movements"
+        element={
+          <ProtectedRoute roles={[Role.STAFF]}>
+            <MovementsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/alerts"
+        element={
+          <ProtectedRoute roles={[Role.STAFF]}>
+            <AlertsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/purchase"
+        element={
+          <ProtectedRoute roles={[Role.OFFICER]}>
+            <DashboardHome role={Role.OFFICER} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/purchase/orders"
+        element={
+          <ProtectedRoute roles={[Role.OFFICER]}>
+            <PurchaseOrdersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/purchase/suppliers"
+        element={
+          <ProtectedRoute roles={[Role.OFFICER]}>
+            <SuppliersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/purchase/alerts"
+        element={
+          <ProtectedRoute roles={[Role.OFFICER]}>
+            <AlertsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN, Role.MANAGER, Role.STAFF, Role.OFFICER]}>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+    </Route>
+
+    <Route path="/dashboard" element={<Navigate to="/login" replace />} />
+    <Route path="/products" element={<Navigate to="/login" replace />} />
+    <Route path="/warehouses" element={<Navigate to="/login" replace />} />
+    <Route path="/purchase-orders" element={<Navigate to="/login" replace />} />
+    <Route path="/suppliers" element={<Navigate to="/login" replace />} />
+    <Route path="/movements" element={<Navigate to="/login" replace />} />
+    <Route path="/reports" element={<Navigate to="/login" replace />} />
+    <Route path="*" element={<Navigate to="/login" replace />} />
+  </Routes>
+);

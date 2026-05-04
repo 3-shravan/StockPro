@@ -21,24 +21,16 @@ export const authApi = {
       '/auth/login',
       credentials,
     );
-    return data;
+    return data.data ?? (data as unknown as AuthTokenResponse);
   },
 
-  /** POST /auth/register → returns created User */
-  register: async (payload: RegisterRequest) => {
-    const { data } = await apiClient.post<ApiResponse<User>>(
-      '/auth/register',
-      payload,
-    );
-    return data;
-  },
 
   // ── Authenticated Endpoints ─────────────────────────────────────────────
 
   /** POST /auth/logout → invalidates server-side session */
   logout: async () => {
     const { data } = await apiClient.post<ApiResponse<void>>('/auth/logout');
-    return data;
+    return data.data;
   },
 
   /** POST /auth/refresh → returns a new JWT token */
@@ -46,7 +38,7 @@ export const authApi = {
     const { data } = await apiClient.post<ApiResponse<AuthTokenResponse>>(
       '/auth/refresh',
     );
-    return data;
+    return data.data;
   },
 
   /** GET /auth/profile/:userId → returns User profile */
@@ -54,7 +46,15 @@ export const authApi = {
     const { data } = await apiClient.get<ApiResponse<User>>(
       `/auth/profile/${userId}`,
     );
-    return data;
+    return data.data;
+  },
+
+  /** GET /auth/me → returns current User profile from token */
+  getMe: async (token?: string) => {
+    const { data } = await apiClient.get<ApiResponse<User>>('/auth/me', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    return data.data;
   },
 
   /** PUT /auth/profile/:userId → updates and returns User profile */
@@ -63,7 +63,16 @@ export const authApi = {
       `/auth/profile/${userId}`,
       payload,
     );
-    return data;
+    return data.data;
+  },
+
+  /** PUT /auth/users/:userId → admin update for any user */
+  updateUser: async (userId: number, payload: Partial<User>) => {
+    const { data } = await apiClient.put<ApiResponse<User>>(
+      `/auth/users/${userId}`,
+      payload,
+    );
+    return data.data;
   },
 
   /** PUT /auth/password/:userId → changes user password */
@@ -72,7 +81,7 @@ export const authApi = {
       `/auth/password/${userId}`,
       { newPassword },
     );
-    return data;
+    return data.data;
   },
 
   // ── Admin Endpoints ─────────────────────────────────────────────────────
@@ -80,7 +89,7 @@ export const authApi = {
   /** GET /auth/users → returns all users (ADMIN/MANAGER) */
   getAll: async () => {
     const { data } = await apiClient.get<ApiResponse<User[]>>('/auth/users');
-    return data;
+    return data.data;
   },
 
   /** PUT /auth/deactivate/:userId → soft-deletes a user (ADMIN) */
@@ -88,6 +97,23 @@ export const authApi = {
     const { data } = await apiClient.put<ApiResponse<void>>(
       `/auth/deactivate/${userId}`,
     );
-    return data;
+    return data.data;
+  },
+
+  /** POST /auth/register → returns created User (ADMIN) */
+  register: async (payload: RegisterRequest) => {
+    const { data } = await apiClient.post<ApiResponse<User>>(
+      '/auth/register',
+      payload,
+    );
+    return data.data;
+  },
+
+  /** DELETE /auth/users/:userId → hard-delete user (ADMIN) */
+  deleteUser: async (userId: number) => {
+    const { data } = await apiClient.delete<ApiResponse<void>>(
+      `/auth/users/${userId}`,
+    );
+    return data.data;
   },
 };
