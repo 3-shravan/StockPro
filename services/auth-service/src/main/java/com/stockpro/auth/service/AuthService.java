@@ -1,6 +1,7 @@
 package com.stockpro.auth.service;
 
 import java.util.List;
+
 import com.stockpro.auth.model.User;
 
 /**
@@ -99,4 +100,12 @@ public interface AuthService {
      * @return List of {@link User} entities
      */
     List<User> getAllUsers();
+
+    /**
+     * Get details of the currently authenticated user from a JWT token.
+     * 
+     * @param token JWT token string
+     * @return {@link User} entity
+     */
+    User getMe(String token);
 }

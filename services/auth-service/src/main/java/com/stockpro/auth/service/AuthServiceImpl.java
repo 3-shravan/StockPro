@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.stockpro.auth.config.JwtUtil;
+import com.stockpro.auth.dto.AuthResponse;
 import com.stockpro.auth.exception.CustomException;
 import com.stockpro.auth.model.User;
 import com.stockpro.auth.repository.UserRepository;
@@ -266,5 +267,13 @@ public class AuthServiceImpl implements AuthService {
     public List<User> getAllUsers() {
         log.debug("Fetching all users from repository");
         return userRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public User getMe(String token) {
+        log.debug("Getting current user details from token");
+        String email = jwtUtil.extractEmail(token);
+        return getUserByEmail(email);
     }
 }

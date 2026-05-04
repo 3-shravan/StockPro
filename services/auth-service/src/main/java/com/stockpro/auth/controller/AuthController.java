@@ -125,6 +125,26 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", authService.getAllUsers()));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<User>> getMe(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) TokenRequest request) {
+        
+        log.info("GET /auth/me");
+        String token = resolveToken(authHeader, request);
+        User user = authService.getMe(token);
+        return ResponseEntity.ok(ApiResponse.success("Current user details retrieved", user));
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<User>> getProfile(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) TokenRequest request) {
+        
+        log.info("GET /auth/profile (alias for /me)");
+        return getMe(authHeader, request);
+    }
+
     private String resolveToken(String authHeader, TokenRequest request) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);
