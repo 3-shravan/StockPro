@@ -12,6 +12,11 @@ export const reportsApi = {
     const { data } = await apiClient.get<ApiResponse<number>>('/reports/total-value');
     return data.data;
   },
+  /** GET /reports/valuation-details → get per-product valuation breakdown */
+  getValuationDetails: async () => {
+    const { data } = await apiClient.get<ApiResponse<InventorySnapshot[]>>('/reports/valuation-details');
+    return data.data;
+  },
 
   /** GET /reports/value/warehouse/:id → stock value for specific warehouse */
   getWarehouseValue: async (id: number) => {
@@ -70,6 +75,11 @@ export const reportsApi = {
       null,
       { params: { productId } }
     );
+    return data.data;
+  },
+  /** POST /reports/sync → manual system-wide sync (Admin/Manager) */
+  sync: async () => {
+    const { data } = await apiClient.post<ApiResponse<void>>('/reports/sync');
     return data.data;
   },
 };

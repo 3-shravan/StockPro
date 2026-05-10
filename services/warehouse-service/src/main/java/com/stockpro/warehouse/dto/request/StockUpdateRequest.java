@@ -19,4 +19,8 @@ public class StockUpdateRequest {
 
     @NotNull(message = "Quantity is required")
     private Integer quantity;
+
+    private String referenceType;
+    private Integer referenceId;
+    private String notes;
 }

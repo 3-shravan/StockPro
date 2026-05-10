@@ -8,6 +8,7 @@ import { Role } from '@/types';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { ProductsPage } from '@/features/products/pages/ProductsPage';
 import { WarehousesPage } from '@/features/warehouses/pages/WarehousesPage';
+import { WarehouseDetailPage } from '@/features/warehouses/pages/WarehouseDetailPage';
 import { PurchaseOrdersPage } from '@/features/purchases/pages/PurchaseOrdersPage';
 import { SuppliersPage } from '@/features/suppliers/pages/SuppliersPage';
 import { MovementsPage } from '@/features/movements/pages/MovementsPage';
@@ -60,6 +61,14 @@ export const AppRoutes = () => (
         }
       />
       <Route
+        path="/admin/warehouses/:id"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN]}>
+            <WarehouseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/analytics"
         element={
           <ProtectedRoute roles={[Role.ADMIN]}>
@@ -87,7 +96,7 @@ export const AppRoutes = () => (
       <Route
         path="/manager/products"
         element={
-          <ProtectedRoute roles={[Role.MANAGER]}>
+          <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN, Role.STAFF]}>
             <ProductsPage />
           </ProtectedRoute>
         }
@@ -95,7 +104,7 @@ export const AppRoutes = () => (
       <Route
         path="/manager/reports"
         element={
-          <ProtectedRoute roles={[Role.MANAGER]}>
+          <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN]}>
             <ReportsPage />
           </ProtectedRoute>
         }
@@ -103,15 +112,31 @@ export const AppRoutes = () => (
       <Route
         path="/manager/stock"
         element={
-          <ProtectedRoute roles={[Role.MANAGER]}>
+          <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN]}>
             <WarehousesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/stock/:id"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN]}>
+            <WarehouseDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/purchase-orders"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN]}>
+            <PurchaseOrdersPage />
           </ProtectedRoute>
         }
       />
       <Route
         path="/manager/movements"
         element={
-          <ProtectedRoute roles={[Role.MANAGER]}>
+          <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN, Role.STAFF]}>
             <MovementsPage />
           </ProtectedRoute>
         }
@@ -128,15 +153,23 @@ export const AppRoutes = () => (
       <Route
         path="/warehouse"
         element={
-          <ProtectedRoute roles={[Role.STAFF]}>
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
             <DashboardHome role={Role.STAFF} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/warehouse/stock/:id"
+        element={
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
+            <WarehouseDetailPage />
           </ProtectedRoute>
         }
       />
       <Route
         path="/warehouse/products"
         element={
-          <ProtectedRoute roles={[Role.STAFF]}>
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
             <ProductsPage />
           </ProtectedRoute>
         }
@@ -144,7 +177,7 @@ export const AppRoutes = () => (
       <Route
         path="/warehouse/receive"
         element={
-          <ProtectedRoute roles={[Role.STAFF]}>
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
             <ReceivePage />
           </ProtectedRoute>
         }
@@ -152,7 +185,7 @@ export const AppRoutes = () => (
       <Route
         path="/warehouse/issue"
         element={
-          <ProtectedRoute roles={[Role.STAFF]}>
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
             <IssuePage />
           </ProtectedRoute>
         }
@@ -160,7 +193,7 @@ export const AppRoutes = () => (
       <Route
         path="/warehouse/transfer"
         element={
-          <ProtectedRoute roles={[Role.STAFF]}>
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
             <TransferPage />
           </ProtectedRoute>
         }
@@ -168,7 +201,7 @@ export const AppRoutes = () => (
       <Route
         path="/warehouse/movements"
         element={
-          <ProtectedRoute roles={[Role.STAFF]}>
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
             <MovementsPage />
           </ProtectedRoute>
         }
@@ -176,7 +209,7 @@ export const AppRoutes = () => (
       <Route
         path="/warehouse/alerts"
         element={
-          <ProtectedRoute roles={[Role.STAFF]}>
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
             <AlertsPage />
           </ProtectedRoute>
         }
@@ -185,7 +218,7 @@ export const AppRoutes = () => (
       <Route
         path="/purchase"
         element={
-          <ProtectedRoute roles={[Role.OFFICER]}>
+          <ProtectedRoute roles={[Role.OFFICER, Role.ADMIN, Role.MANAGER]}>
             <DashboardHome role={Role.OFFICER} />
           </ProtectedRoute>
         }
@@ -193,7 +226,7 @@ export const AppRoutes = () => (
       <Route
         path="/purchase/orders"
         element={
-          <ProtectedRoute roles={[Role.OFFICER]}>
+          <ProtectedRoute roles={[Role.OFFICER, Role.ADMIN, Role.MANAGER]}>
             <PurchaseOrdersPage />
           </ProtectedRoute>
         }
@@ -201,7 +234,7 @@ export const AppRoutes = () => (
       <Route
         path="/purchase/suppliers"
         element={
-          <ProtectedRoute roles={[Role.OFFICER]}>
+          <ProtectedRoute roles={[Role.OFFICER, Role.ADMIN, Role.MANAGER]}>
             <SuppliersPage />
           </ProtectedRoute>
         }
@@ -209,7 +242,7 @@ export const AppRoutes = () => (
       <Route
         path="/purchase/alerts"
         element={
-          <ProtectedRoute roles={[Role.OFFICER]}>
+          <ProtectedRoute roles={[Role.OFFICER, Role.ADMIN, Role.MANAGER]}>
             <AlertsPage />
           </ProtectedRoute>
         }

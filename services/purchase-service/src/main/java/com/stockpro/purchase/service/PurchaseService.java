@@ -17,6 +17,8 @@ public interface PurchaseService {
 
     List<PurchaseOrder> getPOsByStatus(PurchaseOrderStatus status);
 
+    void submitForApproval(int poId);
+
     void approvePO(int poId);
 
     void receiveGoods(int poId, List<POLineItem> receivedItems); // supports partial receipt

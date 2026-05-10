@@ -10,8 +10,12 @@ import type {
 } from '../types';
 
 export const warehousesApi = {
-  getAll: async () => {
-    const { data } = await apiClient.get<ApiResponse<Warehouse[]>>('/warehouses');
+  getAll: async (includeInactive = false) => {
+    const { data } = await apiClient.get<ApiResponse<Warehouse[]>>(`/warehouses?includeInactive=${includeInactive}`);
+    return data.data;
+  },
+  getById: async (id: number) => {
+    const { data } = await apiClient.get<ApiResponse<Warehouse>>(`/warehouses/${id}`);
     return data.data;
   },
   create: async (payload: WarehouseRequest) => {
@@ -24,6 +28,14 @@ export const warehousesApi = {
   },
   deactivate: async (id: number) => {
     const { data } = await apiClient.delete<ApiResponse<void>>(`/warehouses/${id}`);
+    return data.data;
+  },
+  activate: async (id: number) => {
+    const { data } = await apiClient.post<ApiResponse<void>>(`/warehouses/${id}/activate`);
+    return data.data;
+  },
+  hardDelete: async (id: number) => {
+    const { data } = await apiClient.delete<ApiResponse<void>>(`/warehouses/${id}/hard`);
     return data.data;
   },
   getStock: async (warehouseId: number, productId: number) => {
@@ -52,6 +64,14 @@ export const warehousesApi = {
     const { data } = await apiClient.get<ApiResponse<StockLevel[]>>(
       `/warehouses/${warehouseId}/stock/low`,
     );
+    return data.data;
+  },
+  getStats: async (id: number) => {
+    const { data } = await apiClient.get<ApiResponse<import('../types').WarehouseStats>>(`/warehouses/${id}/stats`);
+    return data.data;
+  },
+  reconcile: async (id: number) => {
+    const { data } = await apiClient.post<ApiResponse<void>>(`/warehouses/${id}/reconcile`);
     return data.data;
   },
 };

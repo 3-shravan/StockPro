@@ -61,6 +61,10 @@ public class Alert {
   @Column(name = "is_acknowledged", nullable = false)
   private boolean acknowledged = false;
 
+  private Integer acknowledgedBy;
+
+  private LocalDateTime acknowledgedAt;
+
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
 

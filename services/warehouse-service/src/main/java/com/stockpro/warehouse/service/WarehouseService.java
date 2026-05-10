@@ -11,23 +11,37 @@ public interface WarehouseService {
 
     WarehouseResponse createWarehouse(WarehouseRequest request);
 
-    Optional<WarehouseResponse> getById(int warehouseId);
+    Optional<WarehouseResponse> getWarehouseById(int id);
 
-    List<WarehouseResponse> getAllWarehouses();
+    List<WarehouseResponse> getAllWarehouses(boolean includeInactive);
 
     WarehouseResponse updateWarehouse(int warehouseId, WarehouseRequest request);
 
     void deactivateWarehouse(int warehouseId);
 
+    void activateWarehouse(int warehouseId);
+
+    void deleteWarehouse(int warehouseId);
+
+    List<WarehouseResponse> getWarehousesByManager(int managerId);
+
     Optional<StockLevelResponse> getStockLevel(int warehouseId, int productId);
 
     void updateStock(int warehouseId, int productId, int quantity);
+    void updateStock(com.stockpro.warehouse.dto.request.StockUpdateRequest request);
+
     void adjustStock(int warehouseId, int productId, int delta);
+    void adjustStock(com.stockpro.warehouse.dto.request.StockUpdateRequest request);
+
     void reserveStock(int warehouseId, int productId, int quantity);
 
-    void releaseReservation(int warehouseId, int productId, int quantity);
+    void releaseStock(int warehouseId, int productId, int quantity);
 
-    void transferStock(int fromWarehouseId, int toWarehouseId, int productId, int quantity, int managerId);
+    void transferStock(int fromWarehouseId, int toWarehouseId, int productId, int quantity);
 
     List<StockLevelResponse> getLowStockItems(int warehouseId);
+
+    com.stockpro.warehouse.dto.response.WarehouseStatsResponse getWarehouseStats(int warehouseId);
+
+    void reconcileWarehouseCapacity(int warehouseId);
 }

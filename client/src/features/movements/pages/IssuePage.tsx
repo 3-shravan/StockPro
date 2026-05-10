@@ -44,7 +44,7 @@ export const IssuePage = () => {
       await movementsApi.create({
         productId,
         warehouseId,
-        quantity: -Math.abs(quantity), // Ensure negative for outbound
+        quantity: Math.abs(quantity), // Backend expects positive value; movementType handles direction
         movementType: reason,
         notes,
         performedBy: user?.userId ?? 0,
@@ -96,7 +96,7 @@ export const IssuePage = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium px-1">Product</label>
-                    <ProductSelect value={productId} onChange={setProductId} />
+                    <ProductSelect value={productId} onChange={setProductId} warehouseId={warehouseId} />
                   </div>
                 </div>
 

@@ -21,9 +21,15 @@ public class ReportResource {
     private final ReportService reportService;
 
     @GetMapping("/total-value")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER')")
     public ResponseEntity<ApiResponse<Double>> getTotalStockValue() {
         return ResponseEntity.ok(ApiResponse.success("Total stock value retrieved", reportService.getTotalStockValue()));
+    }
+
+    @GetMapping("/valuation-details")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER')")
+    public ResponseEntity<ApiResponse<List<InventorySnapshot>>> getValuationDetails() {
+        return ResponseEntity.ok(ApiResponse.success("Detailed valuation retrieved", reportService.getValuationDetails()));
     }
 
     @GetMapping("/value/warehouse/{id}")
@@ -65,7 +71,7 @@ public class ReportResource {
     }
 
     @GetMapping("/po-summary")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPOSummary(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
                                                                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
         return ResponseEntity.ok(ApiResponse.success("PO summary retrieved", reportService.getPOSummary(start, end)));
@@ -75,5 +81,12 @@ public class ReportResource {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<InventorySnapshot>> takeManualSnapshot(@PathVariable int warehouseId, @RequestParam int productId) {
         return ResponseEntity.ok(ApiResponse.success("Manual snapshot recorded", reportService.takeSnapshot(warehouseId, productId)));
+    }
+
+    @PostMapping("/sync")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> sync() {
+        reportService.runSync();
+        return ResponseEntity.ok(ApiResponse.success("Analytics synchronization triggered successfully", null));
     }
 }

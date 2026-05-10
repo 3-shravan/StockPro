@@ -11,7 +11,7 @@ export interface Supplier {
   paymentTerms?: string;
   leadTimeDays: number;
   rating: number;
-  isActive: boolean;
+  active: boolean;
 }
 
 export interface SupplierRequest {

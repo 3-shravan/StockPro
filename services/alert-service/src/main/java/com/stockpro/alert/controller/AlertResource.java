@@ -22,8 +22,9 @@ public class AlertResource {
 
   private final AlertService alertService;
 
+  /** Only Admins can send individual targeted alerts. */
   @PostMapping
-  @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<ApiResponse<AlertResponse>> sendAlert(@Valid @RequestBody AlertRequest request) {
     return ResponseEntity.ok(ApiResponse.success("Alert sent successfully", alertService.sendAlert(request)));
   }
@@ -62,8 +63,8 @@ public class AlertResource {
   }
 
   @PutMapping("/{id}/acknowledge")
-  public ResponseEntity<ApiResponse<Void>> acknowledge(@PathVariable int id) {
-    alertService.acknowledge(id);
+  public ResponseEntity<ApiResponse<Void>> acknowledge(@PathVariable int id, @RequestParam int userId) {
+    alertService.acknowledge(id, userId);
     return ResponseEntity.ok(ApiResponse.success("Alert acknowledged", null));
   }
 
@@ -73,7 +74,7 @@ public class AlertResource {
   }
 
   @GetMapping("/unacknowledged")
-  @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+  @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER', 'STAFF')")
   public ResponseEntity<ApiResponse<List<AlertResponse>>> getUnacknowledged() {
     return ResponseEntity.ok(ApiResponse.success("Unacknowledged alerts retrieved", alertService.getUnacknowledged()));
   }
@@ -85,6 +86,13 @@ public class AlertResource {
     return ResponseEntity.ok(ApiResponse.success("Alert deleted successfully", null));
   }
 
+  @DeleteMapping("/clear-type")
+  public ResponseEntity<ApiResponse<Void>> clearByType(@RequestParam String type, @RequestParam int warehouseId) {
+    alertService.clearAlertsByTypeAndWarehouse(type, warehouseId);
+    return ResponseEntity.ok(ApiResponse.success("Alerts cleared successfully", null));
+  }
+
+  /** Only Admins can broadcast system-wide bulk alerts. */
   @PostMapping("/bulk")
   @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<ApiResponse<Void>> sendBulk(@Valid @RequestBody BulkAlertRequest request) {
@@ -93,7 +101,7 @@ public class AlertResource {
   }
 
   @GetMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'OFFICER', 'STAFF')")
   public ResponseEntity<ApiResponse<List<AlertResponse>>> getAll() {
     return ResponseEntity.ok(ApiResponse.success("All alerts retrieved successfully", alertService.getAll()));
   }

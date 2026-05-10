@@ -15,8 +15,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.stockpro.movement.common.response.ApiResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +33,13 @@ public class MovementServiceImpl implements MovementService {
 
   private final MovementRepository movementRepository;
   private final MovementMapper movementMapper;
+  private final RestTemplate restTemplate;
+
+  @Value("${services.product.url}")
+  private String productServiceUrl;
+
+  @Value("${services.warehouse.url}")
+  private String warehouseServiceUrl;
 
   @Override
   @Transactional
@@ -38,6 +53,10 @@ public class MovementServiceImpl implements MovementService {
     } catch (IllegalArgumentException ex) {
       throw new CustomException("Invalid movement type: " + movementRequest.getMovementType(), HttpStatus.BAD_REQUEST);
     }
+
+    // Fetch and persist names at the time of movement for immutable audit trail
+    entity.setProductName(getProductName(movementRequest.getProductId()));
+    entity.setWarehouseName(getWarehouseName(movementRequest.getWarehouseId()));
 
     StockMovement saved = movementRepository.save(entity);
     return movementMapper.toResponse(saved);
@@ -105,6 +124,55 @@ public class MovementServiceImpl implements MovementService {
     return movementRepository.findAll(Sort.by(Sort.Order.desc("movementDate"), Sort.Order.desc("movementId"))).stream()
         .map(movementMapper::toResponse)
         .toList();
+  }
+
+  // Internal Headers for Service-to-Service communication
+  private org.springframework.http.HttpHeaders getInternalHeaders() {
+    org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+    headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+    headers.set("X-User-Name", "system");
+    headers.set("X-User-Roles", "ADMIN");
+    return headers;
+  }
+
+  private String getProductName(int productId) {
+    try {
+      String url = productServiceUrl + "/products/" + productId;
+      org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(getInternalHeaders());
+      ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          entity,
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+      );
+      ApiResponse<Map<String, Object>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        return (String) apiResponse.getData().get("name");
+      }
+    } catch (Exception e) {
+      log.warn("Failed to fetch product name for ID {}: {}", productId, e.getMessage());
+    }
+    return "Item #" + productId;
+  }
+
+  private String getWarehouseName(int warehouseId) {
+    try {
+      String url = warehouseServiceUrl + "/warehouses/" + warehouseId;
+      org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(getInternalHeaders());
+      ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          entity,
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+      );
+      ApiResponse<Map<String, Object>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        return (String) apiResponse.getData().get("name");
+      }
+    } catch (Exception e) {
+      log.warn("Failed to fetch warehouse name for ID {}: {}", warehouseId, e.getMessage());
+    }
+    return "WH #" + warehouseId;
   }
 
   private MovementType parseMovementType(String movementType) {

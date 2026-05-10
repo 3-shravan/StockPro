@@ -25,5 +25,7 @@ public interface AlertRepository extends JpaRepository<Alert, Integer> {
   @Query("SELECT a FROM Alert a WHERE a.acknowledged = false ORDER BY a.createdAt DESC")
   List<Alert> findUnacknowledged();
 
+  void deleteByTypeAndRelatedWarehouseId(AlertType type, Integer relatedWarehouseId);
+
   void deleteByAlertId(int alertId);
 }

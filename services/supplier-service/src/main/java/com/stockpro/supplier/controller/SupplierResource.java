@@ -38,10 +38,10 @@ public class SupplierResource {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SupplierResponse>>> getAllSuppliers() {
-        log.info("API: Getting all active suppliers");
+    public ResponseEntity<ApiResponse<List<SupplierResponse>>> getAllSuppliers(@RequestParam(required = false, defaultValue = "false") boolean includeInactive) {
+        log.info("API: Getting suppliers (includeInactive={})", includeInactive);
         return ResponseEntity
-                .ok(ApiResponse.success("Suppliers retrieved successfully", supplierService.getAllSuppliers()));
+                .ok(ApiResponse.success("Suppliers retrieved successfully", supplierService.getAllSuppliers(includeInactive)));
     }
 
     @GetMapping("/search")
@@ -79,6 +79,14 @@ public class SupplierResource {
         log.info("API: Deactivating supplier ID={}", id);
         supplierService.deactivateSupplier(id);
         return ResponseEntity.ok(ApiResponse.success("Supplier deactivated successfully", null));
+    }
+
+    @PutMapping("/{id}/reactivate")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> reactivateSupplier(@PathVariable int id) {
+        log.info("API: Reactivating supplier ID={}", id);
+        supplierService.reactivateSupplier(id);
+        return ResponseEntity.ok(ApiResponse.success("Supplier reactivated successfully", null));
     }
 
     @PutMapping("/{id}/rating")

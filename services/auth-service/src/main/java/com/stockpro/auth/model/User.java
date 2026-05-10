@@ -52,7 +52,7 @@ public class User {
     /** Department enables department-level data scoping across services */
     private String department;
 
-    /** Soft-delete flag — deactivated users cannot log in */
+    @JsonProperty("isActive")
     @Column(name = "is_active")
     private boolean isActive;
 

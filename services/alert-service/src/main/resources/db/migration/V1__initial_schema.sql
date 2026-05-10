@@ -10,6 +10,8 @@ CREATE TABLE alerts (
     channel VARCHAR(20) NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     is_acknowledged BOOLEAN NOT NULL DEFAULT FALSE,
+    acknowledged_by INT NULL,
+    acknowledged_at DATETIME NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

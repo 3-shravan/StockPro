@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { authApi } from '@/features/auth/api/auth.api';
 import { useAuthStore } from '@/stores/auth.store';
 import { showToast } from '@/lib/toast';
+import { formatDate } from '@/lib/utils';
 
 export const ProfilePage = () => {
   const { user, setAuth, token } = useAuthStore();
@@ -264,7 +265,7 @@ export const ProfilePage = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Joined</span>
-                <span className="font-medium">{new Date(user?.createdAt || Date.now()).toLocaleDateString()}</span>
+                <span className="font-medium">{user?.createdAt ? formatDate(user.createdAt) : 'N/A'}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Status</span>

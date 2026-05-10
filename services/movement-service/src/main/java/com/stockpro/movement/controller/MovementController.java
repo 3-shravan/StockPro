@@ -7,6 +7,7 @@ import com.stockpro.movement.service.MovementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,9 @@ public class MovementController {
 
   private final MovementService movementService;
 
+  /** All warehouse-facing roles can record stock movements. */
   @PostMapping
+  @PreAuthorize("hasAnyRole('STAFF', 'MANAGER', 'ADMIN')")
   public ResponseEntity<ApiResponse<StockMovementResponse>> record(@Valid @RequestBody StockMovementRequest request) {
     log.info("API: recording movement for productId={}, warehouseId={}", request.getProductId(),
         request.getWarehouseId());
@@ -81,7 +84,9 @@ public class MovementController {
         movementService.getStockOut(productId)));
   }
 
+  /** Full audit trail — Management and Staff can view their own warehouse's history. */
   @GetMapping
+  @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'STAFF')")
   public ResponseEntity<ApiResponse<List<StockMovementResponse>>> getAll() {
     return ResponseEntity.ok(ApiResponse.success("All movements retrieved successfully",
         movementService.getAllMovements()));

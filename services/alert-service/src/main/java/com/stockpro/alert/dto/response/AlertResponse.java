@@ -27,5 +27,8 @@ public class AlertResponse {
   private AlertChannel channel;
   private boolean read;
   private boolean acknowledged;
+  private Integer acknowledgedBy;
+  private String acknowledgedByName;
+  private LocalDateTime acknowledgedAt;
   private LocalDateTime createdAt;
 }

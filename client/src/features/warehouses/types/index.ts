@@ -50,3 +50,21 @@ export interface StockTransferRequest {
   quantity: number;
   managerId: number;
 }
+
+export interface ProductStockStat {
+  productId: number;
+  productName: string;
+  quantity: number;
+}
+
+export interface WarehouseStats {
+  warehouseId: number;
+  warehouseName: string;
+  totalItems: number;
+  uniqueProducts: number;
+  capacity: number;
+  usedCapacity: number;
+  utilizedPercentage: number;
+  lowStockItems: number;
+  topProducts: ProductStockStat[];
+}

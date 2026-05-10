@@ -12,6 +12,9 @@ export interface Alert {
   channel: AlertChannel;
   read: boolean;
   acknowledged: boolean;
+  acknowledgedBy?: number;
+  acknowledgedByName?: string;
+  acknowledgedAt?: string;
   createdAt: string;
 }
 

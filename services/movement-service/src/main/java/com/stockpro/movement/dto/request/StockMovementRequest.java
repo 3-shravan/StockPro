@@ -41,6 +41,10 @@ public class StockMovementRequest {
 
   private String notes;
 
+  private String productName;
+
+  private String warehouseName;
+
   @NotNull(message = "balanceAfter is required")
   private Integer balanceAfter;
 }

@@ -1,17 +1,13 @@
 package com.stockpro.warehouse.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "stock_levels")
-@Data
-@Builder
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class StockLevel {
@@ -28,18 +24,15 @@ public class StockLevel {
     private int productId;
 
     @Column(nullable = false)
-    @Builder.Default
     private int quantity = 0;
 
     @Column(name = "reserved_quantity", nullable = false)
-    @Builder.Default
     private int reservedQuantity = 0;
 
     @Column(name = "location")
-    private String location; // bin/aisle ref
+    private String location;
 
     @Column(name = "last_updated")
-    @Builder.Default
     private LocalDateTime lastUpdated = LocalDateTime.now();
 
     public int getAvailableQuantity() {

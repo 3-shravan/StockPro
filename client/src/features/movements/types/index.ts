@@ -3,7 +3,9 @@ import { MovementType } from '@/types/enums';
 export interface StockMovement {
   movementId: number;
   productId: number;
+  productName?: string;
   warehouseId: number;
+  warehouseName?: string;
   movementType: MovementType;
   quantity: number;
   referenceId: number;

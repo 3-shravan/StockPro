@@ -24,6 +24,8 @@ public interface ProductService {
 
     void deactivateProduct(int productId);
 
+    void adjustStock(int productId, int quantity);
+
     void deleteProduct(int productId);
 
     List<ProductResponse> getAllProducts();

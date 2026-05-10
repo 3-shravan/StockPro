@@ -10,12 +10,14 @@ export interface InventorySnapshot {
   stockValue: number;
   snapshotDate: string;
   createdAt: string;
+  productName?: string;
 }
 
 export interface POSummary {
   totalOrders: number;
   totalAmount: number;
-  pendingApproval: number;
-  completed: number;
-  cancelled: number;
+  pendingApproval?: number;
+  completed?: number;
+  cancelled?: number;
+  orders?: any[];
 }

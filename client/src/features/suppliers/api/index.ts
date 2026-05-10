@@ -3,8 +3,10 @@ import type { ApiResponse } from '@/types';
 import type { Supplier, SupplierRequest } from '../types';
 
 export const suppliersApi = {
-  getAll: async () => {
-    const { data } = await apiClient.get<ApiResponse<Supplier[]>>('/suppliers');
+  getAll: async (includeInactive = false) => {
+    const { data } = await apiClient.get<ApiResponse<Supplier[]>>('/suppliers', {
+      params: { includeInactive }
+    });
     return data.data;
   },
   create: async (payload: SupplierRequest) => {
@@ -23,6 +25,10 @@ export const suppliersApi = {
   },
   deactivate: async (id: number) => {
     const { data } = await apiClient.put<ApiResponse<void>>(`/suppliers/${id}/deactivate`);
+    return data.data;
+  },
+  reactivate: async (id: number) => {
+    const { data } = await apiClient.put<ApiResponse<void>>(`/suppliers/${id}/reactivate`);
     return data.data;
   },
   updateRating: async (id: number, rating: number) => {

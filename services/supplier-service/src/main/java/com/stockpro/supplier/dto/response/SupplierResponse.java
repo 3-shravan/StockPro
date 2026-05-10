@@ -23,5 +23,5 @@ public class SupplierResponse {
     private String paymentTerms;
     private int leadTimeDays;
     private double rating;
-    private boolean isActive;
+    private boolean active;
 }

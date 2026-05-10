@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ProductSelect } from '@/components/common/ProductSelect';
 import { WarehouseSelect } from '@/components/common/WarehouseSelect';
-import { movementsApi } from '@/features/movements/api/movements.api';
-import { MovementType } from '@/types/enums';
+import { warehousesApi } from '@/features/warehouses/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { showToast } from '@/lib/toast';
 
@@ -38,34 +37,11 @@ export const TransferPage = () => {
 
     setIsSubmitting(true);
     try {
-      // Industry practice: Transfers involve two movements (OUT and IN)
-      // Here we assume the backend handles this atomically via a transfer API if available,
-      // otherwise we record the transfer intent.
-      await movementsApi.create({
+      await warehousesApi.transferStock({
         productId,
-        warehouseId: fromWarehouseId,
-        quantity: -Math.abs(quantity),
-        movementType: MovementType.TRANSFER_OUT,
-        notes: `Transfer to WH#${toWarehouseId}. ${notes}`,
-        performedBy: user?.userId ?? 0,
-        referenceType: 'TRANSFER',
-        referenceId: toWarehouseId,
-        unitCost: 0,
-        balanceAfter: 0,
-      });
-      
-      // Secondary movement for the destination
-      await movementsApi.create({
-        productId,
-        warehouseId: toWarehouseId,
-        quantity: Math.abs(quantity),
-        movementType: MovementType.TRANSFER_IN,
-        notes: `Transfer from WH#${fromWarehouseId}. ${notes}`,
-        performedBy: user?.userId ?? 0,
-        referenceType: 'TRANSFER',
-        referenceId: fromWarehouseId,
-        unitCost: 0,
-        balanceAfter: 0,
+        fromWarehouseId,
+        toWarehouseId,
+        quantity,
       });
 
       showToast.success('Stock transfer completed successfully.');

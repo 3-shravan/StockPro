@@ -12,12 +12,20 @@ export const purchasesApi = {
     const { data } = await apiClient.get<ApiResponse<PurchaseOrder[]>>(`/purchase-orders/status/${status}`);
     return data.data;
   },
+  getById: async (id: number) => {
+    const { data } = await apiClient.get<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}`);
+    return data.data;
+  },
   create: async (payload: PurchaseOrderRequest) => {
     const { data } = await apiClient.post<ApiResponse<PurchaseOrder>>('/purchase-orders', payload);
     return data.data;
   },
   update: async (id: number, payload: PurchaseOrderRequest) => {
     const { data } = await apiClient.put<ApiResponse<PurchaseOrder>>(`/purchase-orders/${id}`, payload);
+    return data.data;
+  },
+  submit: async (id: number) => {
+    const { data } = await apiClient.put<ApiResponse<void>>(`/purchase-orders/${id}/submit`);
     return data.data;
   },
   approve: async (id: number) => {

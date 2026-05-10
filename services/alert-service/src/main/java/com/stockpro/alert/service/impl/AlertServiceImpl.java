@@ -1,5 +1,7 @@
 package com.stockpro.alert.service.impl;
 
+import java.time.LocalDateTime;
+
 import com.stockpro.alert.dto.request.AlertRequest;
 import com.stockpro.alert.dto.request.BulkAlertRequest;
 import com.stockpro.alert.dto.response.AlertResponse;
@@ -206,9 +208,11 @@ public class AlertServiceImpl implements AlertService {
 
   @Override
   @Transactional
-  public void acknowledge(int alertId) {
+  public void acknowledge(int alertId, int userId) {
     Alert alert = findByIdOrThrow(alertId);
     alert.setAcknowledged(true);
+    alert.setAcknowledgedBy(userId);
+    alert.setAcknowledgedAt(LocalDateTime.now());
     alertRepository.save(alert);
   }
 
@@ -216,6 +220,7 @@ public class AlertServiceImpl implements AlertService {
   public List<AlertResponse> getByRecipient(int recipientId) {
     return alertRepository.findByRecipientId(recipientId).stream()
         .map(alertMapper::toResponse)
+        .map(this::enrich)
         .toList();
   }
 
@@ -228,6 +233,7 @@ public class AlertServiceImpl implements AlertService {
   public List<AlertResponse> getUnacknowledged() {
     return alertRepository.findUnacknowledged().stream()
         .map(alertMapper::toResponse)
+        .map(this::enrich)
         .toList();
   }
 
@@ -238,6 +244,13 @@ public class AlertServiceImpl implements AlertService {
       throw new CustomException("Alert not found with ID: " + alertId, HttpStatus.NOT_FOUND);
     }
     alertRepository.deleteByAlertId(alertId);
+  }
+
+  @Override
+  @Transactional
+  public void clearAlertsByTypeAndWarehouse(String type, int warehouseId) {
+    log.info("Clearing alerts of type {} for warehouse {}", type, warehouseId);
+    alertRepository.deleteByTypeAndRelatedWarehouseId(parseType(type), warehouseId);
   }
 
   @Override
@@ -265,7 +278,35 @@ public class AlertServiceImpl implements AlertService {
   public List<AlertResponse> getAll() {
     return alertRepository.findAll().stream()
         .map(alertMapper::toResponse)
+        .map(this::enrich)
         .toList();
+  }
+
+  private AlertResponse enrich(AlertResponse response) {
+    if (response.isAcknowledged() && response.getAcknowledgedBy() != null) {
+      response.setAcknowledgedByName(getUserName(response.getAcknowledgedBy()));
+    }
+    return response;
+  }
+
+  private String getUserName(int userId) {
+    try {
+      String url = authServiceUrl + "/auth/users/" + userId;
+      ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          null,
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+      );
+      ApiResponse<Map<String, Object>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        Map<String, Object> data = apiResponse.getData();
+        return (String) data.get("fullName");
+      }
+    } catch (Exception e) {
+      log.warn("Failed to fetch user name for ID {}: {}", userId, e.getMessage());
+    }
+    return "User #" + userId;
   }
 
   private String getProductName(int productId) {
@@ -345,7 +386,7 @@ public class AlertServiceImpl implements AlertService {
       if (apiResponse != null && apiResponse.getData() != null) {
         List<Map<String, Object>> users = apiResponse.getData();
         return users.stream()
-            .filter(u -> "ADMIN".equals(u.get("role")) || "MANAGER".equals(u.get("role")))
+            .filter(u -> "ADMIN".equals(u.get("role")) || "MANAGER".equals(u.get("role")) || "STAFF".equals(u.get("role")))
             .map(u -> (Integer) u.get("userId"))
             .toList();
       }

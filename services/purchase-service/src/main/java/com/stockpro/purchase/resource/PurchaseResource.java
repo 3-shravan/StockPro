@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,6 +61,12 @@ public class PurchaseResource {
     @Value("${services.product.url}")
     private String productServiceUrl;
 
+    @Value("${services.supplier.url}")
+    private String supplierServiceUrl;
+
+    @Value("${services.warehouse.url}")
+    private String warehouseServiceUrl;
+
     /**
      * Creates a new Purchase Order in the system.
      * What: Takes raw frontend input, attaches the creator's identity, and persists
@@ -67,7 +74,9 @@ public class PurchaseResource {
      * Why: Every order needs an audit trail of who created it, and DRAFT status
      * prevents accidental fulfillment.
      */
+    /** Purchase Officers (and Admins) create new POs. */
     @PostMapping
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> create(@Valid @RequestBody PurchaseOrderRequest request) {
         log.info("API: Creating purchase order");
 
@@ -102,6 +111,7 @@ public class PurchaseResource {
      * descriptions for clarity.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('STAFF', 'OFFICER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> getById(@PathVariable int id) {
         log.info("API: Getting purchase order by ID: {}", id);
         return purchaseService.getPOById(id)
@@ -141,6 +151,7 @@ public class PurchaseResource {
      * Why: This powers dashboard widgets like "Orders Pending Receipt" or "Approvals Needed".
      */
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('STAFF', 'OFFICER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<PurchaseOrderResponse>>> getByStatus(
             @PathVariable PurchaseOrderStatus status) {
         log.info("API: Getting POs with status: {}", status);
@@ -157,11 +168,25 @@ public class PurchaseResource {
     }
 
     /**
+     * Submits a Purchase Order for approval.
+     * What: Moves order from DRAFT to PENDING_APPROVAL.
+     */
+    @PutMapping("/{id}/submit")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> submit(@PathVariable int id) {
+        log.info("API: Submitting PO ID: {} for approval", id);
+        purchaseService.submitForApproval(id);
+        return ResponseEntity.ok(ApiResponse.success("Purchase order submitted for approval", null));
+    }
+
+    /**
      * Approves a Purchase Order, moving it from DRAFT to APPROVED.
      * What: Triggers the approval workflow in the service layer.
      * Why: Orders must be approved before goods can be physically received.
      */
+    /** Only Inventory Managers (and Admins) can approve POs. */
     @PutMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> approve(@PathVariable int id) {
         log.info("API: Approving PO ID: {}", id);
         
@@ -178,7 +203,9 @@ public class PurchaseResource {
      * Why: Keeping the physical reality (the truck arrived) in sync with digital
      * inventory is the key StockPro value.
      */
+    /** Both Staff and Management can record physical receipt of goods. */
     @PostMapping("/{id}/receive")
+    @PreAuthorize("hasAnyRole('STAFF', 'OFFICER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> receiveGoods(@PathVariable int id,
             @Valid @RequestBody ReceiveGoodsRequest request) {
         log.info("API: Receiving goods for PO ID: {}", id);
@@ -206,7 +233,9 @@ public class PurchaseResource {
      * What: Sets status to CANCELLED and prevents further receipt of goods.
      * Why: To stop a procurement process due to errors or changing requirements.
      */
+    /** Officers and Admins can cancel POs. */
     @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('OFFICER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> cancel(@PathVariable int id) {
         log.info("API: Cancelling PO ID: {}", id);
         
@@ -221,7 +250,9 @@ public class PurchaseResource {
      * What: Replaces PO details and recalculates totals.
      * Why: Allows correcting errors before an order is officially approved.
      */
+    /** Officers can update DRAFT POs before submission. */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> update(@PathVariable int id,
             @Valid @RequestBody PurchaseOrderRequest request) {
         log.info("API: Updating draft PO ID: {}", id);
@@ -270,7 +301,9 @@ public class PurchaseResource {
      * Fetches all Purchase Orders in the system.
      * Why: For administrative oversight and global export capabilities.
      */
+    /** All management roles can view the full PO list. */
     @GetMapping
+    @PreAuthorize("hasAnyRole('STAFF', 'OFFICER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<PurchaseOrderResponse>>> getAll() {
         log.info("API: Listing all purchase orders");
         List<PurchaseOrder> orders = purchaseService.getAllPOs();
@@ -281,22 +314,44 @@ public class PurchaseResource {
     }
 
     /**
-     * Helper to enrich the response with product names and SKUs from
-     * product-service.
-     * This follows the "do what's best" guidance for better UX.
+     * Enriches the response with details from other services (Product, Supplier, Warehouse).
      */
     private PurchaseOrderResponse enrichResponse(PurchaseOrderResponse response) {
+        // 1. Fetch Supplier Name
+        try {
+            String url = supplierServiceUrl + "/suppliers/" + response.getSupplierId();
+            ResponseEntity<ApiResponse<Map<String, Object>>> res = restTemplate.exchange(
+                url, HttpMethod.GET, null, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+            );
+            if (res.getBody() != null && res.getBody().getData() != null) {
+                response.setSupplierName((String) res.getBody().getData().get("name"));
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch supplier details for ID {}: {}", response.getSupplierId(), e.getMessage());
+            response.setSupplierName("Supplier #" + response.getSupplierId());
+        }
+
+        // 2. Fetch Warehouse Name
+        try {
+            String url = warehouseServiceUrl + "/warehouses/" + response.getWarehouseId();
+            ResponseEntity<ApiResponse<Map<String, Object>>> res = restTemplate.exchange(
+                url, HttpMethod.GET, null, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+            );
+            if (res.getBody() != null && res.getBody().getData() != null) {
+                response.setWarehouseName((String) res.getBody().getData().get("name"));
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch warehouse details for ID {}: {}", response.getWarehouseId(), e.getMessage());
+            response.setWarehouseName("Warehouse #" + response.getWarehouseId());
+        }
+
+        // 3. Fetch Line Item Details (Product names)
         if (response.getLineItems() != null) {
             for (POLineItemResponse item : response.getLineItems()) {
                 try {
-                    // Fetch product details from product-service
                     String url = productServiceUrl + "/" + item.getProductId();
-                    // Use ParameterizedTypeReference for type-safe enrichment
                     ResponseEntity<ApiResponse<Map<String, Object>>> productResponseEntity = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        null,
-                        new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+                        url, HttpMethod.GET, null, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
                     );
                     
                     ApiResponse<Map<String, Object>> productResponse = productResponseEntity.getBody();
@@ -306,9 +361,7 @@ public class PurchaseResource {
                         item.setProductSku((String) productData.get("sku"));
                     }
                 } catch (Exception e) {
-                    log.warn("Could not fetch product details for product ID {}: {}", item.getProductId(),
-                            e.getMessage());
-                    // Fallback to placeholders
+                    log.warn("Could not fetch product details for ID {}: {}", item.getProductId(), e.getMessage());
                     item.setProductName("Unknown Product (" + item.getProductId() + ")");
                 }
             }

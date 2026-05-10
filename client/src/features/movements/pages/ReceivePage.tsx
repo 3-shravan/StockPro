@@ -12,6 +12,7 @@ import {
   ShoppingBasket01Icon
 } from 'hugeicons-react';
 import { useEffect, useState } from 'react';
+import { formatDate } from '@/lib/utils';
 
 export const ReceivePage = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -24,11 +25,12 @@ export const ReceivePage = () => {
     setIsLoading(true);
     try {
       // Industry practice: only show orders that are Approved or Partially Received
-      const all = await purchasesApi.getAll();
-      setOrders(all.filter(o => 
-        o.status === PurchaseOrderStatus.APPROVED || 
-        o.status === PurchaseOrderStatus.PARTIALLY_RECEIVED
-      ));
+      // Fetch both statuses in parallel to avoid access denied on global list
+      const [approved, partiallyReceived] = await Promise.all([
+        purchasesApi.getByStatus(PurchaseOrderStatus.APPROVED),
+        purchasesApi.getByStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED)
+      ]);
+      setOrders([...approved, ...partiallyReceived]);
     } catch (error) {
       showToast.error('Failed to load pending purchase orders.');
     } finally {
@@ -138,7 +140,7 @@ export const ReceivePage = () => {
                       <div>
                         <p className="font-bold text-base">PO #{order.poId} · {order.supplierName}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {order.warehouseName} · {order.lineItems.length} items · Ordered {new Date(order.orderDate).toLocaleDateString()}
+                          {order.warehouseName} · {order.lineItems.length} items · Ordered {formatDate(order.orderDate)}
                         </p>
                       </div>
                     </div>
@@ -226,7 +228,7 @@ export const ReceivePage = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Expected Date</span>
-                    <span className="font-bold">{selectedOrder.expectedDate || 'Not specified'}</span>
+                    <span className="font-bold">{selectedOrder.expectedDate ? formatDate(selectedOrder.expectedDate) : 'Not specified'}</span>
                   </div>
                 </div>
 

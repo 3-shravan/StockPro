@@ -35,8 +35,8 @@ export const alertsApi = {
   },
 
   /** PUT /alerts/:alertId/acknowledge → acknowledge alert */
-  acknowledge: async (alertId: number) => {
-    const { data } = await apiClient.put<ApiResponse<void>>(`/alerts/${alertId}/acknowledge`);
+  acknowledge: async (alertId: number, userId: number) => {
+    const { data } = await apiClient.put<ApiResponse<void>>(`/alerts/${alertId}/acknowledge?userId=${userId}`);
     return data.data;
   },
 

@@ -98,6 +98,22 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
+    public void adjustStock(int productId, int quantity) {
+        log.info("Adjusting stock for product ID {}: +{}", productId, quantity);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new CustomException("Product not found with ID: " + productId, HttpStatus.NOT_FOUND));
+        
+        int newQty = product.getCurrentQuantity() + quantity;
+        if (newQty < 0) {
+            throw new CustomException("Stock level cannot be negative", HttpStatus.BAD_REQUEST);
+        }
+        
+        product.setCurrentQuantity(newQty);
+        productRepository.save(product);
+    }
+
+    @Override
+    @Transactional
     public void deleteProduct(int productId) {
         log.info("Deleting product with ID: {}", productId);
         if (!productRepository.existsById(productId)) {

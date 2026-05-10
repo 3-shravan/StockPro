@@ -130,6 +130,12 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", authService.getAllUsers()));
     }
 
+    @GetMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<User>> getUserById(@PathVariable int id) {
+        log.info("GET /auth/users/{}", id);
+        return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", authService.getUserById(id)));
+    }
+
     @PutMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<User>> updateUser(
