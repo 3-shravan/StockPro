@@ -111,7 +111,7 @@ export const LandingPage = () => {
       {/* Trust Section */}
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-6 text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-8">Trusted by industry leaders</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-8">Trusted by industry leaders</p>
           <div className="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
             {/* These would be logos in a real app */}
             <span className="text-2xl font-bold italic">LOGITECH</span>

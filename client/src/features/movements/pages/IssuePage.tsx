@@ -4,10 +4,9 @@ import {
   DeliveryBox01Icon,
   HelpCircleIcon,
   Settings02Icon,
-  ShoppingCart01Icon
+  ShoppingCart01Icon,
+  PackageIcon
 } from 'hugeicons-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ProductSelect } from '@/components/common/ProductSelect';
 import { WarehouseSelect } from '@/components/common/WarehouseSelect';
 import { movementsApi } from '@/features/movements/api/movements.api';
@@ -44,14 +43,14 @@ export const IssuePage = () => {
       await movementsApi.create({
         productId,
         warehouseId,
-        quantity: Math.abs(quantity), // Backend expects positive value; movementType handles direction
+        quantity: Math.abs(quantity),
         movementType: reason,
         notes,
         performedBy: user?.userId ?? 0,
         referenceType: 'MANUAL',
         referenceId: 0,
         unitCost: 0,
-        balanceAfter: 0, // Calculated by backend
+        balanceAfter: 0,
       });
       showToast.success('Stock issue recorded successfully.');
       setProductId(0);
@@ -65,114 +64,130 @@ export const IssuePage = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="font-heading text-3xl font-bold tracking-tight">Stock Issue</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Record outbound stock for production, sales, or internal consumption.
-        </p>
+    <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20 px-6">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
+        <div>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Resource Consumption</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            Dispatch Protocol
+          </h1>
+        </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-[1fr_300px]">
-        <Card className="rounded-3xl border-transparent bg-card/80 shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b border-border/50 pb-8">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <PackageMovingIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle>Issue Details</CardTitle>
-                <CardDescription>Select product and source warehouse.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-10">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="space-y-6">
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium px-1">Source Warehouse</label>
-                    <WarehouseSelect value={warehouseId} onChange={setWarehouseId} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium px-1">Product</label>
-                    <ProductSelect value={productId} onChange={setProductId} warehouseId={warehouseId} />
-                  </div>
+      <div className="grid gap-12 lg:grid-cols-[1fr_400px]">
+        <div className="space-y-12">
+          <form onSubmit={handleSubmit} className="space-y-10">
+            <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-10">
+              <div className="grid gap-8 sm:grid-cols-2">
+                <div className="space-y-3 text-left">
+                  <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    Source Node Hub <span className="text-rose-500">*</span>
+                  </label>
+                  <WarehouseSelect value={warehouseId} onChange={setWarehouseId} placeholder="SELECT ORIGIN HUB" />
                 </div>
 
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium px-1">Quantity to Issue</label>
+                <div className="space-y-3 text-left">
+                  <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    Resource Designation <span className="text-rose-500">*</span>
+                  </label>
+                  <ProductSelect value={productId} onChange={setProductId} warehouseId={warehouseId} placeholder="SELECT SKU" />
+                </div>
+
+                <div className="space-y-3 text-left">
+                  <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    Verified Quantity <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-rose-500 transition-colors" />
                     <input
                       type="number"
                       min="1"
                       value={quantity || ''}
                       onChange={(e) => setQuantity(Number(e.target.value))}
-                      className="h-11 w-full rounded-2xl border border-input/60 bg-background px-4 text-sm focus:border-primary outline-none"
-                      placeholder="Enter amount..."
+                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-rose-500/10 outline-none transition-all"
+                      placeholder="UNIT COUNT"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium px-1">Issue Reason</label>
+                </div>
+
+                <div className="space-y-3 text-left">
+                  <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    Dispatch Rationale <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
                     <select
                       value={reason}
                       onChange={(e) => setReason(e.target.value as MovementType)}
-                      className="h-11 w-full rounded-2xl border border-input/60 bg-background px-4 text-sm focus:border-primary outline-none"
+                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 px-6 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-rose-500/10 outline-none appearance-none cursor-pointer transition-all"
                     >
                       {issueReasons.map((r) => (
-                        <option key={r.label} value={r.value}>{r.label}</option>
+                        <option key={r.label} value={r.value}>{r.label.toUpperCase()} SEGMENT</option>
                       ))}
                     </select>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-40 text-xs">
+                      ▼
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1">Notes / Reference</label>
+                <div className="space-y-3 sm:col-span-2 text-left">
+                  <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    Audit Reference / Strategic Notes
+                  </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-24 w-full rounded-2xl border border-input/60 bg-background p-4 text-sm focus:border-primary outline-none"
-                    placeholder="Describe why this stock is being issued (e.g., Job Card #123)"
+                    className="min-h-[120px] w-full rounded-2xl border border-border bg-muted/5 p-6 text-sm font-bold focus:ring-4 focus:ring-rose-500/10 outline-none transition-all resize-none placeholder:text-muted-foreground/20"
+                    placeholder="DESCRIBE DISPATCH CONTEXT..."
                   />
                 </div>
               </div>
+            </div>
 
-              <Button 
+            <div className="flex items-center gap-4 pt-6 border-t border-border/40">
+              <button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="w-full h-12 rounded-2xl shadow-lg shadow-primary/20"
+                className="flex-1 h-14 rounded-full bg-rose-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-rose-500/20 disabled:opacity-50"
               >
-                {isSubmitting ? 'Recording Issue...' : 'Confirm Stock Issue'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                {isSubmitting ? 'SYNCHRONIZING...' : 'AUTHORIZE DISPATCH'}
+              </button>
+            </div>
+          </form>
+        </div>
 
-        <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10">
-            <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
-              <HelpCircleIcon className="w-4 h-4 text-primary" />
-              Guidelines
+        <div className="space-y-8">
+          <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-8">
+            <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-wider flex items-center gap-3">
+              <HelpCircleIcon className="w-5 h-5" />
+              Operational Guidelines
             </h3>
-            <ul className="text-xs text-muted-foreground space-y-3">
-              <li className="flex gap-2">
-                <span className="text-primary font-bold">•</span>
-                Ensure sufficient stock is available in the selected warehouse.
-              </li>
-              <li className="flex gap-2">
-                <span className="text-primary font-bold">•</span>
-                Issued quantities will be immediately deducted from inventory.
-              </li>
-              <li className="flex gap-2">
-                <span className="text-primary font-bold">•</span>
-                Use 'Write-off' only for damaged or expired goods.
-              </li>
+            <ul className="space-y-6 text-left">
+              {[
+                "Hub capacity and real-time stock levels are verified upon authorization.",
+                "Dispatched quantities are immediately deducted from the immutable ledger.",
+                "Categorize as 'Write-off' only for verified damage or expiration events."
+              ].map((text, i) => (
+                <li key={i} className="flex gap-4 group">
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500/20 mt-1.5 shrink-0 group-hover:bg-rose-500 transition-colors" />
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider leading-relaxed">
+                    {text}
+                  </p>
+                </li>
+              ))}
             </ul>
           </div>
           
-          <div className="p-6 rounded-3xl bg-muted/40 border border-border/50">
-            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Last Action</p>
-            <p className="text-xs text-muted-foreground italic">No movements recorded in this session.</p>
+          <div className="p-10 rounded-[2.5rem] bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-xl">
+            <p className="text-[10px] font-black uppercase text-emerald-500/40 mb-3 tracking-wider text-left">Protocol Status</p>
+            <p className="text-[10px] text-emerald-500/60 font-bold uppercase tracking-wider leading-relaxed italic text-left">
+              Awaiting dispatch authorization to commit records to the global registry.
+            </p>
           </div>
         </div>
       </div>

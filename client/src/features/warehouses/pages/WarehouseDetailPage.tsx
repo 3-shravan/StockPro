@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft01Icon,
-  Building05Icon,
   PackageIcon,
   Alert01Icon,
   ArrowUp01Icon,
@@ -18,6 +17,14 @@ import { warehousesApi } from "@/features/warehouses/api";
 import type { WarehouseStats } from "@/features/warehouses/types";
 import { showToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { Modal } from "@/components/ui/modal";
 import type { WarehouseRequest } from "@/features/warehouses/types";
 import { useAuthStore } from "@/stores/auth.store";
@@ -120,54 +127,48 @@ export const WarehouseDetailPage = () => {
   if (!stats) return null;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header */}
-      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between bg-card/40 p-6 rounded-3xl border border-border/50 backdrop-blur-sm">
+    <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
+      {/* Header Section */}
+      <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between pt-4">
         <div className="flex items-center gap-6">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => navigate(-1)}
-            className="rounded-2xl hover:bg-background shadow-sm"
+            className="rounded-full hover:bg-card/60 backdrop-blur-sm shadow-sm w-12 h-12 border border-border/40 shrink-0"
           >
             <ArrowLeft01Icon className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-5">
-            <div className="p-4 rounded-[1.25rem] bg-primary text-primary-foreground shadow-xl shadow-primary/20">
-              <Building05Icon className="w-8 h-8" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">{stats.warehouseName}</h1>
-              <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Operational Dashboard • ID #{stats.warehouseId}
+          <div>
+            <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Distribution Hub</p>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+              {stats.warehouseName}
+            </h1>
+            <div className="flex items-center gap-2 mt-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm" />
+              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider">
+                Operational Node • ID #{stats.warehouseId}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            className="rounded-2xl gap-2 h-12 px-6 border-border/50 hover:bg-background transition-all"
+        <div className="flex items-center gap-4 p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
+          <button 
+            className="flex items-center gap-2 px-6 py-3 bg-card text-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:bg-muted active:scale-95 border border-border shadow-sm"
             onClick={handleReconcile}
             disabled={isReconciling}
           >
-            <RefreshIcon className={cn("w-5 h-5", isReconciling && "animate-spin")} />
-            Reconcile Capacity
-          </Button>
-          <Button 
-            className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-primary/20"
-            onClick={() => {
-              // We need full details for the form, but stats only has some
-              // For now, we'll populate what we have and let the user fill the rest
-              // In a real app, we'd fetch the full warehouse object
-              setIsEditModalOpen(true);
-            }}
+            <RefreshIcon className={cn("w-4 h-4", isReconciling && "animate-spin")} />
+            Sync Capacity
+          </button>
+          <button 
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-primary/20"
+            onClick={() => setIsEditModalOpen(true)}
           >
-            <Settings02Icon className="w-5 h-5" />
-            Manage Settings
-          </Button>
+            <Settings02Icon className="w-4 h-4" />
+            Node Settings
+          </button>
         </div>
       </div>
 
@@ -239,7 +240,7 @@ export const WarehouseDetailPage = () => {
       </Modal>
 
       {/* Main Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Total Inventory" 
           value={stats.totalItems.toLocaleString()}
@@ -273,18 +274,19 @@ export const WarehouseDetailPage = () => {
       </div>
 
       {/* Detail Sections */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-10 lg:grid-cols-3">
         {/* Top Products Table */}
-        <Card className="lg:col-span-2 rounded-3xl border-transparent bg-card/60 backdrop-blur-md shadow-sm overflow-hidden">
-          <CardHeader className="p-8 pb-4">
+        <Card className="lg:col-span-2 rounded-[2.5rem] border border-border/40 bg-card shadow-2xl overflow-hidden">
+          <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl">Top Inventory Holdings</CardTitle>
-                <CardDescription>Products with the highest stock concentration in this facility.</CardDescription>
+                <CardTitle className="text-lg">Top Inventory Holdings</CardTitle>
+                <CardDescription className="text-xs">Products with the highest stock concentration in this facility.</CardDescription>
               </div>
               <Button 
                 variant="ghost" 
-                className="text-primary hover:text-primary hover:bg-primary/5 rounded-xl"
+                size="sm"
+                className="text-primary hover:text-primary hover:bg-primary/5 rounded-xl text-xs h-8"
                 onClick={() => navigate(getRolePath('/products'))}
               >
                 View Full Inventory
@@ -292,49 +294,47 @@ export const WarehouseDetailPage = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-muted/30 border-y border-border/50">
-                    <th className="px-8 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Product Details</th>
-                    <th className="px-8 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Quantity</th>
-                    <th className="px-8 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {stats.topProducts.map((product) => (
-                    <tr key={product.productId} className="group hover:bg-background/50 transition-colors">
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center font-bold text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                            #{product.productId}
-                          </div>
-                          <span className="font-semibold text-foreground">{product.productName}</span>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/40 h-16">
+                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Asset Parameters</TableHead>
+                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Inventory Load</TableHead>
+                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest text-right">Integrity Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stats.topProducts.map((product) => (
+                  <TableRow key={product.productId} className="group hover:bg-muted/10 border-b border-border/40 transition-colors last:border-0 h-24">
+                    <TableCell className="px-8">
+                      <div className="flex items-center gap-6 whitespace-nowrap">
+                        <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center text-base font-black text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                          #{product.productId}
                         </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <span className="font-medium">{product.quantity.toLocaleString()}</span>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold">
-                          Optimal
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <span className="font-black text-xl text-foreground tracking-tighter">{product.productName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-8 font-black text-xl text-foreground whitespace-nowrap tracking-tighter">
+                      {product.quantity.toLocaleString()} Units
+                    </TableCell>
+                    <TableCell className="px-8 text-right whitespace-nowrap">
+                      <span className="inline-flex items-center px-5 py-2 rounded-full bg-emerald-500/10 text-emerald-500 text-[11px] font-black uppercase tracking-widest border border-emerald-500/10">
+                        Optimal
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
 
         {/* Capacity Visualization */}
-        <Card className="rounded-3xl border-transparent bg-card/60 backdrop-blur-md shadow-sm">
-          <CardHeader className="p-8">
-            <CardTitle className="text-xl">Capacity Analytics</CardTitle>
-            <CardDescription>Storage utilization breakdown.</CardDescription>
+        <Card className="rounded-[2.5rem] border border-border/40 bg-card shadow-2xl">
+          <CardHeader className="p-6">
+            <CardTitle className="text-lg">Capacity Analytics</CardTitle>
+            <CardDescription className="text-xs">Storage utilization breakdown.</CardDescription>
           </CardHeader>
-          <CardContent className="p-8 pt-0 space-y-8">
+          <CardContent className="p-6 pt-0 space-y-6">
             <div className="relative flex items-center justify-center py-4">
               <svg className="w-48 h-48 transform -rotate-90">
                 <circle
@@ -364,18 +364,18 @@ export const WarehouseDetailPage = () => {
               </svg>
               <div className="absolute flex flex-col items-center">
                 <span className="text-4xl font-bold tracking-tight">{Math.round(stats.utilizedPercentage)}%</span>
-                <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Full</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Full</span>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 rounded-2xl bg-muted/30 border border-border/50">
-                <span className="text-sm font-medium text-muted-foreground">Used Space</span>
-                <span className="font-bold">{stats.usedCapacity.toLocaleString()}</span>
+              <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 border border-border/40 group/item hover:bg-muted/50 transition-colors">
+                <span className="text-sm font-black text-muted-foreground uppercase tracking-wider">Used Space</span>
+                <span className="text-xl font-black text-foreground tracking-tighter">{stats.usedCapacity.toLocaleString()} Units</span>
               </div>
-              <div className="flex justify-between items-center p-4 rounded-2xl bg-muted/30 border border-border/50">
-                <span className="text-sm font-medium text-muted-foreground">Free Space</span>
-                <span className="font-bold">{(stats.capacity - stats.usedCapacity).toLocaleString()}</span>
+              <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 border border-border/40 group/item hover:bg-muted/50 transition-colors">
+                <span className="text-sm font-black text-muted-foreground uppercase tracking-wider">Free Space</span>
+                <span className="text-xl font-black text-foreground tracking-tighter">{(stats.capacity - stats.usedCapacity).toLocaleString()} Units</span>
               </div>
             </div>
             
@@ -402,7 +402,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, unit, icon, description, trend, trendType, progress, variant = 'default' }: StatCardProps) => (
-  <Card className="rounded-3xl border-transparent bg-card/60 backdrop-blur-md shadow-sm border-none overflow-hidden group hover:bg-card transition-all">
+  <Card className="rounded-[2.5rem] border-none bg-white/[0.05] shadow-2xl backdrop-blur-xl overflow-hidden group hover:bg-white/[0.08] transition-all">
     <CardContent className="p-6">
       <div className="flex items-center justify-between">
         <div className={cn(

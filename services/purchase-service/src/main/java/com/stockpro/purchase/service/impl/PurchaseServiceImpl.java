@@ -1,5 +1,20 @@
 package com.stockpro.purchase.service.impl;
 
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
 import com.stockpro.purchase.entity.POLineItem;
 import com.stockpro.purchase.entity.PurchaseOrder;
 import com.stockpro.purchase.entity.PurchaseOrderStatus;
@@ -7,25 +22,9 @@ import com.stockpro.purchase.exception.CustomException;
 import com.stockpro.purchase.exception.ResourceNotFoundException;
 import com.stockpro.purchase.repository.PurchaseRepository;
 import com.stockpro.purchase.service.PurchaseService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import com.stockpro.purchase.common.response.ApiResponse;
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * PurchaseServiceImpl implements the business logic for the procurement
@@ -277,8 +276,6 @@ public class PurchaseServiceImpl implements PurchaseService {
     private void adjustWarehouseStock(int warehouseId, int productId, int quantity, int poId) {
         log.info("Adjusting stock in warehouse {} for product {}: +{}", warehouseId, productId, quantity);
         String url = warehouseServiceUrl + "/warehouses/stock/adjust";
-        String getUrl = warehouseServiceUrl + "/warehouses/" + warehouseId + "/stock/" + productId;
-
         // Build the payload for the external API.
         Map<String, Object> request = new HashMap<>();
         request.put("warehouseId", warehouseId);
@@ -317,32 +314,6 @@ public class PurchaseServiceImpl implements PurchaseService {
             // We don't necessarily want to fail the whole receipt if just the catalogue cache update fails,
             // but in this system we treat it as required for UI consistency.
             throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "External Product Service Error: " + e.getMessage());
-        }
-    }
-
-    private void recordStockMovement(int warehouseId, int productId, int quantity, int poId, int balanceAfter, double unitCost) {
-        log.info("Recording stock movement for PO {}: product {}, qty {}", poId, productId, quantity);
-        String url = movementServiceUrl + "/movements";
-
-        Map<String, Object> request = new HashMap<>();
-        request.put("productId", productId);
-        request.put("warehouseId", warehouseId);
-        request.put("quantity", quantity);
-        request.put("movementType", "STOCK_IN");
-        request.put("referenceId", poId);
-        request.put("referenceType", "PURCHASE_ORDER");
-        request.put("unitCost", unitCost);
-        request.put("performedBy", 1); // System/Default user
-        request.put("balanceAfter", balanceAfter);
-        request.put("notes", "Received from PO #" + poId);
-
-        try {
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, getInternalHeaders());
-            restTemplate.postForEntity(url, entity, Object.class);
-        } catch (Exception e) {
-            log.warn("Failed to record stock movement: {}", e.getMessage());
-            // We don't fail the whole transaction for a movement log failure, 
-            // but in a production system we might want to ensure consistency.
         }
     }
 

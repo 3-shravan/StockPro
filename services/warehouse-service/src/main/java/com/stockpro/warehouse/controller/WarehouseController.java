@@ -98,6 +98,14 @@ public class WarehouseController {
                 .orElseThrow(() -> new CustomException("Stock not found", HttpStatus.NOT_FOUND));
     }
 
+    @GetMapping("/stock/product/{productId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<StockLevelResponse>>> getStockByProduct(@PathVariable int productId) {
+        log.info("API: Retrieving all stock levels for product ID: {}", productId);
+        List<StockLevelResponse> response = warehouseService.getStockLevelsByProductId(productId);
+        return ResponseEntity.ok(ApiResponse.success("Product stock levels retrieved", response));
+    }
+
     @PutMapping("/stock/update")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<Void>> updateStock(@Valid @RequestBody StockUpdateRequest request) {

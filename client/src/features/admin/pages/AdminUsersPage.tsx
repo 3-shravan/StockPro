@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { 
   Delete02Icon, 
   Edit02Icon, 
@@ -8,17 +8,23 @@ import {
   Search01Icon, 
   UserAdd01Icon,
   UserGroupIcon,
-  FilterIcon,
-  SmartPhone01Icon,
   Building05Icon,
-  Settings01Icon
+  CallIcon,
+  ViewIcon,
+  ViewOffIcon,
+  PlusSignIcon
 } from 'hugeicons-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import { authApi } from '@/features/auth/api/auth.api';
 import { showToast } from '@/lib/toast';
 import { Role, type Role as RoleType, type User } from '@/types';
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { cn } from "@/lib/utils";
 
 const assignableRoles = [Role.ADMIN, Role.MANAGER, Role.STAFF, Role.OFFICER];
@@ -55,15 +61,28 @@ export const AdminUsersPage = () => {
 
   const isEditing = editingUserId !== null;
 
-  const filteredUsers = users.filter((user) => {
-    if (roleFilter !== 'ALL' && user.role !== roleFilter) return false;
-    if (!query.trim()) return false; 
+  const filteredUsers = useMemo(() => {
+    let result = users;
+    
+    if (roleFilter !== 'ALL') {
+      result = result.filter(u => u.role === roleFilter);
+    }
 
-    const q = query.toLowerCase();
-    return [user.fullName, user.email, user.department, user.phone]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(q));
-  });
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      result = result.filter(user => 
+        [user.fullName, user.email, user.department, user.phone]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(q))
+      );
+    } else {
+      result = [...result].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+
+    return result;
+  }, [users, query, roleFilter]);
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -93,7 +112,6 @@ export const AdminUsersPage = () => {
 
   const editUser = (user: User) => {
     const active = user.isActive ?? (user as any).active ?? true;
-
     setEditingUserId(user.userId);
     setFormData({
       fullName: user.fullName,
@@ -110,7 +128,6 @@ export const AdminUsersPage = () => {
   const deleteUser = async (user: User) => {
     const confirmed = window.confirm(`Are you sure you want to delete ${user.fullName}?`);
     if (!confirmed) return;
-
     try {
       await authApi.deleteUser(user.userId);
       showToast.success('User record removed.');
@@ -122,12 +139,10 @@ export const AdminUsersPage = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
     if (!formData.fullName || !formData.email || (!isEditing && !formData.password)) {
       showToast.error('Name, email, and password are required.');
       return;
     }
-
     setIsSubmitting(true);
     try {
       if (isEditing) {
@@ -151,7 +166,6 @@ export const AdminUsersPage = () => {
         });
         showToast.success('User created.');
       }
-
       resetForm();
       await loadUsers();
     } catch (error: any) {
@@ -162,300 +176,316 @@ export const AdminUsersPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20 px-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between pt-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Access Control</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Manage organizational roles, user accounts, and security permissions.
-          </p>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3 text-left">Administration</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
+            Identity Grid
+          </h1>
         </div>
         
-        <div className="flex p-1 bg-muted/50 rounded-2xl w-fit border border-border/50">
+        <div className="flex p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
           <button
             onClick={() => { setActiveTab('manage'); setEditingUserId(null); setFormData(emptyForm); }}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-              activeTab === 'manage' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
+              activeTab === 'manage' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <UserGroupIcon className="w-4 h-4" />
-            Directory
+            <UserGroupIcon className="w-5 h-5" />
+            Registry
           </button>
           <button
             onClick={() => setActiveTab('create')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-              activeTab === 'create' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
+              activeTab === 'create' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <UserAdd01Icon className="w-4 h-4" />
-            {isEditing ? 'Edit Profile' : 'New Account'}
+            {isEditing ? <Edit02Icon className="w-5 h-5" /> : <PlusSignIcon className="w-5 h-5" />}
+            {isEditing ? 'Modify' : 'Provision'}
           </button>
         </div>
       </div>
 
-      {activeTab === 'manage' ? (
-        <div className="space-y-6">
-          <Card className="rounded-3xl border-transparent bg-card/80 shadow-sm border-none overflow-hidden">
-            <CardContent className="p-8">
-              <div className="flex flex-col gap-6 md:flex-row md:items-end">
-                <div className="flex-1 space-y-2">
-                  <label className="text-sm font-medium px-1">Find Users</label>
-                  <div className="relative group">
-                    <Search01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-12 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="Search by name, email, department..."
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="w-full md:w-56 space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center gap-2 text-muted-foreground">
-                    <FilterIcon className="w-3.5 h-3.5" />
-                    Role Filter
-                  </label>
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value as any)}
-                    className="h-12 w-full rounded-2xl border border-input/60 bg-background px-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                  >
-                    <option value="ALL">All Roles</option>
-                    {assignableRoles.map((role) => (
-                      <option key={role} value={role}>{role}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {activeTab === 'manage' && (
+        <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
+        <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+          <div className="flex items-center gap-4 w-full max-w-4xl">
+            <div className="relative group flex-1">
+              <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                placeholder="Search identities by name, email, department..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
 
-          <div className="min-h-[300px]">
-            {!query.trim() ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center opacity-30">
-                <Search01Icon className="w-12 h-12 mb-4" />
-                <h3 className="font-heading font-bold text-lg">Search first</h3>
-                <p className="text-sm max-w-xs mx-auto mt-2">
-                  Start typing to see matching user profiles from the central directory.
-                </p>
-              </div>
-            ) : isLoading ? (
-              <p className="text-center py-20 text-muted-foreground">Loading directory...</p>
-            ) : filteredUsers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-muted-foreground">No matches found.</p>
-              </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredUsers.map((user) => {
-                  const isActive = user.isActive ?? (user as any).active ?? true;
-                  return (
-                    <Card key={user.userId} className="rounded-3xl border-transparent bg-card/80 hover:bg-card shadow-sm transition-all group overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-bold text-base truncate">{user.fullName}</h4>
-                              {!isActive && (
-                                <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase">Inactive</span>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
-                              <Mail01Icon className="w-3.5 h-3.5" />
-                              {user.email}
-                            </p>
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-primary/10 text-primary rounded-lg border border-primary/10">
-                                {user.role}
-                              </span>
-                              {user.department && (
-                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-muted text-muted-foreground rounded-lg">
-                                  {user.department}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => editUser(user)}
-                              className="p-2 rounded-xl hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                              title="Edit User"
-                            >
-                              <Edit02Icon className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => deleteUser(user)}
-                              className="p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                              title="Remove User"
-                            >
-                              <Delete02Icon className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <Card className="rounded-4xl border-transparent bg-card/80 shadow-sm border-none overflow-hidden max-w-4xl mx-auto">
-          <CardHeader className="bg-muted/30 pb-8 pt-8 px-10 border-b border-border/50">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10">
-                {isEditing ? <Edit02Icon className="w-6 h-6 text-primary" /> : <UserAdd01Icon className="w-6 h-6 text-primary" />}
-              </div>
-              <div>
-                <CardTitle className="text-xl">{isEditing ? 'Modify Account Details' : 'Onboard New Staff Member'}</CardTitle>
-                <CardDescription>
-                  {isEditing ? `Update security and profile info for ${formData.fullName}` : 'Grant access to the StockPro workspace.'}
-                </CardDescription>
+            <div className="relative group shrink-0">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as any)}
+                className="h-16 w-64 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
+              >
+                <option value="ALL">ALL ROLES</option>
+                {assignableRoles.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40">
+                 ▼
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-10">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Full Legal Name <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Used for audit logs and organizational directory." />
-                  </label>
-                  <div className="relative group">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      value={formData.fullName}
-                      onChange={(e) => updateField('fullName', e.target.value)}
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="Jane Smith"
-                    />
-                  </div>
-                </div>
+          </div>
+        </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Email Address <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Primary login identity and notification destination." />
-                  </label>
-                  <div className="relative group">
-                    <Mail01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="jane@company.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Workspace Role <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Determines access levels and allowed operations across all modules." />
-                  </label>
-                  <div className="relative group">
-                    <Settings01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <select
-                      value={formData.role}
-                      onChange={(e) => updateField('role', e.target.value as any)}
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none"
+          <div className="bg-card border border-border rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-sm bg-opacity-50">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-b border-border/60 h-20">
+                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Identity Details</TableHead>
+                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Protocol Role</TableHead>
+                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Deployment Hub</TableHead>
+                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-64 text-center">
+                       <div className="flex flex-col items-center gap-6">
+                          <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                          <p className="text-muted-foreground font-black text-[10px] uppercase tracking-wider">Synchronizing Identity Grid...</p>
+                       </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-64 text-center">
+                       <div className="py-20 space-y-6">
+                          <UserIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
+                          <p className="text-xl font-bold text-foreground/50 uppercase tracking-tight">No identities located</p>
+                       </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow 
+                      key={user.userId} 
+                      className="group hover:bg-primary/[0.02] transition-all border-b border-border/10 h-28"
                     >
-                      {assignableRoles.map((role) => (
-                        <option key={role} value={role}>{role}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                      <TableCell className="px-10">
+                        <div className="flex items-center gap-6">
+                          <div className="w-16 h-16 rounded-[1.5rem] bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
+                            <UserIcon className="w-8 h-8" />
+                          </div>
+                          <div className="text-left">
+                            <span className="font-bold text-xl block leading-tight tracking-tight group-hover:text-primary transition-colors">{user.fullName}</span>
+                            <span className="text-[10px] font-black text-foreground/70 uppercase tracking-wider mt-2 block">{user.email}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-10">
+                        <span className={cn(
+                          "text-[10px] font-black px-4 py-2 rounded-full border shadow-sm uppercase tracking-wider",
+                          user.role === Role.ADMIN ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : 
+                          user.role === Role.MANAGER ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : 
+                          "bg-primary/10 text-primary border-primary/20"
+                        )}>
+                          {user.role}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-10">
+                         <div className="flex items-center gap-3 text-[10px] font-black text-foreground/70 uppercase tracking-wider">
+                           <Building05Icon className="w-4 h-4 opacity-40" />
+                           {user.department || 'GLOBAL HUB'}
+                         </div>
+                      </TableCell>
+                      <TableCell className="px-10">
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full shadow-sm animate-pulse",
+                            (user.isActive ?? true) ? "bg-emerald-500" : "bg-rose-500"
+                          )} />
+                          <span className="text-[10px] font-black uppercase tracking-wider">
+                            {(user.isActive ?? true) ? 'Active' : 'Locked'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-10 text-right">
+                        <div className="flex items-center justify-end gap-4 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-4 group-hover:translate-x-0">
+                          <button 
+                            onClick={() => editUser(user)}
+                            className="w-12 h-12 rounded-2xl bg-muted/50 hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-all duration-300"
+                          >
+                            <Edit02Icon className="w-5 h-5" />
+                          </button>
+                          <button 
+                            onClick={() => deleteUser(user)}
+                            className="w-12 h-12 rounded-2xl bg-muted/50 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all duration-300"
+                          >
+                            <Delete02Icon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Department
-                    <InfoTooltip content="Organizational unit (e.g. Logistics, HR, Operations)." />
-                  </label>
-                  <div className="relative group">
-                    <Building05Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      value={formData.department}
-                      onChange={(e) => updateField('department', e.target.value)}
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. Logistics"
-                    />
-                  </div>
-                </div>
+      {activeTab === 'create' && (
+        <div className="max-w-5xl space-y-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center gap-4 px-2 mb-10">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              {isEditing ? <Edit02Icon className="w-6 h-6" /> : <UserAdd01Icon className="w-6 h-6" />}
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">{isEditing ? 'Identity Modification' : 'Identity Provisioning'}</h2>
+              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                {isEditing ? `RECONFIGURING PERMISSIONS FOR ${formData.fullName}` : 'ENROLLING NEW OPERATIONAL NODE INTO THE GLOBAL REGISTRY'}
+              </p>
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Contact Phone
-                    <InfoTooltip content="Mobile or desk number for internal communication." />
-                  </label>
-                  <div className="relative group">
-                    <SmartPhone01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      value={formData.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="+1 (555) 000-0000"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Account Access
-                    <InfoTooltip content="Inactive users cannot log in or perform any actions." />
-                  </label>
-                  <select
-                    value={String(formData.isActive)}
-                    onChange={(e) => updateField('isActive', e.target.value === 'true')}
-                    className="h-12 w-full rounded-2xl border border-input/60 bg-background px-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                  >
-                    <option value="true">Authorized (Active)</option>
-                    <option value="false">Revoked (Inactive)</option>
-                  </select>
-                </div>
-
-                {!isEditing && (
-                  <div className="space-y-2 sm:col-span-2">
-                    <label className="text-sm font-medium px-1 flex items-center">
-                      Temporary Password <span className="text-destructive ml-1">*</span>
-                      <InfoTooltip content="Set an initial password. The user should be advised to change it immediately." />
+          <div className="px-2">
+            <form onSubmit={handleSubmit} className="space-y-10 text-left">
+              <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-10">
+                <div className="grid gap-8 sm:grid-cols-2">
+                  <div className="space-y-3 sm:col-span-2">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Legal Designation <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative group">
-                      <LockPasswordIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
+                      <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) => updateField('password', e.target.value)}
-                        className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                        placeholder="••••••••"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="FULL LEGAL NAME"
+                        value={formData.fullName}
+                        onChange={(e) => updateField("fullName", e.target.value)}
                       />
                     </div>
                   </div>
-                )}
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Email <span className="text-rose-500">*</span></label>
+                    <div className="relative group">
+                      <Mail01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="email"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="EMAIL ADDRESS"
+                        value={formData.email}
+                        onChange={(e) => updateField("email", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px) font-black text-foreground/70 uppercase tracking-wider px-2">Access Protocol {!isEditing && <span className="text-rose-500">*</span>}</label>
+                    <div className="relative group">
+                      <LockPasswordIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="password"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder={isEditing ? "LEAVE BLANK TO RETAIN" : "SECURE PASSWORD"}
+                        value={formData.password}
+                        onChange={(e) => updateField("password", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Deployment Hub</label>
+                    <div className="relative group">
+                      <Building05Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="DEPARTMENT / UNIT"
+                        value={formData.department}
+                        onChange={(e) => updateField("department", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Comms Protocol</label>
+                    <div className="relative group">
+                      <CallIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="PHONE NUMBER"
+                        value={formData.phone}
+                        onChange={(e) => updateField("phone", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Role <span className="text-rose-500">*</span></label>
+                    <div className="relative">
+                      <select
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 px-6 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all"
+                        value={formData.role}
+                        onChange={(e) => updateField("role", e.target.value)}
+                      >
+                        {assignableRoles.map(r => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-40 text-xs">
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Operational State</label>
+                    <button
+                      type="button"
+                      onClick={() => updateField("isActive", !formData.isActive)}
+                      className={cn(
+                        "h-14 w-full rounded-2xl border transition-all flex items-center justify-center gap-4 px-6",
+                        formData.isActive 
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.1)]" 
+                        : "bg-rose-500/10 border-rose-500/20 text-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+                      )}
+                    >
+                      {formData.isActive ? <ViewIcon className="w-4 h-4" /> : <ViewOffIcon className="w-4 h-4" />}
+                      <span className="text-[10px] font-black uppercase tracking-wider">
+                        {formData.isActive ? 'ACTIVE PROTOCOL' : 'LOCKED IDENTITY'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" disabled={isSubmitting} className="flex-1 h-12 rounded-2xl shadow-lg shadow-primary/20">
-                  {isSubmitting ? 'Processing...' : isEditing ? 'Commit Profile Changes' : 'Authorize Account'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={resetForm}
-                  className="h-12 px-8 rounded-2xl"
+              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
                 >
-                  Cancel
-                </Button>
+                  {isSubmitting ? 'SYNCHRONIZING...' : isEditing ? 'COMMIT IDENTITY CHANGES' : 'AUTHORIZE PROVISIONING'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={resetForm}
+                  className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
+                >
+                  ABORT
+                </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );

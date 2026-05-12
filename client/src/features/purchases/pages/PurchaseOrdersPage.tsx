@@ -1,24 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { 
-  Cancel01Icon, 
-  CheckmarkCircle02Icon, 
+  Search01Icon,
   ShoppingBasket01Icon,
   PlusSignIcon,
   Delete02Icon,
   FilterIcon,
-  Note01Icon,
   Calendar03Icon,
   DeliveryTruck01Icon,
   UserIcon,
   Money01Icon,
   Add01Icon,
   ArrowRight01Icon,
-  Edit02Icon
+  Edit02Icon,
 } from 'hugeicons-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { showToast } from '@/lib/toast';
 import { PurchaseOrderStatus } from '@/types/enums';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow,
+  TableFooter
+} from '@/components/ui/table';
 import { purchasesApi } from '@/features/purchases/api';
 import type { PurchaseOrder, POLineItemRequest } from '@/features/purchases/types';
 import { SupplierSelect } from '@/components/common/SupplierSelect';
@@ -26,18 +31,30 @@ import { WarehouseSelect } from '@/components/common/WarehouseSelect';
 import { ProductSelect } from '@/components/common/ProductSelect';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { cn, formatDate } from "@/lib/utils";
 
 import { useLocation } from 'react-router-dom';
 
 type TabType = 'list' | 'create' | 'details';
 
+const DetailItem = ({ label, value, icon: Icon }: { label: string, value: string, icon: any }) => (
+  <div className="flex items-start gap-4">
+    <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
+      <Icon className="w-4 h-4" />
+    </div>
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">{label}</p>
+      <p className="font-bold mt-0.5">{value}</p>
+    </div>
+  </div>
+);
+
 export const PurchaseOrdersPage = () => {
   const { user } = useAuthStore();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabType>('list');
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | PurchaseOrderStatus>(
     (location.state as any)?.filter || 'ALL'
   );
@@ -212,374 +229,388 @@ export const PurchaseOrdersPage = () => {
   , [orders, statusFilter]);
 
   return (
-    <section className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <section className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Procurement & POs</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Manage the full purchase order lifecycle from draft to fulfillment.
-          </p>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Procurement Flux</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            Purchase Orders
+          </h1>
         </div>
         
-        <div className="flex p-1 bg-muted/50 rounded-2xl w-fit border border-border/50">
+        <div className="flex p-2 bg-card rounded-full border border-border/40 shadow-sm">
           <button
             onClick={() => setActiveTab('list')}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-              activeTab === 'list' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+              activeTab === 'list' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <ShoppingBasket01Icon className="w-4 h-4" />
-            Order List
+            <ShoppingBasket01Icon className="w-5 h-5" />
+            Order History
           </button>
           {(user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
             <button
               onClick={() => { setActiveTab('create'); reset(); }}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-                activeTab === 'create' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+                activeTab === 'create' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <PlusSignIcon className="w-4 h-4" />
-              {editingId ? 'Edit Draft' : 'Draft New PO'}
+              <PlusSignIcon className="w-5 h-5" />
+              {editingId ? 'Edit Draft' : 'Issue Order'}
             </button>
           )}
         </div>
       </div>
 
       {activeTab === 'create' ? (
-        <Card className="rounded-4xl border-transparent bg-card/80 shadow-sm border-none overflow-hidden">
-          <CardHeader className="bg-muted/30 pb-8 pt-8 px-10 border-b border-border/50">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10">
-                <ShoppingBasket01Icon className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">{editingId ? 'Modify Draft PO' : 'Draft Purchase Order'}</CardTitle>
-                <CardDescription>
-                  {editingId ? `Editing PO #${editingId}` : 'Specify vendor, destination, and product requirements.'}
-                </CardDescription>
-              </div>
+        <div className="max-w-5xl space-y-10 animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex items-center gap-4 px-2">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              <ShoppingBasket01Icon className="w-6 h-6" />
             </div>
-          </CardHeader>
-          <CardContent className="p-10">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">{editingId ? 'Edit Purchase Order' : 'Create Purchase Order'}</h2>
+              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                {editingId ? `Editing draft #${editingId}` : 'Specify supplier, warehouse, and items for procurement.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="px-2">
             <form onSubmit={handleCreate} className="space-y-10">
               <div className="grid gap-8 md:grid-cols-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Source Supplier <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="The vendor providing the goods." />
-                  </label>
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Supplier <span className="text-rose-400">*</span></label>
                   <SupplierSelect value={supplierId} onChange={setSupplierId} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Destination Warehouse <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="The storage location where goods will be received." />
-                  </label>
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Warehouse <span className="text-rose-400">*</span></label>
                   <WarehouseSelect value={warehouseId} onChange={setWarehouseId} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Expected Arrival
-                    <InfoTooltip content="Planned delivery date for logistics planning." />
-                  </label>
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Expected Date</label>
                   <div className="relative group">
-                    <Calendar03Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
                     <input
                       type="date"
                       value={expectedDate}
                       onChange={(e) => setExpectedDate(e.target.value)}
-                      className="h-11 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary outline-none"
+                      className="h-12 w-full rounded-2xl border border-border bg-muted/5 pl-5 pr-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm uppercase tracking-wider font-bold"
                     />
+                    <Calendar03Icon className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none" />
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <h3 className="font-bold text-base flex items-center gap-2">
-                    Line Items
-                    <InfoTooltip content="List of products and quantities required from the supplier." />
-                  </h3>
-                  <Button type="button" variant="outline" size="sm" onClick={addLine} className="rounded-xl h-9 border-primary/20 text-primary hover:bg-primary/5">
-                    <Add01Icon className="w-4 h-4 mr-1" /> Add Product
-                  </Button>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-1 border-border/40">
+                  <h3 className="text-xl font-bold tracking-tight text-foreground">Procurement Items</h3>
+                  <button type="button" onClick={addLine} className="h-10 px-6 rounded-full border border-border bg-card hover:bg-muted text-foreground text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm">
+                    <Add01Icon className="w-4 h-4" /> Add Item
+                  </button>
                 </div>
                 
-                <div className="space-y-3">
+                <div className="space-y-2 ">
                   {lineItems.map((item, index) => (
-                    <div key={index} className="grid gap-4 md:grid-cols-[1fr_150px_180px_auto] items-end bg-muted/20 p-5 rounded-3xl border border-border/40 transition-all hover:border-primary/20">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-muted-foreground/60 px-1 tracking-wider">Product Selection</label>
+                    <div key={index} className="grid gap-6 bg-white/[0.05] md:grid-cols-[1fr_150px_150px_auto] items-end bg-card p-6 rounded-3xl border border-border/40 shadow-sm">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider px-2">Resource Entity</label>
                         <ProductSelect 
                           value={item.productId} 
                           onChange={(id, product) => updateLine(index, 'productId', id, product)} 
                         />
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-muted-foreground/60 px-1 tracking-wider">Qty</label>
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider px-2">Units</label>
                         <input
                           type="number"
                           min="1"
                           value={item.quantity}
                           onChange={(e) => updateLine(index, 'quantity', Number(e.target.value))}
-                          className="h-11 w-full rounded-2xl border border-input/60 bg-background px-4 text-sm focus:border-primary outline-none"
+                          className="h-12 w-full rounded-2xl border border-border bg-muted/5 px-5 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold"
                         />
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-muted-foreground/60 px-1 tracking-wider">Unit Cost (INR)</label>
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider px-2">Evaluation Cost</label>
                         <input
                           type="number"
                           value={item.unitCost}
                           onChange={(e) => updateLine(index, 'unitCost', Number(e.target.value))}
-                          className="h-11 w-full rounded-2xl border border-input/60 bg-background px-4 text-sm focus:border-primary outline-none"
+                          className="h-12 w-full rounded-2xl border border-border bg-muted/5 px-5 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-primary"
                         />
                       </div>
-                      <Button 
+                      <button 
                         type="button" 
-                        variant="ghost" 
                         onClick={() => removeLine(index)}
                         disabled={lineItems.length === 1}
-                        className="h-11 w-11 rounded-2xl text-destructive hover:bg-destructive/10"
+                        className="h-12 w-12 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-white hover:bg-rose-500 bg-muted/20 border border-border/20 transition-all disabled:opacity-20 shadow-sm"
                       >
-                        <Delete02Icon className="w-5 h-5" />
-                      </Button>
+                        <Delete02Icon className="w-6 h-6" />
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="grid gap-8 md:grid-cols-[1fr_320px]">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Purchase Notes
-                    <InfoTooltip content="Internal instructions or reference numbers for this order." />
-                  </label>
+              <div className="grid gap-8 lg:grid-cols-[1fr_320px]  border-border/40">
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Order Instructions & Remarks</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-32 w-full rounded-3xl border border-input/60 bg-background p-5 text-sm focus:border-primary outline-none"
-                    placeholder="Enter any special instructions..."
+                    className="h-32 w-full rounded-3xl border border-border bg-card p-6 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none shadow-sm"
+                    placeholder="Enter any additional instructions or comments..."
                   />
                 </div>
-                <div className="bg-primary/5 rounded-4xl p-8 space-y-6 border border-primary/10">
-                  <h4 className="font-black text-[10px] uppercase tracking-widest text-primary">Financial Summary</h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground font-medium">Subtotal</span>
-                      <span className="font-bold">₹{subtotal.toLocaleString()}</span>
+                <div className="bg-white/[0.05] rounded-3xl p-8 space-y-6 border-transparent border-border/40 shadow-sm flex flex-col">
+                  <h4 className="font-bold text-xl text-foreground tracking-tight">Ledger Summary</h4>
+                  <div className="space-y-4 flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Base Line</span>
+                      <span className="text-sm font-bold tabular-nums">₹{subtotal.toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground font-medium">Est. Tax</span>
-                      <span className="font-bold">₹0</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Duties/Taxes</span>
+                      <span className="text-sm font-bold tabular-nums text-muted-foreground/50">₹0.00</span>
                     </div>
-                    <div className="pt-4 border-t border-primary/10 flex justify-between items-baseline">
-                      <span className="font-bold text-sm">Total Amount</span>
-                      <span className="font-black text-2xl text-primary">₹{subtotal.toLocaleString()}</span>
+                    <div className="pt-6 border-t border-border/20 flex flex-col gap-1 mt-4">
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Gross Total</span>
+                      <span className="text-4xl font-bold text-primary tracking-tighter tabular-nums">₹{subtotal.toLocaleString()}</span>
                     </div>
                   </div>
-                  <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-2xl shadow-lg shadow-primary/20 mt-2">
-                    {isSubmitting ? 'Processing...' : editingId ? 'Update Order' : 'Create Purchase Order'}
-                  </Button>
-                  {editingId && (
-                    <Button type="button" variant="ghost" onClick={reset} className="w-full h-10 mt-2 rounded-xl">
-                      Cancel Edit
-                    </Button>
-                  )}
+                  <div className="pt-4 space-y-3 border-t border-border/10">
+                    <button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-full bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 shadow-sm">
+                      {isSubmitting ? 'Processing...' : editingId ? 'Commit Changes' : 'Execute Order'}
+                    </button>
+                    {editingId && (
+                      <button type="button" onClick={reset} className="w-full h-12 rounded-full border border-border bg-background text-foreground text-[10px] font-bold uppercase tracking-wider hover:bg-muted/10 transition-all shadow-sm">
+                        Abort Edit
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : activeTab === 'details' && selectedOrder ? (
-        <div className="space-y-6">
-          <Button variant="ghost" onClick={() => setActiveTab('list')} className="rounded-xl">
-            <ArrowRight01Icon className="w-4 h-4 mr-2 rotate-180" /> Back to List
-          </Button>
+        <div className="max-w-5xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500 px-2">
+          <button 
+            onClick={() => setActiveTab('list')} 
+            className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-all group"
+          >
+            <ArrowRight01Icon className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" /> 
+            Back to Orders
+          </button>
           
-          <Card className="rounded-4xl border-transparent bg-card/80 shadow-sm overflow-hidden">
-            <CardHeader className="bg-primary/5 p-8 border-b border-primary/10">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-card border border-border/40 rounded-2xl shadow-sm overflow-hidden">
+            <div className="p-8 border-b border-border/10 bg-muted/10">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-white shadow-sm border border-primary/10">
-                    <ShoppingBasket01Icon className="w-6 h-6 text-primary" />
+                  <div className="w-14 h-14 rounded-xl bg-background flex items-center justify-center border border-border/40">
+                    <ShoppingBasket01Icon className="w-7 h-7 text-primary" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-2xl font-black tracking-tight">PO #{selectedOrder.poId}</CardTitle>
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-2xl font-bold">Order #{selectedOrder.poId}</h2>
                       <span className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                        selectedOrder.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground" :
-                        selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600" :
-                        selectedOrder.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600" :
-                        selectedOrder.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600" :
-                        selectedOrder.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600" :
-                        selectedOrder.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive" :
+                        "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                        selectedOrder.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground border-border/40" :
+                        selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                        selectedOrder.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                        selectedOrder.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20" :
+                        selectedOrder.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                        selectedOrder.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive border-destructive/20" :
                         "bg-muted text-muted-foreground"
                       )}>
                         {selectedOrder.status.replace('_', ' ')}
                       </span>
                     </div>
-                    <CardDescription className="font-medium mt-1">
-                      Ordered on {formatDate(selectedOrder.orderDate)} · Created by ID: {selectedOrder.createdById}
-                    </CardDescription>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Created on {formatDate(selectedOrder.orderDate)} • By User #{selectedOrder.createdById}
+                    </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                    {/* Submit button removed - POs are auto-submitted on creation */}
+                <div className="flex flex-wrap items-center gap-3">
                    {selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL && (user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
-                      <Button onClick={() => approve(selectedOrder.poId)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl">
+                      <button onClick={() => approve(selectedOrder.poId)} className="h-10 px-6 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all">
                         Approve Order
-                      </Button>
+                      </button>
                    )}
                    {(selectedOrder.status === PurchaseOrderStatus.DRAFT || selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL) && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
-                      <Button variant="outline" onClick={() => edit(selectedOrder)} className="rounded-xl border-primary/20 text-primary">
+                      <button onClick={() => edit(selectedOrder)} className="h-10 px-6 rounded-lg border border-primary/20 bg-primary/10 text-primary font-bold text-xs hover:bg-primary/20 transition-all">
                         Edit Draft
-                      </Button>
+                      </button>
                    )}
                    {(selectedOrder.status === PurchaseOrderStatus.DRAFT || selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL) && (user?.role === Role.OFFICER || user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
-                      <Button variant="ghost" onClick={() => cancel(selectedOrder.poId)} className="rounded-xl text-destructive hover:bg-destructive/10">
-                        Reject / Cancel
-                      </Button>
+                      <button onClick={() => cancel(selectedOrder.poId)} className="h-10 px-6 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive font-bold text-xs hover:bg-destructive/20 transition-all">
+                        Cancel Order
+                      </button>
                    )}
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-8">
-              <div className="grid md:grid-cols-3 gap-8 pb-8 border-b border-border/50">
+            </div>
+
+            <div className="p-8">
+              <div className="grid md:grid-cols-3 gap-8 pb-8 border-b border-border/10">
                 <DetailItem label="Supplier" value={selectedOrder.supplierName || 'N/A'} icon={UserIcon} />
                 <DetailItem label="Warehouse" value={selectedOrder.warehouseName || 'N/A'} icon={DeliveryTruck01Icon} />
-                <DetailItem label="Expected Date" value={selectedOrder.expectedDate ? formatDate(selectedOrder.expectedDate) : 'N/A'} icon={Calendar03Icon} />
+                <DetailItem label="Expected Date" value={selectedOrder.expectedDate ? formatDate(selectedOrder.expectedDate) : 'Not Specified'} icon={Calendar03Icon} />
               </div>
               
-              <div className="mt-8">
-                <h3 className="font-bold text-lg mb-4">Line Items</h3>
-                <div className="rounded-3xl border border-border/50 overflow-hidden">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-muted/30 text-muted-foreground font-bold uppercase text-[10px] tracking-widest">
-                      <tr>
-                        <th className="px-6 py-4">Product</th>
-                        <th className="px-6 py-4">SKU</th>
-                        <th className="px-6 py-4 text-center">Ordered</th>
-                        <th className="px-6 py-4 text-center">Received</th>
-                        <th className="px-6 py-4 text-right">Unit Cost</th>
-                        <th className="px-6 py-4 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
+              <div className="mt-8 space-y-4">
+                <h3 className="text-sm font-bold text-foreground">Items Manifest</h3>
+                <div className="rounded-xl border border-border/40 overflow-hidden bg-muted/5">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/10 border-b border-border/40">
+                        <TableHead className="px-6 font-semibold text-xs text-muted-foreground h-10">Product</TableHead>
+                        <TableHead className="px-6 font-semibold text-xs text-muted-foreground h-10">SKU</TableHead>
+                        <TableHead className="px-6 text-center font-semibold text-xs text-muted-foreground h-10">Ordered</TableHead>
+                        <TableHead className="px-6 text-center font-semibold text-xs text-muted-foreground h-10">Received</TableHead>
+                        <TableHead className="px-6 text-right font-semibold text-xs text-muted-foreground h-10">Unit Cost</TableHead>
+                        <TableHead className="px-6 text-right font-semibold text-xs text-muted-foreground h-10">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {selectedOrder.lineItems.map((item, i) => (
-                        <tr key={i} className="hover:bg-muted/10">
-                          <td className="px-6 py-4 font-bold">{item.productName || `ID: ${item.productId}`}</td>
-                          <td className="px-6 py-4 text-muted-foreground font-mono">{item.productSku || 'N/A'}</td>
-                          <td className="px-6 py-4 text-center font-semibold">{item.quantity}</td>
-                          <td className="px-6 py-4 text-center">
+                        <TableRow key={i} className="hover:bg-muted/30 border-b border-border/10 transition-colors">
+                          <TableCell className="px-6 py-4 font-bold text-sm">{item.productName || `ID: ${item.productId}`}</TableCell>
+                          <TableCell className="px-6 py-4 text-xs font-mono text-muted-foreground">{item.productSku || 'N/A'}</TableCell>
+                          <TableCell className="px-6 py-4 text-center text-sm font-bold">{item.quantity}</TableCell>
+                          <TableCell className="px-6 py-4 text-center">
                             <span className={cn(
-                              "px-2 py-0.5 rounded-md text-[10px] font-black",
+                              "px-2 py-0.5 rounded text-[10px] font-bold",
                               item.receivedQty === 0 ? "bg-muted text-muted-foreground" :
                               item.receivedQty < item.quantity ? "bg-amber-500/10 text-amber-600" :
                               "bg-emerald-500/10 text-emerald-600"
                             )}>
                               {item.receivedQty} / {item.quantity}
                             </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">₹{item.unitCost.toLocaleString()}</td>
-                          <td className="px-6 py-4 text-right font-bold text-primary">₹{(item.quantity * item.unitCost).toLocaleString()}</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right text-sm">₹{item.unitCost.toLocaleString()}</TableCell>
+                          <TableCell className="px-6 py-4 text-right text-sm font-bold text-primary">₹{(item.quantity * item.unitCost).toLocaleString()}</TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                    <tfoot className="bg-primary/5">
-                      <tr>
-                        <td colSpan={4} className="px-6 py-6 text-right font-bold">Total Amount</td>
-                        <td className="px-6 py-6 text-right text-xl font-black text-primary">₹{selectedOrder.totalAmount.toLocaleString()}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                    </TableBody>
+                    <TableFooter className="bg-muted/10 border-t border-border/40">
+                      <TableRow>
+                        <TableCell colSpan={5} className="px-6 py-4 text-right font-bold text-xs text-foreground/70 uppercase">Order Total</TableCell>
+                        <TableCell className="px-6 py-4 text-right text-lg font-bold text-primary">₹{selectedOrder.totalAmount.toLocaleString()}</TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
                 </div>
               </div>
 
               {selectedOrder.notes && (
-                <div className="mt-8 p-6 rounded-3xl bg-muted/20 border border-border/30">
-                  <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Internal Notes</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed italic">"{selectedOrder.notes}"</p>
+                <div className="mt-8 p-6 rounded-xl bg-muted/5 border border-border/20 italic">
+                  <h4 className="text-[10px] font-bold text-foreground/70 uppercase mb-2">Internal Notes</h4>
+                  <p className="text-sm text-muted-foreground">"{selectedOrder.notes}"</p>
                 </div>
               )}
 
               {(selectedOrder.status === PurchaseOrderStatus.APPROVED || selectedOrder.status === PurchaseOrderStatus.PARTIALLY_RECEIVED) && (
-                <div className="mt-12 p-8 rounded-4xl bg-primary/5 border border-primary/10 animate-in slide-in-from-bottom duration-500">
+                <div className="mt-12 p-8 rounded-2xl bg-primary/5 border border-primary/10 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="flex items-center gap-3 mb-6">
-                    <DeliveryTruck01Icon className="w-5 h-5 text-primary" />
-                    <h3 className="font-bold text-lg">Receive Goods Entry</h3>
+                    <div className="h-1 w-8 bg-primary rounded-full" />
+                    <h3 className="text-sm font-bold text-foreground">Receive Goods</h3>
                   </div>
                   
                   <div className="space-y-4">
                     {selectedOrder.lineItems.map((item, i) => (
-                      <div key={i} className="grid md:grid-cols-[1fr_200px] items-center gap-6 p-4 rounded-2xl bg-background/50 border border-border/40">
+                      <div key={i} className="grid md:grid-cols-[1fr_200px] items-center gap-6 p-4 rounded-xl bg-background border border-border/20">
                         <div>
                           <p className="font-bold text-sm">{item.productName || `Product ${item.productId}`}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">Remaining: {item.quantity - item.receivedQty} units</p>
+                          <p className="text-[11px] text-muted-foreground mt-1">Pending receipt: {item.quantity - item.receivedQty} units</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <input 
-                            type="number"
-                            min="0"
-                            max={item.quantity - item.receivedQty}
-                            value={receivingItems.find(ri => ri.productId === item.productId)?.quantity || 0}
-                            onChange={(e) => {
-                              const val = Math.min(Number(e.target.value), item.quantity - item.receivedQty);
-                              setReceivingItems(prev => prev.map(ri => ri.productId === item.productId ? { ...ri, quantity: val } : ri));
-                            }}
-                            className="h-10 w-full rounded-xl border border-input bg-background px-4 text-sm focus:border-primary outline-none"
-                            placeholder="0"
-                          />
-                          <span className="text-xs font-bold text-muted-foreground w-20">units</span>
+                        <div className="flex items-center gap-4">
+                          <div className="relative flex-1">
+                             <input 
+                              type="number"
+                              min="0"
+                              max={item.quantity - item.receivedQty}
+                              value={receivingItems.find(ri => ri.productId === item.productId)?.quantity || 0}
+                              onChange={(e) => {
+                                const val = Math.min(Number(e.target.value), item.quantity - item.receivedQty);
+                                setReceivingItems(prev => prev.map(ri => ri.productId === item.productId ? { ...ri, quantity: val } : ri));
+                              }}
+                              className="h-10 w-full rounded-lg border border-border/40 bg-muted/10 px-3 text-right text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                              placeholder="0"
+                            />
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground/50 uppercase">Qty</span>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   <div className="mt-8 flex justify-end">
-                    <Button 
+                    <button 
                       onClick={() => handleReceive(selectedOrder.poId)} 
                       disabled={isSubmitting || !receivingItems.some(ri => ri.quantity > 0)}
-                      className="rounded-xl shadow-lg shadow-primary/20 h-11 px-8"
+                      className="h-11 px-8 rounded-xl bg-primary text-primary-foreground font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
                     >
-                      {isSubmitting ? 'Updating Inventory...' : 'Confirm Receipt of Goods'}
-                    </Button>
+                      {isSubmitting ? 'Processing...' : 'Confirm Receipt'}
+                    </button>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          <Card className="rounded-3xl border-transparent bg-card/80 shadow-sm overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-xl border border-border/50">
-                  <FilterIcon className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</span>
-                </div>
-                
-                <div className="flex p-1 bg-muted/30 rounded-xl border border-border/30">
+        <div className="space-y-6 animate-in fade-in duration-500 px-2">
+          {/* Main Action Bar */}
+          <div className="flex flex-col gap-4 w-full">
+            <div className="flex items-center gap-4 w-full">
+              <div className="relative group flex-1">
+                <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <input
+                  className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                  placeholder="Search orders by entity, hub, or SKU..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center gap-3 px-6 h-16 rounded-2xl bg-card/40 border border-border backdrop-blur-md shrink-0">
+                 <FilterIcon className="w-4 h-4 text-primary" />
+                 <div className="flex flex-col">
+                   <span className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/50 leading-none mb-1">Status Filter</span>
+                   <span className="text-[10px] font-black uppercase tracking-[0.1em] text-foreground">
+                     {statusFilter === 'ALL' ? 'Showing All' : statusFilter.replace('_', ' ')}
+                   </span>
+                 </div>
+              </div>
+            </div>
+
+            {/* Status Quick Filters */}
+            <div className="flex items-center justify-between gap-4 w-full">
+              <div className="flex p-1 bg-card/40 backdrop-blur-md rounded-xl border border-border shadow-inner overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1">
                   <button 
                     onClick={() => setStatusFilter('ALL')}
                     className={cn(
-                      "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                      statusFilter === 'ALL' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                      "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-300",
+                      statusFilter === 'ALL' 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                     )}
                   >
-                    All
+                    All Protocols
                   </button>
                   {Object.values(PurchaseOrderStatus).map(s => (
                     <button 
                       key={s}
                       onClick={() => setStatusFilter(s)}
                       className={cn(
-                        "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                        statusFilter === s ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                        "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-300",
+                        statusFilter === s 
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                       )}
                     >
                       {s.replace('_', ' ')}
@@ -587,110 +618,120 @@ export const PurchaseOrdersPage = () => {
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <div className="grid gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground px-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">{filteredOrders.length} Records Found</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 px-2">
             {isLoading ? (
-              <p className="py-20 text-center text-muted-foreground">Loading procurement log...</p>
+              <div className="py-24 text-center space-y-4">
+                <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin mx-auto" />
+                <p className="text-sm text-muted-foreground">Loading orders...</p>
+              </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="py-20 text-center bg-muted/10 rounded-4xl border border-dashed border-border/50">
-                <ShoppingBasket01Icon className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p className="text-muted-foreground">No purchase orders matching criteria.</p>
+              <div className="py-24 text-center space-y-4 bg-muted/10 rounded-3xl border border-dashed border-border/40">
+                <ShoppingBasket01Icon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-foreground">No orders found</p>
+                  <p className="text-sm text-muted-foreground">There are no purchase orders matching your filters.</p>
+                </div>
               </div>
             ) : (
               filteredOrders.map((order) => (
-                <Card 
+                <div 
                   key={order.poId} 
-                  className="rounded-3xl border-transparent bg-card/80 hover:bg-card shadow-sm transition-all group overflow-hidden cursor-pointer active:scale-[0.98]"
+                  className="group relative bg-card border border-border/40 rounded-3xl p-8 hover:border-primary/20 transition-all duration-500 shadow-sm hover:shadow-xl hover:shadow-primary/5 cursor-pointer overflow-hidden"
                   onClick={() => viewDetails(order.poId)}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                          <ShoppingBasket01Icon className="w-7 h-7" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-3 mb-1">
-                            <h4 className="font-bold text-lg">PO #{order.poId}</h4>
-                            <span className={cn(
-                               "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                               order.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground" :
-                               order.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600" :
-                               order.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600" :
-                               order.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600" :
-                               order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600" :
-                               order.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive" :
-                               "bg-muted text-muted-foreground"
-                            )}>
-                              {order.status.replace('_', ' ')}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-y-1 gap-x-4">
-                            <p className="text-sm text-muted-foreground font-medium flex items-center gap-1.5">
-                              <UserIcon className="w-3.5 h-3.5" /> {order.supplierName}
-                            </p>
-                            <p className="text-sm text-muted-foreground font-medium flex items-center gap-1.5">
-                              <DeliveryTruck01Icon className="w-3.5 h-3.5" /> {order.warehouseName}
-                            </p>
-                            <p className="text-sm text-muted-foreground font-medium flex items-center gap-1.5">
-                              <Money01Icon className="w-3.5 h-3.5" /> ₹{order.totalAmount.toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-16 translate-x-16 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                  
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative">
+                    <div className="flex items-center gap-6">
+                      <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center border border-border/10 shadow-inner group-hover:bg-primary/5 transition-colors">
+                        <ShoppingBasket01Icon className="w-7 h-7 text-muted-foreground/40 group-hover:text-primary transition-colors" />
                       </div>
-
-                      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                         {order.status === PurchaseOrderStatus.DRAFT && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
-                          <Button 
-                            onClick={() => submitForApproval(order.poId)}
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-10 px-4"
-                          >
-                            <ArrowRight01Icon className="w-4 h-4 mr-1.5" /> Submit
-                          </Button>
-                        )}
-
-                        {order.status === PurchaseOrderStatus.PENDING_APPROVAL && (user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
-                          <Button 
-                            onClick={() => approve(order.poId)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-10 px-4 shadow-md shadow-emerald-600/10"
-                          >
-                            <CheckmarkCircle02Icon className="w-4 h-4 mr-1.5" /> Approve
-                          </Button>
-                        )}
-
-                        {(order.status === PurchaseOrderStatus.DRAFT || order.status === PurchaseOrderStatus.PENDING_APPROVAL) && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
-                          <Button 
-                            variant="ghost" 
-                            onClick={() => edit(order)}
-                            className="text-primary hover:bg-primary/10 rounded-xl h-10"
-                          >
-                            <Edit02Icon className="w-4 h-4 mr-1.5" /> Edit
-                          </Button>
-                        )}
-
-                        {(order.status === PurchaseOrderStatus.DRAFT || order.status === PurchaseOrderStatus.PENDING_APPROVAL) && (user?.role === Role.OFFICER || user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
-                          <Button 
-                            variant="ghost" 
-                            onClick={() => cancel(order.poId)}
-                            className="text-destructive hover:bg-destructive/10 rounded-xl h-10"
-                          >
-                            <Cancel01Icon className="w-4 h-4 mr-1.5" /> {user?.role === Role.MANAGER ? 'Reject' : 'Cancel'}
-                          </Button>
-                        )}
-
-                        <Button 
-                          variant="outline" 
-                          onClick={() => viewDetails(order.poId)}
-                          className="rounded-xl h-10 border-border/60 hover:bg-muted/50"
-                        >
-                          View Details <Note01Icon className="w-4 h-4 ml-1.5 opacity-60" />
-                        </Button>
+                      <div>
+                        <div className="flex items-center gap-3 mb-1">
+                           <span className="text-[10px] font-black uppercase tracking-wider text-primary/60">Log #{order.poId}</span>
+                           <span className={cn(
+                             "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border",
+                             order.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground border-border/40" :
+                             order.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                             order.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                             order.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20" :
+                             order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                             order.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive border-destructive/20" :
+                             "bg-muted text-muted-foreground"
+                           )}>
+                             {order.status.replace('_', ' ')}
+                           </span>
+                        </div>
+                        <h3 className="text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors flex items-center gap-3">
+                           {order.lineItems?.[0]?.productName || 'Direct Procurement'}
+                           {order.lineItems && order.lineItems.length > 1 && (
+                             <span className="px-2 py-0.5 rounded-md bg-muted/50 text-[10px] text-muted-foreground font-black uppercase tracking-tighter">+{order.lineItems.length - 1} Units</span>
+                           )}
+                        </h3>
+                        <div className="flex items-center gap-4 mt-1.5">
+                           <p className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-wider flex items-center gap-2">
+                              <UserIcon className="w-3 h-3 text-primary/40" /> {order.supplierName || 'Unknown Supplier'}
+                           </p>
+                           <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+                           <p className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-wider flex items-center gap-2">
+                              <DeliveryTruck01Icon className="w-3 h-3 text-primary/40" /> {order.warehouseName || 'General Hub'}
+                           </p>
+                        </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
+                        {order.status === PurchaseOrderStatus.DRAFT && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
+                          <button 
+                            onClick={() => submitForApproval(order.poId)}
+                            className="h-10 px-4 rounded-xl bg-primary/10 text-primary font-bold text-[9px] uppercase tracking-wider hover:bg-primary transition-all hover:text-primary-foreground shadow-sm"
+                          >
+                            Submit
+                          </button>
+                        )}
+                        {order.status === PurchaseOrderStatus.PENDING_APPROVAL && (user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
+                          <button 
+                            onClick={() => approve(order.poId)}
+                            className="h-10 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 font-bold text-[9px] uppercase tracking-wider hover:bg-emerald-600 transition-all hover:text-white shadow-sm"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {(order.status === PurchaseOrderStatus.DRAFT || order.status === PurchaseOrderStatus.PENDING_APPROVAL) && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
+                          <button 
+                            onClick={() => { setActiveTab('create'); setEditingId(order.poId); }}
+                            className="w-10 h-10 rounded-xl border border-border/40 bg-background text-muted-foreground flex items-center justify-center hover:bg-muted/10 transition-all shadow-sm"
+                          >
+                            <Edit02Icon className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="px-6 py-4 rounded-2xl bg-muted/20 border border-border/5 flex flex-col items-end">
+                         <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-wider mb-1 flex items-center gap-1">
+                            <Money01Icon className="w-2.5 h-2.5 text-primary/40" /> Total Valuation
+                         </span>
+                         <span className="text-xl font-bold tabular-nums tracking-tighter text-foreground/90">₹{order.totalAmount.toLocaleString()}</span>
+                      </div>
+                      
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); viewDetails(order.poId); }}
+                        className="h-16 px-8 rounded-full border border-border/40 bg-background text-muted-foreground font-bold text-[10px] uppercase tracking-wider hover:bg-muted/50 transition-all flex items-center gap-3 shadow-sm group-hover:border-primary/20"
+                      >
+                        Inspect Ledger <ArrowRight01Icon className="w-4 h-4 group-hover:text-primary transition-colors" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))
             )}
           </div>
@@ -699,15 +740,3 @@ export const PurchaseOrdersPage = () => {
     </section>
   );
 };
-
-const DetailItem = ({ label, value, icon: Icon }: { label: string, value: string, icon: any }) => (
-  <div className="flex items-start gap-4">
-    <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
-      <Icon className="w-4 h-4" />
-    </div>
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{label}</p>
-      <p className="font-bold mt-0.5">{value}</p>
-    </div>
-  </div>
-);

@@ -34,5 +34,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Integer>
     @Query("SELECT s.warehouseId, COALESCE(SUM(s.quantity), 0) FROM StockLevel s GROUP BY s.warehouseId")
     List<Object[]> sumQuantitiesByWarehouse();
 
+    List<StockLevel> findByProductId(int productId);
+
     void deleteByWarehouseId(int warehouseId);
 }

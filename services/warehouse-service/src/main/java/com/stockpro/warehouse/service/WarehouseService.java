@@ -26,6 +26,7 @@ public interface WarehouseService {
     List<WarehouseResponse> getWarehousesByManager(int managerId);
 
     Optional<StockLevelResponse> getStockLevel(int warehouseId, int productId);
+    List<StockLevelResponse> getStockLevelsByProductId(int productId);
 
     void updateStock(int warehouseId, int productId, int quantity);
     void updateStock(com.stockpro.warehouse.dto.request.StockUpdateRequest request);

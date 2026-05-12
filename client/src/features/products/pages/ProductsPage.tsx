@@ -1,27 +1,35 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  Delete02Icon, 
-  Edit02Icon, 
-  Search01Icon, 
   PlusSignIcon, 
   PackageIcon, 
-  Grid02Icon, 
   Tag01Icon, 
+  BarCode01Icon, 
+  Grid02Icon, 
   Money01Icon, 
-  ChartUpIcon,
+  ChartUpIcon, 
+  InformationCircleIcon,
+  LayoutGridIcon,
+  TableIcon,
+  ArrowRight01Icon,
+  Edit02Icon,
+  Search01Icon,
   ShoppingBasket01Icon,
-  BarCode01Icon,
-  InformationCircleIcon
+  FilterIcon
 } from 'hugeicons-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { showToast } from '@/lib/toast';
 import { productsApi } from '@/features/products/api';
 import type { Product, ProductRequest } from '@/features/products/types';
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from '@/stores/auth.store';
-import { useLocation } from 'react-router-dom';
 
 const emptyProduct: ProductRequest = {
   sku: '',
@@ -42,11 +50,25 @@ const emptyProduct: ProductRequest = {
 
 type TabType = 'catalogue' | 'registration';
 
+const ArrowDown01Icon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
 export const ProductsPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const location = useLocation();
   const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  
+  const getProductPath = (id: number) => {
+    const base = isManagerOrAdmin ? '/manager' : '/warehouse';
+    return `${base}/products/${id}`;
+  };
+
   const [activeTab, setActiveTab] = useState<TabType>('catalogue');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [products, setProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState<boolean>((location.state as any)?.filter === 'LOW_STOCK');
@@ -84,7 +106,7 @@ export const ProductsPage = () => {
     void loadProducts();
   }, []);
 
-  const update = (field: keyof ProductRequest, value: string) => {
+  const update = (field: keyof ProductRequest, value: string | number) => {
     const numericFields = ['costPrice', 'sellingPrice', 'reorderLevel', 'maxStockLevel', 'leadTimeDays', 'currentQuantity'];
     setForm((current) => ({
       ...current,
@@ -144,373 +166,476 @@ export const ProductsPage = () => {
     }
   };
 
-  const remove = async (product: Product) => {
-    if (!window.confirm(`Are you sure you want to delete "${product.name}"?`)) return;
-    try {
-      await productsApi.delete(product.productId);
-      showToast.success('Product deleted.');
-      await loadProducts();
-    } catch (error: any) {
-      showToast.error(error.response?.data?.message || 'Unable to delete product.');
-    }
-  };
-
   return (
-    <section className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Product Catalogue</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Manage your inventory items, pricing, and stock thresholds.
-          </p>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Inventory Catalogue</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
+            Stock Protocols
+          </h1>
         </div>
 
-        <div className="flex p-1 bg-muted/50 rounded-2xl w-fit border border-border/50">
+        <div className="flex p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
           <button
             onClick={() => { setActiveTab('catalogue'); reset(); }}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-              activeTab === 'catalogue' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
+              activeTab === 'catalogue' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <ShoppingBasket01Icon className="w-4 h-4" />
+            <ShoppingBasket01Icon className="w-5 h-5" />
             Catalogue
           </button>
           {isManagerOrAdmin && (
             <button
               onClick={() => setActiveTab('registration')}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-                activeTab === 'registration' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
+                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <PlusSignIcon className="w-4 h-4" />
-              {editingId ? 'Edit Product' : 'New Product'}
+              <PlusSignIcon className="w-5 h-5" />
+              {editingId ? 'Modify SKU' : 'Register SKU'}
             </button>
           )}
         </div>
       </div>
 
       {activeTab === 'catalogue' && (
-        <div className="space-y-6">
-          <Card className="rounded-3xl border-transparent bg-card/80 shadow-sm overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <div className="relative group max-w-md w-full">
-                  <Search01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-12 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                    placeholder="Search by name, SKU, or category..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </div>
-                
-                <div className="flex items-center gap-2">
-                   <button
-                    onClick={() => setLowStockOnly(!lowStockOnly)}
-                    className={cn(
-                      "flex items-center gap-2 px-4 h-12 rounded-2xl text-xs font-bold transition-all border",
-                      lowStockOnly 
-                        ? "bg-destructive/10 text-destructive border-destructive/20 shadow-sm shadow-destructive/5" 
-                        : "bg-background text-muted-foreground border-input/60 hover:border-primary/30"
-                    )}
-                   >
-                     <InformationCircleIcon className={cn("w-4 h-4", lowStockOnly ? "text-destructive" : "text-muted-foreground")} />
-                     LOW STOCK ONLY
-                   </button>
-                </div>
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+            <div className="flex items-center gap-4 w-full max-w-4xl">
+              <div className="relative group flex-1">
+                <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <input
+                  className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                  placeholder="Search protocols by name, SKU, category or brand..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
               </div>
-            </CardContent>
-          </Card>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loading ? (
-              <p className="col-span-full py-20 text-center text-muted-foreground">Loading catalogue...</p>
-            ) : filtered.length === 0 ? (
-              <div className="col-span-full py-20 text-center bg-muted/20 rounded-4xl border border-dashed border-border">
-                <p className="text-muted-foreground">No products found.</p>
-              </div>
-            ) : (
-              filtered.map((product) => (
-                <Card 
-                  key={product.productId} 
-                  className="rounded-3xl border-transparent bg-card/80 hover:bg-card shadow-sm transition-all group overflow-hidden cursor-pointer active:scale-[0.98]"
-                  onClick={() => isManagerOrAdmin && edit(product)}
+              <button 
+                onClick={() => setLowStockOnly(!lowStockOnly)}
+                className={cn(
+                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-sm shrink-0",
+                  lowStockOnly 
+                    ? "bg-rose-500 text-white border-rose-600 shadow-rose-500/20" 
+                    : "bg-card border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <FilterIcon className="w-5 h-5" />
+                {lowStockOnly ? "Critical Stock" : "All Density"}
+              </button>
+
+              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-sm shrink-0">
+                <button 
+                  onClick={() => setViewMode('grid')}
+                  className={cn(
+                    "p-3 rounded-xl transition-all duration-300",
+                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                        <PackageIcon className="w-6 h-6" />
-                      </div>
-                      {isManagerOrAdmin && (
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                          <button 
-                            onClick={() => edit(product)}
-                            className="p-2 rounded-xl hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                            title="Edit Details"
-                          >
-                            <Edit02Icon className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => void remove(product)}
-                            className="p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                            title="Delete Product"
-                          >
-                            <Delete02Icon className="w-4 h-4" />
-                          </button>
-                        </div>
+                  <LayoutGridIcon className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    "p-3 rounded-xl transition-all duration-300",
+                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <TableIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {loading ? (
+             <div className="p-32 text-center flex flex-col items-center gap-6">
+                <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Decoding SKU Registry...</p>
+             </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-32 text-center space-y-6 bg-muted/5 rounded-[3rem] border border-dashed border-border/60">
+                <PackageIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
+                <div className="space-y-2">
+                  <p className="text-xl font-bold text-foreground">No protocols found</p>
+                  <p className="text-sm text-foreground/70 uppercase tracking-wider font-medium">Adjust query parameters or register new asset.</p>
+                </div>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {filtered.map((product) => (
+                <div 
+                  key={product.productId} 
+                  className="group relative flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-[2.5rem] transition-all duration-500 text-left shadow-sm hover:shadow-2xl hover:-translate-y-2 cursor-pointer overflow-hidden"
+                  onClick={() => navigate(getProductPath(product.productId))}
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[60px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
+                  
+                  <div className="flex items-start justify-between mb-10 relative">
+                    <div className="w-16 h-16 rounded-3xl bg-primary/5 text-primary flex items-center justify-center border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
+                      <PackageIcon className="w-8 h-8" />
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="text-[10px] font-black px-4 py-1.5 bg-muted text-foreground/70 uppercase tracking-wider rounded-full border border-border">
+                        {product.category}
+                      </span>
+                      {product.currentQuantity <= product.reorderLevel && (
+                        <span className="text-[10px] font-black px-4 py-1.5 bg-rose-500/10 text-rose-500 uppercase tracking-wider rounded-full border border-rose-500/20 animate-pulse">
+                          CRITICAL
+                        </span>
                       )}
                     </div>
+                  </div>
 
-                    <div className="mt-4">
-                      <h3 className="font-bold text-lg truncate">{product.name}</h3>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-muted rounded-md text-muted-foreground">
+                  <div className="space-y-4 mb-10 relative">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-wider opacity-60">{product.sku}</p>
+                    <h3 className="font-bold text-2xl leading-tight tracking-tight group-hover:text-primary transition-colors min-h-[4rem]">{product.name}</h3>
+                  </div>
+
+                  <div className="mt-auto space-y-6 relative">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-foreground/70 uppercase tracking-wider">Density</p>
+                        <p className={cn(
+                          "text-xl font-black tabular-nums tracking-tighter",
+                          product.currentQuantity <= product.reorderLevel ? "text-rose-500" : "text-foreground"
+                        )}>
+                          {product.currentQuantity} <span className="text-[10px] uppercase opacity-40 ml-1">{product.unitOfMeasure}</span>
+                        </p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-[10px] font-black text-foreground/70 uppercase tracking-wider">Valuation</p>
+                        <p className="text-xl font-black tabular-nums tracking-tighter">
+                          ${product.sellingPrice.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={cn(
+                          "h-full transition-all duration-1000 ease-out",
+                          product.currentQuantity <= product.reorderLevel ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                        )}
+                        style={{ width: `${Math.min(100, (product.currentQuantity / (product.maxStockLevel || 100)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex items-center justify-between pt-6 border-t border-border/10">
+                     <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                        {isManagerOrAdmin && (
+                          <button onClick={() => edit(product)} className="w-10 h-10 rounded-xl bg-muted/50 hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-all">
+                            <Edit02Icon className="w-4 h-4" />
+                          </button>
+                        )}
+                     </div>
+                     <ArrowRight01Icon className="w-6 h-6 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-2 transition-all duration-500" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-sm bg-opacity-50">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b border-border/60 h-20">
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Protocol Asset</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Classification</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Density Status</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Valuation</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((product) => (
+                    <TableRow 
+                      key={product.productId} 
+                      className="group hover:bg-primary/[0.02] transition-all cursor-pointer border-b border-border/10 h-28"
+                      onClick={() => navigate(getProductPath(product.productId))}
+                    >
+                      <TableCell className="px-10">
+                        <div className="flex items-center gap-6">
+                          <div className="w-16 h-16 rounded-3xl bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
+                            <PackageIcon className="w-8 h-8" />
+                          </div>
+                          <div className="text-left">
+                            <span className="text-[10px] font-black text-primary uppercase tracking-wider opacity-60 block mb-1">{product.sku}</span>
+                            <span className="font-bold text-xl block leading-tight tracking-tight group-hover:text-primary transition-colors">{product.name}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-10">
+                        <span className="text-[10px] font-black px-4 py-2 bg-muted text-foreground/70 uppercase tracking-wider rounded-full border border-border">
                           {product.category}
                         </span>
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-primary/5 rounded-md text-primary">
-                          SKU: {product.sku}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 grid grid-cols-2 gap-4 border-t border-border/50 pt-4">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Current Stock</p>
-                        <p className="text-xl font-bold mt-1">
-                          {product.currentQuantity} <span className="text-xs font-medium text-muted-foreground">{product.unitOfMeasure}</span>
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Price</p>
-                        <p className="text-xl font-bold mt-1 text-primary">
-                          ${product.sellingPrice.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {product.currentQuantity <= product.reorderLevel && (
-                      <div className="mt-4 flex items-center gap-2 p-2 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                        <InformationCircleIcon className="w-4 h-4" />
-                        <span className="text-[10px] font-bold uppercase">Low Stock Alert</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                      </TableCell>
+                      <TableCell className="px-10 text-left">
+                        <div className="flex flex-col gap-3 w-48">
+                          <div className="flex justify-between items-end">
+                            <span className={cn(
+                              "text-sm font-black tabular-nums tracking-tighter",
+                              product.currentQuantity <= product.reorderLevel ? "text-rose-500" : "text-foreground"
+                            )}>
+                              {product.currentQuantity} <span className="text-[10px] uppercase opacity-40 ml-1">{product.unitOfMeasure}</span>
+                            </span>
+                            {product.currentQuantity <= product.reorderLevel && (
+                              <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider animate-pulse">REORDER</span>
+                            )}
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full transition-all duration-1000", 
+                                product.currentQuantity <= product.reorderLevel ? "bg-rose-500" : "bg-primary"
+                              )}
+                              style={{ width: `${Math.min(100, (product.currentQuantity / (product.maxStockLevel || 100)) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-10">
+                         <span className="text-xl font-black tabular-nums tracking-tighter">
+                            ${product.sellingPrice.toLocaleString()}
+                         </span>
+                      </TableCell>
+                      <TableCell className="px-10 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-4">
+                          {isManagerOrAdmin && (
+                            <button onClick={() => edit(product)} className="w-12 h-12 rounded-2xl bg-muted/50 hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-all duration-300">
+                              <Edit02Icon className="w-5 h-5" />
+                            </button>
+                          )}
+                          <ArrowRight01Icon className="w-8 h-8 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-2 transition-all duration-500" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === 'registration' && (
-        <Card className="max-w-4xl mx-auto rounded-4xl border-transparent bg-card/80 shadow-sm border-none overflow-hidden">
-          <CardHeader className="bg-muted/30 pb-8 pt-8 px-10 border-b border-border/50">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10">
-                {editingId ? <Edit02Icon className="w-6 h-6 text-primary" /> : <PlusSignIcon className="w-6 h-6 text-primary" />}
-              </div>
-              <div>
-                <CardTitle className="text-xl">{editingId ? 'Edit Product Details' : 'Register New Product'}</CardTitle>
-                <CardDescription>
-                  {editingId ? `Update information for ${form.name}` : 'Add a new item to your master product list.'}
-                </CardDescription>
-              </div>
+        <div className="max-w-5xl space-y-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center gap-4 px-2">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              {editingId ? <Edit02Icon className="w-6 h-6" /> : <PlusSignIcon className="w-6 h-6" />}
             </div>
-          </CardHeader>
-          <CardContent className="p-10">
-            <form onSubmit={save} className="space-y-8">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Product Name <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Descriptive name of the product as it should appear in invoices." />
-                  </label>
-                  <div className="relative group">
-                    <PackageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. Wireless Ergonomic Mouse"
-                      value={form.name}
-                      onChange={(e) => update("name", e.target.value)}
-                    />
-                  </div>
-                </div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">{editingId ? 'Modify Resource' : 'Asset Initialization'}</h2>
+              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                {editingId ? `RECONFIGURING LOGISTICS STREAM FOR ${form.name}` : 'PROVISIONING NEW SKU RECORD IN THE GLOBAL REGISTRY'}
+              </p>
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    SKU Code <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Stock Keeping Unit - unique identifier for inventory tracking." />
-                  </label>
-                  <div className="relative group">
-                    <Tag01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. MOUSE-WL-001"
-                      value={form.sku}
-                      onChange={(e) => update("sku", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Barcode / QR
-                    <InfoTooltip content="UPC, EAN or QR code for physical scanning." />
-                  </label>
-                  <div className="relative group">
-                    <BarCode01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="012345678912"
-                      value={form.barcode}
-                      onChange={(e) => update("barcode", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Category <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Group products for easier reporting and filtering." />
-                  </label>
-                  <div className="relative group">
-                    <Grid02Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. Peripherals"
-                      value={form.category}
-                      onChange={(e) => update("category", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Unit of Measure <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="How this item is counted (e.g. PCS, KG, BOX)." />
-                  </label>
-                  <select
-                    className="h-12 w-full rounded-2xl border border-input/60 bg-background px-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                    value={form.unitOfMeasure}
-                    onChange={(e) => update("unitOfMeasure", e.target.value)}
-                  >
-                    <option value="PCS">Pieces (PCS)</option>
-                    <option value="KG">Kilograms (KG)</option>
-                    <option value="M">Meters (M)</option>
-                    <option value="L">Liters (L)</option>
-                    <option value="BOX">Box (BOX)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Cost Price
-                    <InfoTooltip content="Purchase price from supplier per unit." />
-                  </label>
-                  <div className="relative group">
-                    <Money01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="0.00"
-                      value={form.costPrice || ''}
-                      onChange={(e) => update("costPrice", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Selling Price
-                    <InfoTooltip content="Price at which this item is sold to customers." />
-                  </label>
-                  <div className="relative group">
-                    <Money01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="0.00"
-                      value={form.sellingPrice || ''}
-                      onChange={(e) => update("sellingPrice", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Reorder Level
-                    <InfoTooltip content="Minimum stock level before a low-stock alert is triggered." />
-                  </label>
-                  <div className="relative group">
-                    <ChartUpIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      type="number"
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. 10"
-                      value={form.reorderLevel || ''}
-                      onChange={(e) => update("reorderLevel", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Lead Time (Days)
-                    <InfoTooltip content="Expected days to receive stock after ordering from supplier." />
-                  </label>
-                  <div className="relative group">
-                    <InformationCircleIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      type="number"
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. 7"
-                      value={form.leadTimeDays || ''}
-                      onChange={(e) => update("leadTimeDays", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {editingId && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium px-1 flex items-center text-primary">
-                      Stock Correction (Global)
-                      <InfoTooltip content="CRITICAL: Manually override global pieces. Use only to fix sync errors." />
+          <div className="px-2">
+            <form onSubmit={save} className="space-y-10">
+              <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-10">
+                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-3 sm:col-span-2 lg:col-span-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Resource Identity <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative group">
-                      <PackageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-primary group-focus-within:text-primary" />
+                      <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
-                        type="number"
-                        className="h-12 w-full rounded-2xl border-primary/40 border bg-primary/5 pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold"
-                        placeholder="e.g. 400"
-                        value={form.currentQuantity ?? 0}
-                        onChange={(e) => update("currentQuantity", e.target.value)}
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-lg font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/20"
+                        placeholder="OFFICIAL PRODUCT DESIGNATION"
+                        value={form.name}
+                        onChange={(e) => update("name", e.target.value)}
                       />
                     </div>
                   </div>
-                )}
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Protocol SKU <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative group">
+                      <Tag01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="SKU-CODE"
+                        value={form.sku}
+                        onChange={(e) => update("sku", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Registry Barcode
+                    </label>
+                    <div className="relative group">
+                      <BarCode01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="SCAN IDENTITY"
+                        value={form.barcode}
+                        onChange={(e) => update("barcode", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Classification <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative group">
+                      <Grid02Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="CATEGORY"
+                        value={form.category}
+                        onChange={(e) => update("category", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Registry Unit <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 px-6 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all"
+                        value={form.unitOfMeasure}
+                        onChange={(e) => update("unitOfMeasure", e.target.value)}
+                      >
+                        <option value="PCS">PIECES (PCS)</option>
+                        <option value="KG">KILOGRAMS (KG)</option>
+                        <option value="M">METERS (M)</option>
+                        <option value="L">LITERS (L)</option>
+                        <option value="BOX">BOXES (BOX)</option>
+                      </select>
+                      <ArrowDown01Icon className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Acquisition Evaluation
+                    </label>
+                    <div className="relative group">
+                      <Money01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="0.00"
+                        value={form.costPrice || ''}
+                        onChange={(e) => update("costPrice", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Market Evaluation
+                    </label>
+                    <div className="relative group">
+                      <Money01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="0.00"
+                        value={form.sellingPrice || ''}
+                        onChange={(e) => update("sellingPrice", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Risk Threshold
+                    </label>
+                    <div className="relative group">
+                      <ChartUpIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="number"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="MIN. STOCK"
+                        value={form.reorderLevel || ''}
+                        onChange={(e) => update("reorderLevel", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Supply Lead Period
+                    </label>
+                    <div className="relative group">
+                      <InformationCircleIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="number"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="DAYS"
+                        value={form.leadTimeDays || ''}
+                        onChange={(e) => update("leadTimeDays", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {editingId && (
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-rose-500 uppercase tracking-wider px-2 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        Manual Density Override
+                      </label>
+                      <div className="relative group">
+                        <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-500/60" />
+                        <input
+                          type="number"
+                          className="h-14 w-full rounded-2xl border border-rose-500/20 bg-rose-500/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-rose-500/10 outline-none transition-all text-rose-500"
+                          placeholder="CURRENT QTY"
+                          value={form.currentQuantity ?? 0}
+                          onChange={(e) => update("currentQuantity", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" disabled={isSubmitting} className="flex-1 h-12 rounded-2xl shadow-lg shadow-primary/20">
-                  {isSubmitting ? 'Saving...' : editingId ? 'Update Product' : 'Register Product'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={reset}
-                  className="h-12 px-8 rounded-2xl"
+              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
                 >
-                  Cancel
-                </Button>
+                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT SPECIFICATIONS' : 'AUTHORIZE INITIALIZATION'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={reset}
+                  className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
+                >
+                  ABORT
+                </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
-    </section>
+    </div>
   );
 };

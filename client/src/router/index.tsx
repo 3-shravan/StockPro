@@ -11,6 +11,8 @@ import { WarehousesPage } from '@/features/warehouses/pages/WarehousesPage';
 import { WarehouseDetailPage } from '@/features/warehouses/pages/WarehouseDetailPage';
 import { PurchaseOrdersPage } from '@/features/purchases/pages/PurchaseOrdersPage';
 import { SuppliersPage } from '@/features/suppliers/pages/SuppliersPage';
+import { SupplierDetailPage } from '@/features/suppliers/pages/SupplierDetailPage';
+import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage';
 import { MovementsPage } from '@/features/movements/pages/MovementsPage';
 import { ReceivePage } from '@/features/movements/pages/ReceivePage';
 import { IssuePage } from '@/features/movements/pages/IssuePage';
@@ -102,6 +104,14 @@ export const AppRoutes = () => (
         }
       />
       <Route
+        path="/manager/products/:id"
+        element={
+          <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN, Role.STAFF]}>
+            <ProductDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/manager/reports"
         element={
           <ProtectedRoute roles={[Role.MANAGER, Role.ADMIN]}>
@@ -175,6 +185,14 @@ export const AppRoutes = () => (
         }
       />
       <Route
+        path="/warehouse/products/:id"
+        element={
+          <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
+            <ProductDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/warehouse/receive"
         element={
           <ProtectedRoute roles={[Role.STAFF, Role.ADMIN]}>
@@ -236,6 +254,14 @@ export const AppRoutes = () => (
         element={
           <ProtectedRoute roles={[Role.OFFICER, Role.ADMIN, Role.MANAGER]}>
             <SuppliersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/purchase/suppliers/:id"
+        element={
+          <ProtectedRoute roles={[Role.OFFICER, Role.ADMIN, Role.MANAGER]}>
+            <SupplierDetailPage />
           </ProtectedRoute>
         }
       />

@@ -7,6 +7,7 @@ import com.stockpro.alert.entity.AlertChannel;
 import com.stockpro.alert.entity.AlertSeverity;
 import com.stockpro.alert.entity.AlertType;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
  
 @Mapper(componentModel = "spring")
 public interface AlertMapper {
@@ -28,5 +29,6 @@ public interface AlertMapper {
         .build();
   }
 
+  @Mapping(target = "acknowledgedByName", ignore = true)
   AlertResponse toResponse(Alert alert);
 }

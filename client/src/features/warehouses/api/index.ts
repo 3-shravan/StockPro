@@ -66,6 +66,12 @@ export const warehousesApi = {
     );
     return data.data;
   },
+  getStockByProduct: async (productId: number) => {
+    const { data } = await apiClient.get<ApiResponse<StockLevel[]>>(
+      `/warehouses/stock/product/${productId}`,
+    );
+    return data.data;
+  },
   getStats: async (id: number) => {
     const { data } = await apiClient.get<ApiResponse<import('../types').WarehouseStats>>(`/warehouses/${id}/stats`);
     return data.data;

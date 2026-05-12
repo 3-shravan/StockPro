@@ -7,23 +7,29 @@ import {
   Delete02Icon,
   PlusSignIcon,
   PackageIcon,
-  UserIcon,
   Location01Icon,
   MapsIcon,
-  CallIcon,
-  InformationCircleIcon,
   Tick01Icon,
-  WasteIcon,
   ViewIcon,
-  ViewOffIcon
+  ViewOffIcon,
+  LayoutGridIcon,
+  TableIcon,
+  ArrowRight01Icon,
+  Search01Icon,
 } from "hugeicons-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
 import { showToast } from "@/lib/toast";
 import { useAuthStore } from "@/stores/auth.store";
+import { authApi } from "@/features/auth/api/auth.api";
 import { warehousesApi } from "@/features/warehouses/api";
 import type { Warehouse, WarehouseRequest } from "@/features/warehouses/types";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { cn } from "@/lib/utils";
 import { UserSelect } from "@/components/common/UserSelect";
 import { WarehouseSelect } from "@/components/common/WarehouseSelect";
@@ -46,7 +52,9 @@ export const WarehousesPage = () => {
   const isAdmin = user?.role === 'ADMIN';
   const isManagerOrAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
   const [activeTab, setActiveTab] = useState<TabType>('directory');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [users, setUsers] = useState<Record<number, string>>({});
   const [query, setQuery] = useState("");
   const [form, setForm] = useState<WarehouseRequest>(emptyWarehouse);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -63,10 +71,20 @@ export const WarehousesPage = () => {
   const load = async (includeInactive = showInactive) => {
     setLoading(true);
     try {
-      setWarehouses(await warehousesApi.getAll(includeInactive));
+      const [wRes, uRes] = await Promise.all([
+        warehousesApi.getAll(includeInactive),
+        authApi.getAll()
+      ]);
+      setWarehouses(wRes);
+      
+      const userMap = uRes.reduce((acc, u) => {
+        acc[u.userId] = u.fullName;
+        return acc;
+      }, {} as Record<number, string>);
+      setUsers(userMap);
     } catch (error: any) {
       showToast.error(
-        error.response?.data?.message || "Unable to load warehouses.",
+        error.response?.data?.message || "Unable to load data.",
       );
     } finally {
       setLoading(false);
@@ -83,12 +101,10 @@ export const WarehousesPage = () => {
     void load();
   }, []);
 
-  const update = (field: keyof WarehouseRequest, value: string) => {
+  const update = (field: keyof WarehouseRequest, value: string | boolean | number) => {
     setForm((current) => ({
       ...current,
-      [field]: ["managerId", "capacity"].includes(field)
-        ? Number(value)
-        : value,
+      [field]: field === 'capacity' ? Number(value) : value,
     }));
   };
 
@@ -106,36 +122,23 @@ export const WarehousesPage = () => {
   };
 
   const remove = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to deactivate "${name}"? It will no longer be visible in the active directory.`)) return;
-    
+    if (!window.confirm(`Are you sure you want to deactivate "${name}"?`)) return;
     try {
       await warehousesApi.deactivate(id);
       showToast.success("Warehouse deactivated.");
       await load();
     } catch (error: any) {
-      showToast.error(error.response?.data?.message || "Failed to deactivate warehouse.");
+      showToast.error(error.response?.data?.message || "Failed to deactivate.");
     }
   };
 
   const activate = async (id: number, name: string) => {
     try {
       await warehousesApi.activate(id);
-      showToast.success(`"${name}" has been reactivated.`);
+      showToast.success(`"${name}" reactivated.`);
       await load();
     } catch (error: any) {
-      showToast.error(error.response?.data?.message || "Failed to activate warehouse.");
-    }
-  };
-
-  const hardDelete = async (id: number, name: string) => {
-    if (!window.confirm(`⚠️ PERMANENT ACTION: Are you sure you want to PERMANENTLY DELETE "${name}" and all its historical stock data? This cannot be undone.`)) return;
-    
-    try {
-      await warehousesApi.hardDelete(id);
-      showToast.success("Warehouse permanently deleted.");
-      await load();
-    } catch (error: any) {
-      showToast.error(error.response?.data?.message || "Failed to delete warehouse.");
+      showToast.error(error.response?.data?.message || "Failed to activate.");
     }
   };
 
@@ -148,7 +151,7 @@ export const WarehousesPage = () => {
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!form.name || !form.location || !form.capacity) {
-      showToast.error("Please fill in all required fields (marked with *).");
+      showToast.error("Required fields missing.");
       return;
     }
 
@@ -164,9 +167,7 @@ export const WarehousesPage = () => {
       reset();
       await load();
     } catch (error: any) {
-      showToast.error(
-        error.response?.data?.message || "Unable to save warehouse.",
-      );
+      showToast.error(error.response?.data?.message || "Unable to save.");
     } finally {
       setIsSubmitting(false);
     }
@@ -175,7 +176,7 @@ export const WarehousesPage = () => {
   const submitTransfer = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!transfer.fromWarehouseId || !transfer.toWarehouseId || !transfer.productId || transfer.quantity <= 0) {
-      showToast.error("Please fill all fields and ensure quantity is greater than 0.");
+      showToast.error("Invalid transfer details.");
       return;
     }
 
@@ -185,7 +186,7 @@ export const WarehousesPage = () => {
         ...transfer,
         managerId: user?.userId ?? 0,
       });
-      showToast.success("Stock transfer recorded.");
+      showToast.success("Transfer authorized.");
       setTransfer({
         fromWarehouseId: 0,
         toWarehouseId: 0,
@@ -195,9 +196,7 @@ export const WarehousesPage = () => {
       setActiveTab('directory');
       await load();
     } catch (error: any) {
-      showToast.error(
-        error.response?.data?.message || "Unable to transfer stock.",
-      );
+      showToast.error(error.response?.data?.message || "Transfer failed.");
     } finally {
       setIsSubmitting(false);
     }
@@ -212,447 +211,550 @@ export const WarehousesPage = () => {
   });
 
   return (
-    <section className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Warehouses & Logistics</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Manage storage locations, capacities, and stock movements.
-          </p>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Distribution Grid</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            Logistics Hubs
+          </h1>
         </div>
 
-        <div className="flex p-1 bg-muted/50 rounded-2xl w-fit border border-border/50">
+        <div className="flex p-2 bg-card rounded-full border border-border shadow-sm">
           <button
             onClick={() => { setActiveTab('directory'); reset(); }}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-              activeTab === 'directory' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+              activeTab === 'directory' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Building05Icon className="w-4 h-4" />
+            <Building05Icon className="w-5 h-5" />
             Directory
           </button>
           {isAdmin && (
             <button
               onClick={() => setActiveTab('registration')}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-                activeTab === 'registration' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <PlusSignIcon className="w-4 h-4" />
-              New Warehouse
-            </button>
-          )}
-          {isAdmin && editingId && activeTab === 'registration' && (
-            <button
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-background text-foreground shadow-sm"
-            >
-              <Edit02Icon className="w-4 h-4" />
-              Edit Warehouse
+              <PlusSignIcon className="w-5 h-5" />
+              Provision
             </button>
           )}
           {isManagerOrAdmin && (
             <button
               onClick={() => setActiveTab('transfer')}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all",
-                activeTab === 'transfer' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+                activeTab === 'transfer' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <ArrowLeftRightIcon className="w-4 h-4" />
-              Stock Transfer
+              <ArrowLeftRightIcon className="w-5 h-5" />
+              Transfer
             </button>
           )}
         </div>
       </div>
 
       {activeTab === 'directory' && (
-        <div className="space-y-6">
-          <Card className="rounded-3xl border-transparent bg-card/80 shadow-sm overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <div className="relative group w-full max-w-md">
-                  <InformationCircleIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-12 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                    placeholder="Search by name, city or address..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </div>
+        <div className="space-y-8 px-2">
+          <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+            <div className="flex items-center gap-4 w-full max-w-4xl">
+              <div className="relative group flex-1">
+                <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <input
+                  className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                  placeholder="Search facilities..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
 
-                <Button 
-                  onClick={toggleInactive}
-                  variant={showInactive ? "secondary" : "ghost"}
-                  className="rounded-2xl gap-2 h-12 px-6"
+              <button 
+                onClick={toggleInactive}
+                className={cn(
+                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm shrink-0",
+                  showInactive 
+                    ? "bg-primary text-primary-foreground border-primary" 
+                    : "bg-card text-muted-foreground border-border hover:bg-muted/5"
+                )}
+              >
+                {showInactive ? <ViewIcon className="w-5 h-5" /> : <ViewOffIcon className="w-5 h-5" />}
+                {showInactive ? "All Nodes" : "Active Nodes"}
+              </button>
+
+              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-sm shrink-0">
+                <button 
+                  onClick={() => setViewMode('grid')}
+                  className={cn(
+                    "p-3 rounded-xl transition-all duration-300",
+                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  {showInactive ? <ViewIcon className="w-5 h-5" /> : <ViewOffIcon className="w-5 h-5" />}
-                  {showInactive ? "Showing All" : "Active Only"}
-                </Button>
+                  <LayoutGridIcon className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    "p-3 rounded-xl transition-all duration-300",
+                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <TableIcon className="w-5 h-5" />
+                </button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loading ? (
-              <p className="col-span-full py-20 text-center text-muted-foreground">Loading storage network...</p>
-            ) : filteredWarehouses.length === 0 ? (
-              <div className="col-span-full py-20 text-center bg-muted/20 rounded-4xl border border-dashed border-border">
-                <p className="text-muted-foreground">No warehouses found.</p>
-              </div>
-            ) : (
-              filteredWarehouses.map((warehouse) => {
+          {loading ? (
+             <div className="p-24 text-center flex flex-col items-center gap-4">
+                <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
+                <p className="text-muted-foreground text-sm">Synchronizing facilities...</p>
+             </div>
+          ) : filteredWarehouses.length === 0 ? (
+            <div className="py-24 text-center space-y-4 bg-muted/10 rounded-3xl border border-dashed border-border">
+                <Building05Icon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
+                <div className="space-y-1">
+                  <p className="text-lg font-semibold text-foreground">No facilities located</p>
+                  <p className="text-sm text-muted-foreground">Adjust parameters or provision a new hub.</p>
+                </div>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredWarehouses.map((warehouse) => {
                 const usedPercent = warehouse.capacity
                   ? Math.min(100, Math.round((warehouse.usedCapacity / warehouse.capacity) * 100))
                   : 0;
                 
                 return (
-                  <Card 
+                  <div 
                     key={warehouse.warehouseId} 
                     className={cn(
-                      "rounded-3xl border-transparent bg-card/80 hover:bg-card shadow-sm transition-all group overflow-hidden cursor-pointer active:scale-[0.98]",
-                      !warehouse.active && "opacity-60 grayscale-[0.5] border-dashed border-border"
+                      "group flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-3xl transition-all duration-300 cursor-pointer shadow-sm relative overflow-hidden",
+                      !warehouse.active && "opacity-60 grayscale"
                     )}
                     onClick={() => {
                       const basePath = isAdmin ? "/admin/warehouses" : user?.role === 'MANAGER' ? "/manager/stock" : "/warehouse/stock";
                       navigate(`${basePath}/${warehouse.warehouseId}`);
                     }}
                   >
-                    <CardContent className="p-6">
-                      {!warehouse.active && (
-                        <div className="absolute top-0 right-0 px-3 py-1 bg-muted text-[10px] font-bold uppercase tracking-widest text-muted-foreground rounded-bl-xl border-l border-b">
-                          Inactive
-                        </div>
-                      )}
-                      <div className="flex items-start justify-between">
-                        <div className="p-3 rounded-2xl bg-primary/10 text-primary">
-                          <Building05Icon className="w-6 h-6" />
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                          {warehouse.active && isAdmin && (
-                            <button 
-                              onClick={() => edit(warehouse)}
-                              className="p-2 rounded-xl hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                              title="Edit Details"
-                            >
-                              <Edit02Icon className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          {isAdmin && (
-                            <>
-                              {warehouse.active ? (
-                                <button 
-                                  onClick={() => remove(warehouse.warehouseId, warehouse.name)}
-                                  className="p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                  title="Deactivate Warehouse"
-                                >
-                                  <Delete02Icon className="w-4 h-4" />
-                                </button>
-                              ) : (
-                                <button 
-                                  onClick={() => activate(warehouse.warehouseId, warehouse.name)}
-                                  className="p-2 rounded-xl hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500 transition-colors"
-                                  title="Activate Warehouse"
-                                >
-                                  <Tick01Icon className="w-4 h-4" />
-                                </button>
-                              )}
-                              
-                              <button 
-                                onClick={() => hardDelete(warehouse.warehouseId, warehouse.name)}
-                                className="p-2 rounded-xl hover:bg-red-600/10 text-muted-foreground hover:text-red-600 transition-colors"
-                                title="Permanently Delete"
-                              >
-                                <WasteIcon className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                          
+                    {!warehouse.active && (
+                      <div className="absolute top-0 right-0 px-4 py-2 bg-muted text-[10px] font-bold text-muted-foreground rounded-bl-3xl border-l border-b border-border/20 uppercase tracking-wider">
+                        Decommissioned
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between mb-8">
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform">
+                        <Building05Icon className="w-7 h-7 text-primary" />
+                      </div>
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        {warehouse.active && isAdmin && (
                           <button 
-                            className="p-2 rounded-xl hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                            title="View Statistics"
+                            onClick={() => edit(warehouse)}
+                            className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300"
                           >
-                            <ViewIcon className="w-4 h-4" />
+                            <Edit02Icon className="w-5 h-5" />
                           </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <h3 className="font-bold text-lg">{warehouse.name}</h3>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                          <Location01Icon className="w-3.5 h-3.5" />
-                          {warehouse.location}
-                        </p>
-                      </div>
-
-                      <div className="mt-6 space-y-3">
-                        <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          <span>Storage Capacity</span>
-                          <span>{usedPercent}% Full</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
-                          <div 
-                            className={cn(
-                              "h-full rounded-full transition-all duration-500",
-                              usedPercent > 90 ? "bg-destructive" : usedPercent > 70 ? "bg-amber-500" : "bg-primary"
-                            )}
-                            style={{ width: `${usedPercent}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {warehouse.usedCapacity.toLocaleString()} / {warehouse.capacity.toLocaleString()} units utilized
-                        </p>
-                      </div>
-
-                      <div className="mt-6 pt-4 border-t border-border/50 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                            <UserIcon className="w-3 h-3 text-muted-foreground" />
-                          </div>
-                          <span className="text-xs font-medium">Mgr #{warehouse.managerId}</span>
-                        </div>
-                        {warehouse.phone && (
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <CallIcon className="w-3 h-3" />
-                            {warehouse.phone}
-                          </div>
+                        )}
+                        {isAdmin && (
+                          warehouse.active ? (
+                            <button 
+                              onClick={() => remove(warehouse.warehouseId, warehouse.name)}
+                              className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-rose-500 hover:text-white transition-all duration-300"
+                            >
+                              <Delete02Icon className="w-5 h-5" />
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => activate(warehouse.warehouseId, warehouse.name)}
+                              className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-emerald-500 hover:text-white transition-all duration-300"
+                            >
+                              <Tick01Icon className="w-5 h-5" />
+                            </button>
+                          )
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+
+                    <div className="space-y-2 mb-8 text-left">
+                      <h3 className="font-bold text-2xl leading-tight tracking-tight">{warehouse.name}</h3>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <Location01Icon className="w-4 h-4" />
+                        {warehouse.location}
+                      </p>
+                    </div>
+
+                    <div className="space-y-4 mt-auto">
+                      <div className="flex justify-between items-end">
+                        <div className="space-y-1 text-left">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capacity Utilization</p>
+                          <p className="font-bold tabular-nums text-sm">{warehouse.usedCapacity.toLocaleString()} / {warehouse.capacity.toLocaleString()}</p>
+                        </div>
+                        <span className={cn(
+                          "px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider border",
+                          usedPercent > 90 ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-primary/10 text-primary border-primary/20"
+                        )}>{usedPercent}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            usedPercent > 90 ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : usedPercent > 70 ? "bg-amber-500" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                          )}
+                          style={{ width: `${usedPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-border/10 flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-left">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground border border-border">
+                          {users[warehouse.managerId]?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Leadership</p>
+                          <p className="text-sm font-bold truncate tracking-tight">{users[warehouse.managerId] || `User #${warehouse.managerId}`}</p>
+                        </div>
+                      </div>
+                      <ArrowRight01Icon className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                    </div>
+                  </div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-3xl shadow-sm overflow-hidden px-2">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
+                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Facility Detail</TableHead>
+                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Geographic Node</TableHead>
+                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Capacity Utilization</TableHead>
+                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Leadership</TableHead>
+                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredWarehouses.map((warehouse) => {
+                    const usedPercent = warehouse.capacity
+                      ? Math.min(100, Math.round((warehouse.usedCapacity / warehouse.capacity) * 100))
+                      : 0;
+                    
+                    return (
+                      <TableRow 
+                        key={warehouse.warehouseId} 
+                        className={cn(
+                          "group hover:bg-muted/30 transition-all cursor-pointer border-b border-border/10 h-24",
+                          !warehouse.active && "opacity-60 grayscale"
+                        )}
+                        onClick={() => {
+                          const basePath = isAdmin ? "/admin/warehouses" : user?.role === 'MANAGER' ? "/manager/stock" : "/warehouse/stock";
+                          navigate(`${basePath}/${warehouse.warehouseId}`);
+                        }}
+                      >
+                        <TableCell className="px-8">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                              <Building05Icon className="w-6 h-6" />
+                            </div>
+                            <div className="text-left">
+                              <span className="font-bold text-lg block leading-tight tracking-tight">{warehouse.name}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1 block">{warehouse.active ? 'Operational' : 'Decommissioned'}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8">
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-foreground/70 uppercase tracking-wider">
+                            <Location01Icon className="w-4 h-4 text-primary/40" />
+                            {warehouse.location}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8 text-left">
+                          <div className="flex flex-col gap-2 w-48">
+                            <div className="flex justify-between text-[10px] font-bold">
+                              <span className="text-foreground/70 uppercase tracking-wider tabular-nums">{warehouse.usedCapacity.toLocaleString()} Units</span>
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-full border",
+                                usedPercent > 90 ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-primary/10 text-primary border-primary/20"
+                              )}>{usedPercent}%</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-muted overflow-hidden">
+                              <div 
+                                className={cn(
+                                  "h-full rounded-full transition-all duration-500", 
+                                  usedPercent > 90 ? "bg-rose-500" : usedPercent > 70 ? "bg-amber-500" : "bg-primary"
+                                )}
+                                style={{ width: `${usedPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8">
+                           <div className="flex items-center gap-4 text-left">
+                             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground border border-border">
+                               {users[warehouse.managerId]?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
+                             </div>
+                             <div className="min-w-0">
+                               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Leadership</p>
+                               <p className="text-sm font-bold truncate tracking-tight">{users[warehouse.managerId] || `User #${warehouse.managerId}`}</p>
+                             </div>
+                           </div>
+                        </TableCell>
+                        <TableCell className="px-8 text-right" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-3">
+                            {isAdmin && (
+                              <>
+                                <button onClick={() => edit(warehouse)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300">
+                                  <Edit02Icon className="w-4 h-4" />
+                                </button>
+                                {warehouse.active ? (
+                                  <button onClick={() => remove(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-rose-500 hover:text-white transition-all duration-300">
+                                    <Delete02Icon className="w-4 h-4" />
+                                  </button>
+                                ) : (
+                                  <button onClick={() => activate(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-emerald-500 hover:text-white transition-all duration-300">
+                                    <Tick01Icon className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <div className="w-10 h-10 rounded-xl text-muted-foreground/30 group-hover:text-primary transition-colors flex items-center justify-center">
+                              <ArrowRight01Icon className="w-5 h-5" />
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === 'registration' && (
-        <Card className="max-w-3xl mx-auto rounded-4xl border-transparent bg-card/80 shadow-sm border-none overflow-hidden">
-          <CardHeader className="bg-muted/30 pb-8 pt-8 px-10 border-b border-border/50">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10">
-                {editingId ? <Edit02Icon className="w-6 h-6 text-primary" /> : <PlusSignIcon className="w-6 h-6 text-primary" />}
-              </div>
-              <div>
-                <CardTitle className="text-xl">{editingId ? 'Edit Warehouse details' : 'Register New Storage Location'}</CardTitle>
-                <CardDescription>
-                  {editingId ? `Update information for ${form.name}` : 'Setup a new warehouse in your logistics network.'}
-                </CardDescription>
-              </div>
+        <div className="max-w-4xl space-y-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center gap-4 px-2">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              {editingId ? <Edit02Icon className="w-6 h-6" /> : <PlusSignIcon className="w-6 h-6" />}
             </div>
-          </CardHeader>
-          <CardContent className="p-10">
-            <form onSubmit={save} className="space-y-8">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Warehouse Name <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Unique identifier for this warehouse (e.g., North Hub A1)" />
-                  </label>
-                  <div className="relative group">
-                    <Building05Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      className={cn(
-                        "h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none",
-                        !isAdmin && editingId && "opacity-50 cursor-not-allowed bg-muted/20"
-                      )}
-                      placeholder="e.g. Central Distribution Center"
-                      value={form.name}
-                      onChange={(e) => update("name", e.target.value)}
-                      disabled={!isAdmin && !!editingId}
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">{editingId ? 'Modify Hub' : 'Establish Node'}</h2>
+              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                {editingId ? `RECONFIGURING ASSET FOR ${form.name}` : 'PROVISIONING NEW LOGISTICS INTERFACE'}
+              </p>
+            </div>
+          </div>
+
+          <div className="px-2">
+            <form onSubmit={save} className="space-y-10">
+              <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-10">
+                <div className="grid gap-8 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Facility Identifier <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative group">
+                      <Building05Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        className={cn(
+                          "h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/20",
+                          !isAdmin && editingId && "opacity-50 cursor-not-allowed"
+                        )}
+                        placeholder="WAREHOUSE NAME"
+                        value={form.name}
+                        onChange={(e) => update("name", e.target.value)}
+                        disabled={!isAdmin && !!editingId}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Geographic Hub <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative group">
+                      <MapsIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        className={cn(
+                          "h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/20",
+                          !isAdmin && editingId && "opacity-50 cursor-not-allowed"
+                        )}
+                        placeholder="CITY / REGION"
+                        value={form.location}
+                        onChange={(e) => update("location", e.target.value)}
+                        disabled={!isAdmin && !!editingId}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Physical Coordinates
+                    </label>
+                    <div className="relative group">
+                      <Location01Icon className="absolute left-6 top-6 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <textarea
+                        className="min-h-[120px] w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-none placeholder:text-muted-foreground/20"
+                        placeholder="ENTER FULL PHYSICAL ADDRESS..."
+                        value={form.address}
+                        onChange={(e) => update("address", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Operational Command <span className="text-rose-500">*</span>
+                    </label>
+                    <UserSelect 
+                      value={form.managerId} 
+                      onChange={(id) => setForm(f => ({ ...f, managerId: id }))} 
+                      placeholder="SELECT MANAGER"
+                      roleFilter="MANAGER"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    City / Region <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="The general geographical area where the warehouse is located." />
-                  </label>
-                  <div className="relative group">
-                    <MapsIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      className={cn(
-                        "h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none",
-                        !isAdmin && editingId && "opacity-50 cursor-not-allowed bg-muted/20"
-                      )}
-                      placeholder="e.g. New York, NY"
-                      value={form.location}
-                      onChange={(e) => update("location", e.target.value)}
-                      disabled={!isAdmin && !!editingId}
-                    />
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2 space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Full Physical Address
-                    <InfoTooltip content="Detailed address for shipping and navigation." />
-                  </label>
-                  <div className="relative group">
-                    <Location01Icon className="absolute left-4 top-4 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <textarea
-                      className="min-h-24 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="123 Industrial Way, Suite 500..."
-                      value={form.address}
-                      onChange={(e) => update("address", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Warehouse Manager <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Select the authorized staff member responsible for this location." />
-                  </label>
-                  <UserSelect 
-                    value={form.managerId} 
-                    onChange={(id) => setForm({ ...form, managerId: id })} 
-                    placeholder="Select Manager"
-                    roleFilter="MANAGER"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Total Capacity <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Maximum number of units this warehouse can store." />
-                  </label>
-                  <div className="relative group">
-                    <PackageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      type="number"
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. 5000"
-                      value={form.capacity || ''}
-                      onChange={(e) => update("capacity", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 sm:col-span-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Contact Phone
-                    <InfoTooltip content="Direct contact number for warehouse office." />
-                  </label>
-                  <div className="relative group">
-                    <CallIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="+1 (555) 000-0000"
-                      value={form.phone}
-                      onChange={(e) => update("phone", e.target.value)}
-                    />
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Unit Capacity <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative group">
+                      <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="number"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/20"
+                        placeholder="MAX UNITS"
+                        value={form.capacity || ''}
+                        onChange={(e) => update("capacity", e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" disabled={isSubmitting} className="flex-1 h-12 rounded-2xl shadow-lg shadow-primary/20">
-                  {isSubmitting ? 'Saving...' : editingId ? 'Update Warehouse' : 'Initialize Warehouse'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={reset}
-                  className="h-12 px-8 rounded-2xl"
+              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
                 >
-                  Cancel
-                </Button>
+                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE DEPLOYMENT'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={reset}
+                  className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
+                >
+                  ABORT
+                </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {activeTab === 'transfer' && (
-        <Card className="max-w-2xl mx-auto rounded-4xl border-transparent bg-card/80 shadow-sm border-none overflow-hidden">
-          <CardHeader className="bg-primary/5 pb-8 pt-8 px-10 border-b border-primary/10">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary/10">
-                <ArrowLeftRightIcon className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">Internal Stock Transfer</CardTitle>
-                <CardDescription>
-                  Move products between warehouses safely and track movements.
-                </CardDescription>
-              </div>
+        <div className="max-w-4xl space-y-12 animate-in slide-in-from-bottom-8 duration-700">
+          <div className="flex items-center gap-4 px-2">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20">
+              <ArrowLeftRightIcon className="w-6 h-6" />
             </div>
-          </CardHeader>
-          <CardContent className="p-10">
-            <form onSubmit={submitTransfer} className="space-y-8">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Source Warehouse <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="The location where stock is currently held." />
-                  </label>
-                  <WarehouseSelect 
-                    value={transfer.fromWarehouseId} 
-                    onChange={(id) => setTransfer(v => ({ ...v, fromWarehouseId: id }))} 
-                    placeholder="Origin"
-                  />
-                </div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Internal Transfer</h2>
+              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                REBALANCING GLOBAL INVENTORY CLUSTER
+              </p>
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Destination Warehouse <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="The target location to receive the stock." />
-                  </label>
-                  <WarehouseSelect 
-                    value={transfer.toWarehouseId} 
-                    onChange={(id) => setTransfer(v => ({ ...v, toWarehouseId: id }))} 
-                    placeholder="Destination"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Product <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="The item you wish to transfer between locations." />
-                  </label>
-                  <ProductSelect 
-                    value={transfer.productId} 
-                    onChange={(id) => setTransfer(v => ({ ...v, productId: id }))} 
-                    placeholder="Select Item"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium px-1 flex items-center">
-                    Transfer Quantity <span className="text-destructive ml-1">*</span>
-                    <InfoTooltip content="Number of units to move. Must be available in source." />
-                  </label>
-                  <div className="relative group">
-                    <PackageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
-                    <input
-                      type="number"
-                      className="h-12 w-full rounded-2xl border border-input/60 bg-background pl-10 pr-4 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                      placeholder="e.g. 50"
-                      value={transfer.quantity || ''}
-                      onChange={(e) => setTransfer(v => ({ ...v, quantity: Number(e.target.value) }))}
+          <div className="px-2">
+            <form onSubmit={submitTransfer} className="space-y-10">
+              <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-10">
+                <div className="grid gap-8 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Source Node <span className="text-rose-500">*</span>
+                    </label>
+                    <WarehouseSelect 
+                      value={transfer.fromWarehouseId} 
+                      onChange={(id) => setTransfer(v => ({ ...v, fromWarehouseId: id }))} 
+                      placeholder="ORIGIN HUB"
                     />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Target Node <span className="text-rose-500">*</span>
+                    </label>
+                    <WarehouseSelect 
+                      value={transfer.toWarehouseId} 
+                      onChange={(id) => setTransfer(v => ({ ...v, toWarehouseId: id }))} 
+                      placeholder="DESTINATION HUB"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Asset Designation <span className="text-rose-500">*</span>
+                    </label>
+                    <ProductSelect 
+                      value={transfer.productId} 
+                      onChange={(id) => setTransfer(v => ({ ...v, productId: id }))} 
+                      placeholder="SELECT SKU"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Quantity <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative group">
+                      <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-amber-500 transition-colors" />
+                      <input
+                        type="number"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-amber-500/10 outline-none transition-all placeholder:text-muted-foreground/20"
+                        placeholder="0"
+                        value={transfer.quantity || ''}
+                        onChange={(e) => setTransfer(v => ({ ...v, quantity: Number(e.target.value) }))}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-4 pt-4">
-                <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-2xl shadow-lg shadow-primary/20 gap-2">
-                  <ArrowLeftRightIcon className="w-4 h-4" />
-                  {isSubmitting ? 'Executing Transfer...' : 'Initiate Stock Transfer'}
-                </Button>
-                <p className="text-center text-[11px] text-muted-foreground">
-                  By clicking initiate, you confirm that stock levels will be adjusted across both locations.
-                </p>
+              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="flex-1 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'PROCESSING...' : 'AUTHORIZE TRANSFER'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setActiveTab('directory')}
+                  className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
+                >
+                  ABORT
+                </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
-    </section>
+    </div>
   );
 };

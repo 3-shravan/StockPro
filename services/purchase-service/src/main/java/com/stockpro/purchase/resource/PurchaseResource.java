@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -317,11 +319,14 @@ public class PurchaseResource {
      * Enriches the response with details from other services (Product, Supplier, Warehouse).
      */
     private PurchaseOrderResponse enrichResponse(PurchaseOrderResponse response) {
+        HttpHeaders headers = getInternalHeaders();
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
         // 1. Fetch Supplier Name
         try {
             String url = supplierServiceUrl + "/suppliers/" + response.getSupplierId();
             ResponseEntity<ApiResponse<Map<String, Object>>> res = restTemplate.exchange(
-                url, HttpMethod.GET, null, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+                url, HttpMethod.GET, entity, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
             );
             if (res.getBody() != null && res.getBody().getData() != null) {
                 response.setSupplierName((String) res.getBody().getData().get("name"));
@@ -335,7 +340,7 @@ public class PurchaseResource {
         try {
             String url = warehouseServiceUrl + "/warehouses/" + response.getWarehouseId();
             ResponseEntity<ApiResponse<Map<String, Object>>> res = restTemplate.exchange(
-                url, HttpMethod.GET, null, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+                url, HttpMethod.GET, entity, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
             );
             if (res.getBody() != null && res.getBody().getData() != null) {
                 response.setWarehouseName((String) res.getBody().getData().get("name"));
@@ -349,24 +354,41 @@ public class PurchaseResource {
         if (response.getLineItems() != null) {
             for (POLineItemResponse item : response.getLineItems()) {
                 try {
-                    String url = productServiceUrl + "/" + item.getProductId();
+                    String url = productServiceUrl + "/products/" + item.getProductId();
+                    log.debug("Enriching item: fetching product details from {}", url);
+                    
                     ResponseEntity<ApiResponse<Map<String, Object>>> productResponseEntity = restTemplate.exchange(
-                        url, HttpMethod.GET, null, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+                        url, HttpMethod.GET, entity, new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
                     );
                     
                     ApiResponse<Map<String, Object>> productResponse = productResponseEntity.getBody();
                     if (productResponse != null && productResponse.getData() != null) {
                         Map<String, Object> productData = productResponse.getData();
-                        item.setProductName((String) productData.get("name"));
-                        item.setProductSku((String) productData.get("sku"));
+                        String productName = (String) productData.get("name");
+                        String productSku = (String) productData.get("sku");
+                        
+                        item.setProductName(productName);
+                        item.setProductSku(productSku);
+                        log.debug("Successfully enriched item {} with product name: {}", item.getProductId(), productName);
+                    } else {
+                        log.warn("Product service returned empty data for ID {}", item.getProductId());
+                        item.setProductName("Product #" + item.getProductId());
                     }
                 } catch (Exception e) {
-                    log.warn("Could not fetch product details for ID {}: {}", item.getProductId(), e.getMessage());
+                    log.error("Failed to fetch product details for ID {}: {}", item.getProductId(), e.getMessage());
                     item.setProductName("Unknown Product (" + item.getProductId() + ")");
                 }
             }
         }
         return response;
+    }
+
+    private HttpHeaders getInternalHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+        headers.set("X-User-Name", "system");
+        headers.set("X-User-Roles", "ADMIN");
+        return headers;
     }
 
     /**

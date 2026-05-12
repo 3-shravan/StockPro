@@ -9,6 +9,10 @@ export const suppliersApi = {
     });
     return data.data;
   },
+  getById: async (id: number) => {
+    const { data } = await apiClient.get<ApiResponse<Supplier>>(`/suppliers/${id}`);
+    return data.data;
+  },
   create: async (payload: SupplierRequest) => {
     const { data } = await apiClient.post<ApiResponse<Supplier>>('/suppliers', payload);
     return data.data;

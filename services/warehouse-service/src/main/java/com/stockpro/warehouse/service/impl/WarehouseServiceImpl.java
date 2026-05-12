@@ -209,6 +209,14 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
+    public List<StockLevelResponse> getStockLevelsByProductId(int productId) {
+        log.debug("Service: Fetching all stock levels for product {}", productId);
+        return stockLevelRepository.findByProductId(productId).stream()
+                .map(stockMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public void updateStock(int warehouseId, int productId, int quantity) {
         updateStock(StockUpdateRequest.builder()

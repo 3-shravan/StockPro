@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeftRightIcon,
@@ -24,7 +24,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -39,7 +38,6 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  // 1. Overview & Insights
   { label: 'Dashboard', path: '/admin', icon: DashboardCircleIcon, roles: [Role.ADMIN] },
   { label: 'Dashboard', path: '/manager', icon: DashboardCircleIcon, roles: [Role.MANAGER] },
   { label: 'Dashboard', path: '/warehouse', icon: DashboardCircleIcon, roles: [Role.STAFF] },
@@ -48,30 +46,27 @@ const navItems: NavItem[] = [
   { label: 'Intelligence', path: '/admin/analytics', icon: Chart01Icon, roles: [Role.ADMIN] },
   { label: 'Intelligence', path: '/manager/reports', icon: Chart01Icon, roles: [Role.MANAGER] },
 
-  // 2. Core Catalogue
   { label: 'Products', path: '/manager/products', icon: PackageIcon, roles: [Role.MANAGER, Role.ADMIN, Role.STAFF] },
   { label: 'Suppliers', path: '/purchase/suppliers', icon: UserGroupIcon, roles: [Role.OFFICER, Role.ADMIN] },
 
-  // 3. Procurement & Inbound
   { label: 'Purchase Orders', path: '/manager/purchase-orders', icon: ShoppingBasket01Icon, roles: [Role.MANAGER, Role.ADMIN] },
   { label: 'Purchase Orders', path: '/purchase/orders', icon: ShoppingBasket01Icon, roles: [Role.OFFICER] },
   { label: 'Receive Goods', path: '/warehouse/receive', icon: PackageReceiveIcon, roles: [Role.STAFF, Role.ADMIN] },
 
-  // 4. Inventory & Movements
   { label: 'Warehouses', path: '/manager/stock', icon: WarehouseIcon, roles: [Role.MANAGER, Role.ADMIN] },
   { label: 'Movements', path: '/manager/movements', icon: ArrowLeftRightIcon, roles: [Role.MANAGER, Role.ADMIN, Role.STAFF] },
   { label: 'Issue Stock', path: '/warehouse/issue', icon: PackageMovingIcon, roles: [Role.STAFF] },
   
-  // 5. System & Control
-  { label: 'Alerts', path: '/admin/alerts', icon: Notification01Icon, roles: [Role.ADMIN] },
-  { label: 'Alerts', path: '/manager/alerts', icon: Notification01Icon, roles: [Role.MANAGER] },
-  { label: 'Alerts', path: '/warehouse/alerts', icon: Notification01Icon, roles: [Role.STAFF] },
-  { label: 'Alerts', path: '/purchase/alerts', icon: Notification01Icon, roles: [Role.OFFICER] },
+  { label: 'Operations Pulse', path: '/admin/alerts', icon: Notification01Icon, roles: [Role.ADMIN] },
+  { label: 'Operations Pulse', path: '/manager/alerts', icon: Notification01Icon, roles: [Role.MANAGER] },
+  { label: 'Operations Pulse', path: '/warehouse/alerts', icon: Notification01Icon, roles: [Role.STAFF] },
+  { label: 'Operations Pulse', path: '/purchase/alerts', icon: Notification01Icon, roles: [Role.OFFICER] },
 
   { label: 'Users', path: '/admin/users', icon: UserGroupIcon, roles: [Role.ADMIN] },
 ];
 
 export const Navigation = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { unreadCount, fetchUnreadCount } = useAlertsStore();
   const [collapsed, setCollapsed] = useState(() => {
@@ -80,10 +75,7 @@ export const Navigation = () => {
 
   const filteredNavItems = useMemo(() => {
     if (!user) return [];
-    
     const items = navItems.filter(item => item.roles.includes(user.role));
-    
-    // Deduplicate by label to avoid showing "Dashboard" or "Purchase Orders" multiple times
     const seen = new Set();
     return items.filter(item => {
       if (seen.has(item.label)) return false;
@@ -95,7 +87,6 @@ export const Navigation = () => {
   useEffect(() => {
     if (user?.userId) {
       void fetchUnreadCount(user.userId);
-      // Poll for new alerts every 60 seconds
       const interval = setInterval(() => {
         void fetchUnreadCount(user.userId);
       }, 60000);
@@ -105,62 +96,79 @@ export const Navigation = () => {
 
   useEffect(() => {
     localStorage.setItem('stockpro-sidebar-collapsed', String(collapsed));
+    // Offset = left-4 (1rem) + sidebar width + gap (1.5rem)
     document.documentElement.style.setProperty(
       '--stockpro-sidebar-offset',
-      collapsed ? '6.5rem' : '19rem',
+      collapsed ? '8.5rem' : '20.5rem',
     );
   }, [collapsed]);
 
   return (
-    <Sidebar className={collapsed ? 'w-18' : 'w-72'}>
-      <SidebarHeader>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sidebar-primary">
-              <PackageIcon className="h-6 w-6 text-sidebar-primary-foreground" />
-            </div>
-            {!collapsed && (
-              <div className="min-w-0">
-                <p className="truncate font-heading text-xl font-bold">StockPro</p>
-                <p className="text-xs uppercase text-muted-foreground">
-                  {user?.role} workspace
-                </p>
+    <Sidebar className={cn("transition-all duration-500 border-r border-border/40 bg-sidebar/50 backdrop-blur-3xl", collapsed ? 'w-24' : 'w-72')}>
+      <SidebarHeader className="p-6">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 group cursor-pointer" onClick={() => navigate(user?.role === 'ADMIN' ? '/admin' : '/dashboard')}>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-foreground text-background transition-transform duration-500 group-hover:scale-110">
+                <PackageIcon className="h-6 w-6" />
               </div>
+              {!collapsed && (
+                <div className="min-w-0">
+                  <p className="font-bold text-xl tracking-tight text-foreground leading-tight">StockPro</p>
+                </div>
+              )}
+            </div>
+            
+            {!collapsed && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/10 text-muted-foreground transition-all hover:bg-foreground hover:text-background active:scale-95"
+              >
+                <MenuCollapseIcon className="h-5 w-5" />
+              </button>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setCollapsed((value) => !value)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? (
-              <ArrowRight01Icon className="h-4 w-4" />
-            ) : (
-              <MenuCollapseIcon className="h-4 w-4" />
-            )}
-          </button>
+          
+          {collapsed && (
+             <button
+                type="button"
+                onClick={() => setCollapsed(false)}
+                className="flex h-11 w-11 mx-auto items-center justify-center rounded-xl bg-muted/10 text-muted-foreground transition-all hover:bg-foreground hover:text-background active:scale-95 border border-border/10 shadow-sm"
+              >
+                <ArrowRight01Icon className="h-5 w-5" />
+              </button>
+          )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-5 py-3">
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Workspace</SidebarGroupLabel>}
-          <SidebarMenu>
+          <SidebarMenu className="space-y-2">
             {filteredNavItems.map((item) => (
               <SidebarMenuItem key={item.path}>
-                <NavLink to={item.path} end className="block" title={item.label}>
+                <NavLink to={item.path} end title={item.label}>
                   {({ isActive }) => (
                     <SidebarMenuButton
                       active={isActive}
-                      className={collapsed ? 'justify-center px-0' : ''}
+                      className={cn(
+                        "h-14 rounded-2xl transition-all duration-500 flex items-center group/btn relative",
+                        isActive 
+                        ? "bg-foreground text-background shadow-xl shadow-foreground/10" 
+                        : "text-muted-foreground/90 hover:text-foreground hover:bg-muted/5",
+                        collapsed ? "w-14 mx-auto justify-center px-0" : "px-5 gap-4"
+                      )}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.label}</span>}
-                      {item.label === 'Alerts' && unreadCount > 0 && (
+                      <item.icon className={cn("h-5 w-5 transition-transform duration-500 group-hover/btn:scale-110", isActive && "text-background")} />
+                      {!collapsed && <span className="font-bold text-[11px] uppercase tracking-[0.15em]">{item.label}</span>}
+                      
+                      {item.label === 'Operations Pulse' && unreadCount > 0 && (
                         <span className={cn(
-                          "flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground",
-                          collapsed ? "absolute -right-1 -top-1 border-2 border-sidebar shadow-sm" : "ml-auto"
+                          "flex h-5 min-w-5 items-center justify-center rounded-full text-[9px] font-bold shadow-sm",
+                          isActive 
+                            ? "bg-background text-foreground" 
+                            : "bg-primary text-primary-foreground",
+                          collapsed ? "absolute -right-1 -top-1 border-2 border-background" : "ml-auto"
                         )}>
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </span>
@@ -172,30 +180,34 @@ export const Navigation = () => {
             ))}
           </SidebarMenu>
         </SidebarGroup>
-
       </SidebarContent>
 
-      {!collapsed && (
-        <SidebarFooter>
-          <NavLink 
-            to="/profile" 
-            className={({ isActive }) => cn(
-              "flex items-center gap-3 rounded-full px-4 py-2.5 transition-all hover:bg-muted/40 group mb-4 mx-3 border border-transparent",
-              isActive && "bg-primary/5 text-primary border-primary/10 shadow-sm"
-            )}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-all group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground">
-              <UserIcon className="h-4 w-4" />
-            </div>
-            {!collapsed && (
-              <div className="min-w-0 overflow-hidden">
-                <p className="truncate text-[10px] font-black uppercase tracking-widest text-foreground/80">{user?.role}</p>
-                <p className="truncate text-[8px] uppercase text-muted-foreground font-bold tracking-tight opacity-60">Account Settings</p>
+      <SidebarFooter className="p-5 border-t border-border/5">
+        <NavLink 
+          to="/profile" 
+          className={cn(
+            "flex items-center transition-all duration-500 group rounded-[1.5rem]",
+            collapsed ? "justify-center p-2" : "gap-4 px-4 py-4 bg-foreground/[0.02] dark:bg-white/[0.02] hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] border border-border/10 shadow-sm"
+          )}
+        >
+          <div className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-500",
+            "bg-foreground text-background group-hover:scale-110",
+            collapsed && "mx-auto"
+          )}>
+            <UserIcon className="h-5 w-5" />
+          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-black uppercase tracking-[0.15em] text-foreground/80 group-hover:text-foreground transition-colors leading-none">{user?.email || 'User Account'}</p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="truncate text-[9px] font-black text-foreground/30 uppercase tracking-widest">{user?.role}</p>
               </div>
-            )}
-          </NavLink>
-        </SidebarFooter>
-      )}
+            </div>
+          )}
+        </NavLink>
+      </SidebarFooter>
     </Sidebar>
   );
 };

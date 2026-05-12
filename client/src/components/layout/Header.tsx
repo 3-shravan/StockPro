@@ -1,90 +1,50 @@
 import { Logout04Icon, UserIcon, PackageIcon } from "hugeicons-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth.store";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 
-const routeMeta: Record<string, { title: string; description: string }> = {
-  "/admin": {
-    title: "Admin Command Center",
-    description:
-      "Cross-service visibility for users, warehouses, inventory, and procurement.",
-  },
-  "/admin/users": {
-    title: "User Administration",
-    description: "Control access, role assignments, and user lifecycle.",
-  },
-  "/admin/warehouses": {
-    title: "Warehouse Administration",
-    description:
-      "Manage warehouse setup, utilization, and transfer operations.",
-  },
-  "/admin/analytics": {
-    title: "Analytics & Reports",
-    description:
-      "Inventory valuation, stock risk, and PO lifecycle performance.",
-  },
-  "/admin/alerts": {
-    title: "Alert Center",
-    description: "Track and resolve critical operational notifications.",
-  },
-};
-
 export const Header = () => {
   const { user, logout } = useAuthStore();
-  const location = useLocation();
-
-  const current = routeMeta[location.pathname] ?? {
-    title: "StockPro Workspace",
-    description: "Role-based operations and inventory workflows.",
-  };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-4">
-          <div className="hidden items-center gap-2 sm:flex lg:hidden">
-            <div className="w-8 h-8 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <PackageIcon className="w-5 h-5 text-primary-foreground" />
+    <header className="sticky top-0 z-30 bg-black/[0.02] dark:bg-white/[0.02] backdrop-blur-2xl border-b border-border/5 transition-all duration-300">
+      <div className="max-w-8xl mx-auto flex h-14 items-center justify-between px-10">
+        <div className="flex items-center gap-5">
+          {/* Mobile Logo */}
+          <div className="flex items-center gap-3 sm:flex lg:hidden">
+            <div className="w-10 h-10 bg-foreground text-background rounded-xl flex items-center justify-center shadow-lg shadow-foreground/5">
+              <PackageIcon className="w-6 h-6" />
             </div>
-            <span className="font-heading font-bold text-xl tracking-tight text-foreground">
-              StockPro
-            </span>
           </div>
           <ThemeToggle />
         </div>
 
         <div className="flex items-center gap-4">
-          <Link to="/profile" className="flex items-center gap-3 group">
+          <Link to="/profile" className="flex items-center gap-4 group pl-4 pr-1.5 py-1.5 rounded-2xl bg-muted/5 hover:bg-muted/10 border border-border/5 transition-all">
             <div className="text-right hidden md:block">
-              <p className="text-sm font-semibold text-foreground leading-none group-hover:text-primary transition-colors">
-                {user?.fullName || `User #${user?.userId ?? ""}`}
+              <p className="text-[10px] font-black text-foreground/80 leading-none group-hover:text-foreground transition-colors uppercase tracking-[0.05em]">
+                {user?.fullName || user?.email || "User Account"}
               </p>
-              <p className="mt-1 text-[10px] font-semibold uppercase text-primary">
-                {user?.role}
-              </p>
+              <div className="flex items-center justify-end gap-1.5 mt-1.5">
+                 <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                 <p className="text-[8px] font-black uppercase text-foreground/30 tracking-widest">
+                   {user?.role} ACTIVE
+                 </p>
+              </div>
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
-              <UserIcon className="w-6 h-6 text-primary group-hover:text-primary-foreground group-hover:scale-110 transition-transform" />
+            <div className="w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center group-hover:scale-105 transition-all duration-500 shadow-sm border border-foreground/10">
+              <UserIcon className="w-5 h-5" />
             </div>
           </Link>
 
           <button
             onClick={() => void logout()}
-            className="flex items-center justify-center w-10 h-10 rounded-2xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors duration-300 group"
-            title="Sign Out"
+            className="flex items-center gap-2.5 px-4 h-10 rounded-xl bg-muted/5 text-foreground/40 hover:bg-rose-500/10 hover:text-rose-500 transition-all duration-500 group border border-border/5 shadow-sm active:scale-95"
           >
-            <Logout04Icon className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Sign Out</span>
+            <Logout04Icon className="w-4 h-4 group-hover:translate-x-0.5 transition-all" />
           </button>
         </div>
-      </div>
-
-      <div className="px-4 pb-3 sm:px-6 lg:px-8">
-        <p className="text-base font-semibold tracking-tight">
-          {current.title}
-        </p>
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          {current.description}
-        </p>
       </div>
     </header>
   );

@@ -1,5 +1,3 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -11,16 +9,16 @@ import {
 import { movementsApi } from '@/features/movements/api/movements.api';
 import type { StockMovement } from '@/features/movements/types';
 import { showToast } from '@/lib/toast';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { MovementType } from '@/types/enums';
 import {
-  AlertCircleIcon,
   ArrowDown01Icon,
   ArrowUp01Icon,
-  Clock01Icon,
   PackageIcon,
   Search01Icon,
-  WarehouseIcon
+  ArrowReloadHorizontalIcon,
+  Building05Icon,
+  Activity01Icon
 } from 'hugeicons-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -33,9 +31,11 @@ export const MovementsPage = () => {
   const load = async () => {
     setIsLoading(true);
     try {
-      setMovements(await movementsApi.getAll());
+      const data = await movementsApi.getAll();
+      setMovements(data);
     } catch (error: any) {
-      showToast.error('Unable to load movements history.');
+      console.error("[MovementsPage] Failed to load movements:", error);
+      showToast.error('Unable to access ledger data.');
     } finally {
       setIsLoading(false);
     }
@@ -49,140 +49,152 @@ export const MovementsPage = () => {
     return movements
       .filter((m) => typeFilter === 'ALL' || m.movementType === typeFilter)
       .filter((m) => {
-        const q = query.toLowerCase();
-        return !q || 
-          m.notes?.toLowerCase().includes(q) || 
+        const q = query.toLowerCase().trim();
+        return !q ||
+          m.notes?.toLowerCase().includes(q) ||
           m.productName?.toLowerCase().includes(q) ||
           m.warehouseName?.toLowerCase().includes(q) ||
-          String(m.productId).includes(q) || 
-          String(m.warehouseId).includes(q);
+          String(m.productId).includes(q);
       });
   }, [movements, typeFilter, query]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">Audit Trail</h1>
-          <p className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
-            <Clock01Icon className="w-4 h-4" />
-            Immutable history of all inventory changes across the enterprise.
-          </p>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Audit Ledger</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
+            Asset Trajectory
+          </h1>
         </div>
       </div>
 
-      <Card className="rounded-3xl border-none bg-card/40 backdrop-blur-md shadow-2xl overflow-hidden ring-1 ring-white/5">
-        <CardContent className="p-6 flex flex-col gap-6 md:flex-row md:items-center">
-          <div className="relative flex-1 group">
-            <Search01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
-            <input
-              className="h-14 w-full rounded-2xl border-none bg-background/50 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted-foreground/50"
-              placeholder="Search by product, warehouse, or reference..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Movement Type</label>
+        {/* Action Bar */}
+        <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+          <div className="flex items-center gap-4 w-full max-w-4xl">
+            <div className="relative group flex-1">
+              <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                placeholder="Search by product, warehouse, or reference..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="relative group shrink-0">
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as any)}
-                className="h-12 min-w-[180px] rounded-2xl border-none bg-background/50 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none cursor-pointer hover:bg-background/80 transition-all"
+                className="h-16 w-64 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
               >
-                <option value="ALL">All Activities</option>
+                <option value="ALL">ALL ACTIVITY</option>
                 {Object.values(MovementType).map(t => (
                   <option key={t} value={t}>{t.replace('_', ' ')}</option>
                 ))}
               </select>
+              <ArrowDown01Icon className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40" />
             </div>
-            <Button 
-              variant="secondary" 
-              size="icon" 
-              onClick={load} 
-              className="h-14 w-14 rounded-2xl bg-primary/10 hover:bg-primary/20 text-primary transition-all active:scale-95 mt-auto"
-            >
-               <Clock01Icon className={`w-6 h-6 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="rounded-3xl border border-white/5 bg-card/30 backdrop-blur-sm shadow-2xl overflow-hidden relative group">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            <button 
+              onClick={() => void load()}
+              disabled={isLoading}
+              className="h-16 px-8 rounded-2xl border border-border bg-card/50 hover:bg-muted/50 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 shadow-sm shrink-0"
+            >
+              <ArrowReloadHorizontalIcon className={cn("w-5 h-5 text-primary", isLoading && "animate-spin")} />
+              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Sync</span>
+            </button>
+          </div>
+        </div>
+
+      {/* Ledger Table */}
+      <div className="bg-card border border-border/40 rounded-3xl shadow-sm overflow-hidden px-2">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent border-white/5 bg-muted/20">
-              <TableHead className="px-8 h-16 font-black uppercase tracking-[0.2em] text-[10px]">Timestamp</TableHead>
-              <TableHead className="h-16 font-black uppercase tracking-[0.2em] text-[10px]">Activity</TableHead>
-              <TableHead className="h-16 font-black uppercase tracking-[0.2em] text-[10px]">Product</TableHead>
-              <TableHead className="h-16 font-black uppercase tracking-[0.2em] text-[10px]">Warehouse</TableHead>
-              <TableHead className="h-16 font-black uppercase tracking-[0.2em] text-[10px]">Quantity</TableHead>
-              <TableHead className="h-16 font-black uppercase tracking-[0.2em] text-[10px]">Balance</TableHead>
-              <TableHead className="h-16 font-black uppercase tracking-[0.2em] text-[10px] pl-8">Audit Information</TableHead>
+            <TableRow className="hover:bg-transparent border-b border-border/40 h-14">
+              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Protocol Date</TableHead>
+              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Operation Type</TableHead>
+              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Resource Node</TableHead>
+              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-center">Unit Δ</TableHead>
+              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-center">Density Post</TableHead>
+              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-right">System Logs</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-border/40">
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="h-64 text-center text-muted-foreground animate-pulse font-medium">Synchronizing audit data...</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                    <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">Loading Ledger Protocols...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-96 text-center">
-                  <div className="flex flex-col items-center gap-4 opacity-20">
-                    <AlertCircleIcon className="w-16 h-16" />
-                    <p className="font-heading text-2xl font-bold">No Records Found</p>
+                <TableCell colSpan={6} className="h-64 text-center">
+                  <div className="space-y-4">
+                    <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto shadow-sm border border-border/40">
+                      <Activity01Icon className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">No activity identified in current audit</p>
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((m) => (
-                <TableRow key={m.movementId} className="hover:bg-primary/5 transition-all duration-300 border-white/5">
-                  <TableCell className="px-8 py-6">
-                    <p className="font-bold tracking-tight text-foreground/90">{formatDate(m.movementDate)}</p>
+                <TableRow key={m.movementId} className="group hover:bg-muted/20 border-b border-border/40 transition-all cursor-pointer h-20">
+                  <TableCell className="px-8">
+                    <div className="flex flex-col text-left">
+                      <p className="font-bold text-sm text-foreground tracking-tight whitespace-nowrap">
+                        {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(m.movementDate))}
+                      </p>
+                      <p className="text-[10px] font-bold text-foreground/50 uppercase tracking-wider tabular-nums mt-0.5">
+                        {new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(m.movementDate))}
+                      </p>
+                    </div>
                   </TableCell>
-                  <TableCell>
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ring-1 ring-inset ${getMovementStyles(m.movementType)}`}>
+                  <TableCell className="px-8">
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit flex items-center gap-2 border whitespace-nowrap shadow-sm",
+                      getMovementStyles(m.movementType)
+                    )}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current shadow-sm" />
                       {m.movementType.replace('_', ' ')}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5">
-                      <div className="flex items-center gap-2">
-                        <PackageIcon className="w-3.5 h-3.5 text-primary/60" />
-                        <span className="font-bold text-sm">{m.productName || `Product #${m.productId}`}</span>
+                  <TableCell className="px-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center shrink-0 border border-border/40 group-hover:border-primary/20 transition-all shadow-sm">
+                        <PackageIcon className="w-5 h-5 text-muted-foreground" />
                       </div>
-                      <span className="text-[10px] text-muted-foreground/60 ml-5">SKU: {m.productId}</span>
+                      <div className="min-w-0 text-left">
+                        <p className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors tracking-tight">{m.productName || `Protocol #${m.productId}`}</p>
+                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-foreground/70 uppercase tracking-wider whitespace-nowrap">
+                          <Building05Icon className="w-3.5 h-3.5" />
+                          {m.warehouseName || `Hub #${m.warehouseId}`}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                       <WarehouseIcon className="w-3.5 h-3.5 text-emerald-500/60" />
-                       <span className="font-semibold text-sm text-foreground/80">{m.warehouseName || `Warehouse #${m.warehouseId}`}</span>
+                  <TableCell className="px-8 text-center">
+                    <div className={cn(
+                      "inline-flex items-center gap-2 font-bold",
+                      m.quantity >= 0 ? "text-emerald-500" : "text-rose-500"
+                    )}>
+                      <span className="text-sm tracking-tight tabular-nums">
+                        {m.quantity >= 0 ? '+' : ''}{m.quantity}
+                      </span>
+                      {m.quantity >= 0 ? <ArrowUp01Icon className="w-4 h-4" /> : <ArrowDown01Icon className="w-4 h-4" />}
                     </div>
                   </TableCell>
-                  <TableCell>
-                     <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-lg ${m.quantity > 0 ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
-                          {m.quantity > 0 ? <ArrowUp01Icon className="w-3.5 h-3.5 text-emerald-500" /> : <ArrowDown01Icon className="w-3.5 h-3.5 text-destructive" />}
-                        </div>
-                        <span className={`font-black text-lg tabular-nums tracking-tighter ${m.quantity > 0 ? 'text-emerald-500' : 'text-destructive'}`}>
-                           {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
-                        </span>
-                     </div>
+                  <TableCell className="px-8 text-center">
+                    <span className="text-base font-bold text-muted-foreground tracking-tight tabular-nums">{m.balanceAfter || 0}</span>
                   </TableCell>
-                  <TableCell>
-                     <span className="font-black text-base tabular-nums text-foreground/50">{m.balanceAfter}</span>
-                  </TableCell>
-                  <TableCell className="pl-8 py-6">
-                     <div className="flex flex-col gap-1.5 border-l border-white/5 pl-4">
-                        <p className="text-xs font-medium text-foreground/80 leading-relaxed max-w-[250px]">
-                           {m.notes || 'System generated movement'}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded">Ref: {m.referenceType}</span>
-                          <span className="text-[9px] font-bold text-muted-foreground/60">ID: #{m.referenceId}</span>
-                        </div>
-                     </div>
+                  <TableCell className="px-8 text-right">
+                    <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider leading-relaxed max-w-[200px] ml-auto truncate">
+                      {m.notes || 'System Protocol Handshake Successful'}
+                    </p>
                   </TableCell>
                 </TableRow>
               ))
@@ -196,13 +208,13 @@ export const MovementsPage = () => {
 
 const getMovementStyles = (type: MovementType) => {
   switch (type) {
-    case MovementType.STOCK_IN: return 'bg-emerald-500/10 text-emerald-600';
-    case MovementType.STOCK_OUT: return 'bg-amber-500/10 text-amber-600';
+    case MovementType.STOCK_IN: return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+    case MovementType.STOCK_OUT: return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
     case MovementType.TRANSFER_IN:
-    case MovementType.TRANSFER_OUT: return 'bg-blue-500/10 text-blue-600';
-    case MovementType.ADJUSTMENT: return 'bg-purple-500/10 text-purple-600';
-    case MovementType.WRITE_OFF: return 'bg-destructive/10 text-destructive';
-    case MovementType.RETURN: return 'bg-slate-500/10 text-slate-600';
-    default: return 'bg-muted text-muted-foreground';
+    case MovementType.TRANSFER_OUT: return 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20';
+    case MovementType.ADJUSTMENT: return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+    case MovementType.WRITE_OFF: return 'bg-slate-500/10 text-slate-600 border-slate-500/20';
+    case MovementType.RETURN: return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+    default: return 'bg-muted/10 text-muted-foreground border-border/40';
   }
 };

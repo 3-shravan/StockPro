@@ -7,6 +7,10 @@ export const productsApi = {
     const { data } = await apiClient.get<ApiResponse<Product[]>>('/products');
     return data.data;
   },
+  getById: async (id: number) => {
+    const { data } = await apiClient.get<ApiResponse<Product>>(`/products/${id}`);
+    return data.data;
+  },
   getLowStock: async () => {
     const { data } = await apiClient.get<ApiResponse<Product[]>>('/products/low-stock');
     return data.data;
