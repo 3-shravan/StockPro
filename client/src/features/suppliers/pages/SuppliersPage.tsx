@@ -157,6 +157,23 @@ export const SuppliersPage = () => {
     } catch (error) { showToast.error('Deactivation failed.'); }
   };
 
+  const activate = async (s: Supplier) => {
+    try {
+      await suppliersApi.reactivate(s.supplierId);
+      showToast.success('Supplier reactivated.');
+      await load();
+    } catch (error) { showToast.error('Reactivation failed.'); }
+  };
+
+  const remove = async (s: Supplier) => {
+    if (!window.confirm(`Permanently delete partner "${s.name}"? This action cannot be undone.`)) return;
+    try {
+      await suppliersApi.delete(s.supplierId);
+      showToast.success('Supplier deleted.');
+      await load();
+    } catch (error) { showToast.error('Deletion failed.'); }
+  };
+
   return (
     <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
@@ -167,12 +184,12 @@ export const SuppliersPage = () => {
           </h1>
         </div>
 
-        <div className="flex p-2 bg-card rounded-full border border-border shadow-sm">
+        <div className="flex p-2 bg-card rounded-full border border-border shadow-app-subtle">
           <button
             onClick={() => { setActiveTab('directory'); reset(); }}
             className={cn(
               "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-              activeTab === 'directory' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              activeTab === 'directory' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <UserGroupIcon className="w-5 h-5" />
@@ -183,7 +200,7 @@ export const SuppliersPage = () => {
               onClick={() => setActiveTab('registration')}
               className={cn(
                 "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <PlusSignIcon className="w-5 h-5" />
@@ -210,7 +227,7 @@ export const SuppliersPage = () => {
               <button 
                 onClick={() => setShowInactive(!showInactive)}
                 className={cn(
-                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-sm shrink-0",
+                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-app-subtle shrink-0",
                   showInactive 
                     ? "bg-primary text-primary-foreground border-primary" 
                     : "bg-card border border-border text-muted-foreground hover:text-foreground"
@@ -220,12 +237,12 @@ export const SuppliersPage = () => {
                 {showInactive ? "All Nodes" : "Active Only"}
               </button>
 
-              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-sm shrink-0">
+              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
                 <button 
                   onClick={() => setViewMode('grid')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
-                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <LayoutGridIcon className="w-5 h-5" />
@@ -234,7 +251,7 @@ export const SuppliersPage = () => {
                   onClick={() => setViewMode('list')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
-                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <TableIcon className="w-5 h-5" />
@@ -262,7 +279,7 @@ export const SuppliersPage = () => {
                 <div 
                   key={s.supplierId} 
                   className={cn(
-                    "group relative flex flex-col p-6 bg-card border border-border hover:border-primary/40 rounded-3xl transition-all duration-300 text-left shadow-sm hover:-translate-y-1 overflow-hidden cursor-pointer",
+                    "group relative flex flex-col p-6 bg-card border border-border hover:border-primary/40 rounded-3xl transition-all duration-300 text-left shadow-app-card hover:shadow-app-hover hover:-translate-y-1 overflow-hidden cursor-pointer",
                     !s.active && "opacity-60 grayscale-[0.5] border-dashed"
                   )}
                   onClick={() => navigate(`/purchase/suppliers/${s.supplierId}`)}
@@ -280,14 +297,25 @@ export const SuppliersPage = () => {
                     
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       {isOfficerOrAdmin && (
-                        <button onClick={() => edit(s)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300">
-                          <Edit02Icon className="w-4 h-4" />
+                        <button onClick={() => edit(s)} className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
+                          <Edit02Icon className="w-5 h-5" />
                         </button>
                       )}
-                      {isOfficerOrAdmin && s.active && (
-                        <button onClick={() => deactivate(s)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-rose-500 hover:text-white transition-all duration-300">
-                          <Delete02Icon className="w-4 h-4" />
-                        </button>
+                      {isOfficerOrAdmin && (
+                        s.active ? (
+                          <button onClick={() => deactivate(s)} className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300">
+                            <Delete02Icon className="w-5 h-5" />
+                          </button>
+                        ) : (
+                          <>
+                            <button onClick={() => activate(s)} className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300">
+                              <PlusSignIcon className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => remove(s)} className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300">
+                              <Delete02Icon className="w-5 h-5" />
+                            </button>
+                          </>
+                        )
                       )}
                     </div>
                   </div>
@@ -322,7 +350,7 @@ export const SuppliersPage = () => {
               ))}
             </div>
           ) : (
-            <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm">
+            <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-app-card">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
@@ -380,13 +408,41 @@ export const SuppliersPage = () => {
                       <TableCell className="px-6 text-right" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {isOfficerOrAdmin && (
-                            <button 
-                              onClick={() => edit(s)} 
-                              className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                              title="Edit"
-                            >
-                              <Edit02Icon className="w-4 h-4" />
-                            </button>
+                            <>
+                              <button 
+                                onClick={() => edit(s)} 
+                                className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300"
+                                title="Edit"
+                              >
+                                <Edit02Icon className="w-5 h-5" />
+                              </button>
+                              {s.active ? (
+                                <button 
+                                  onClick={() => deactivate(s)} 
+                                  className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
+                                  title="Deactivate"
+                                >
+                                  <Delete02Icon className="w-5 h-5" />
+                                </button>
+                              ) : (
+                                <>
+                                  <button 
+                                    onClick={() => activate(s)} 
+                                    className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300"
+                                    title="Activate"
+                                  >
+                                    <PlusSignIcon className="w-5 h-5" />
+                                  </button>
+                                  <button 
+                                    onClick={() => remove(s)} 
+                                    className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
+                                    title="Delete"
+                                  >
+                                    <Delete02Icon className="w-5 h-5" />
+                                  </button>
+                                </>
+                              )}
+                            </>
                           )}
                           <div className="w-8 h-8 flex items-center justify-center text-muted-foreground/30 group-hover:text-primary transition-all group-hover:translate-x-1">
                             <ArrowRight01Icon className="w-5 h-5" />
@@ -423,7 +479,7 @@ export const SuppliersPage = () => {
                   <div className="space-y-3 sm:col-span-2">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Legal Identity Designation <span className="text-rose-500">*</span>
+                      Legal Identity Designation <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <UserGroupIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -467,7 +523,7 @@ export const SuppliersPage = () => {
                   <div className="space-y-6">
                     <div className="space-y-3">
                       <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center justify-between">
-                        Direct Channel <span className="text-rose-500">*</span>
+                        Direct Channel <span className="text-rose-400">*</span>
                       </label>
                       <div className="relative group">
                         <Mail01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -558,7 +614,7 @@ export const SuppliersPage = () => {
                 <button 
                   type="submit" 
                   disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
+                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
                 >
                   {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE REGISTRATION'}
                 </button>

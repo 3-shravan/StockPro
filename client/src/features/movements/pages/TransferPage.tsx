@@ -68,7 +68,7 @@ export const TransferPage = () => {
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Origin Node <span className="text-rose-500">*</span>
+                    Origin Node <span className="text-rose-400">*</span>
                   </label>
                   <WarehouseSelect value={fromWarehouseId} onChange={setFromWarehouseId} placeholder="SOURCE HUB" />
                 </div>
@@ -76,7 +76,7 @@ export const TransferPage = () => {
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Target Node <span className="text-rose-500">*</span>
+                    Target Node <span className="text-rose-400">*</span>
                   </label>
                   <WarehouseSelect value={toWarehouseId} onChange={setToWarehouseId} placeholder="DESTINATION HUB" />
                 </div>
@@ -84,7 +84,7 @@ export const TransferPage = () => {
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Asset Designation <span className="text-rose-500">*</span>
+                    Asset Designation <span className="text-rose-400">*</span>
                   </label>
                   <ProductSelect value={productId} onChange={setProductId} warehouseId={fromWarehouseId} placeholder="SELECT SKU" />
                 </div>
@@ -92,7 +92,7 @@ export const TransferPage = () => {
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Verified Quantity <span className="text-rose-500">*</span>
+                    Verified Quantity <span className="text-rose-400">*</span>
                   </label>
                   <div className="relative group">
                     <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-amber-500 transition-colors" />

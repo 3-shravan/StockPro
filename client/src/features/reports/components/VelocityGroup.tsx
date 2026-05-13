@@ -11,7 +11,7 @@ export const VelocityGroup = ({ label, ids, variant, productMap }: VelocityGroup
   const colors = {
     primary: 'bg-primary/5 text-primary border-primary/20 shadow-[0_0_10px_rgba(var(--primary),0.1)]',
     warning: 'bg-amber-500/5 text-amber-500 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)]',
-    destructive: 'bg-rose-500/5 text-rose-500 border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.1)]'
+    destructive: 'bg-rose-400/5 text-rose-400 border-rose-400/20 shadow-[0_0_10px_rgba(244,63,94,0.1)]'
   };
 
   return (

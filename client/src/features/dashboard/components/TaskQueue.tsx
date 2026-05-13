@@ -17,7 +17,7 @@ export const TaskQueue = ({ orders, alerts, userRole }: TaskQueueProps) => {
 
   const tasks = useMemo(() => {
     if (!orders || !alerts) return [];
-    
+
     const actionableTasks: any[] = [];
 
     // 1. Order-based tasks (Actionable)
@@ -39,7 +39,7 @@ export const TaskQueue = ({ orders, alerts, userRole }: TaskQueueProps) => {
         title: `Authorize PO #${o.poId}`,
         desc: `Awaiting Management Approval`,
         type: 'APPROVAL',
-        path: userRole === Role.ADMIN ? '/manager/purchase-orders' : '/manager/purchase-orders'
+        path: userRole === Role.ADMIN ? '/admin/purchase-orders' : '/manager/purchase-orders'
       })));
     }
 
@@ -51,8 +51,8 @@ export const TaskQueue = ({ orders, alerts, userRole }: TaskQueueProps) => {
       title: a.title || 'System Alert',
       desc: a.message || 'Anomaly detected in registry.',
       type: 'ALERT',
-      path: userRole === Role.STAFF ? '/warehouse/alerts' : 
-            (userRole === Role.OFFICER ? '/purchase/alerts' : '/manager/alerts')
+      path: userRole === Role.STAFF ? '/warehouse/alerts' :
+        (userRole === Role.OFFICER ? '/purchase/alerts' : '/manager/alerts')
     })));
 
     return actionableTasks.slice(0, 5);
@@ -77,10 +77,10 @@ export const TaskQueue = ({ orders, alerts, userRole }: TaskQueueProps) => {
         <div className="divide-y divide-border/5">
           {tasks.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center gap-2">
-               <div className="w-10 h-10 rounded-xl bg-muted/5 border border-dashed border-border/30 flex items-center justify-center text-muted-foreground/40">
-                  <PackageReceiveIcon className="w-5 h-5" />
-               </div>
-               <p className="font-black text-[10px] uppercase tracking-[0.2em] text-foreground/40">Queue Synchronized</p>
+              <div className="w-10 h-10 rounded-xl bg-muted/5 border border-dashed border-border/30 flex items-center justify-center text-muted-foreground/40">
+                <PackageReceiveIcon className="w-5 h-5" />
+              </div>
+              <p className="font-black text-[10px] uppercase tracking-[0.2em] text-foreground/40">Queue Synchronized</p>
             </div>
           ) : (
             tasks.map((t) => (
@@ -91,14 +91,14 @@ export const TaskQueue = ({ orders, alerts, userRole }: TaskQueueProps) => {
               >
                 <div className={cn(
                   "w-10 h-10 rounded-xl flex items-center justify-center border transition-all duration-500 shrink-0",
-                  t.type === 'RECEIPT' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
-                  t.type === 'APPROVAL' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : 
-                  "bg-primary/10 text-primary border-primary/20",
+                  t.type === 'RECEIPT' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                    t.type === 'APPROVAL' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                      "bg-primary/10 text-primary border-primary/20",
                   "group-hover/row:scale-110 shadow-inner"
                 )}>
-                  {t.type === 'RECEIPT' ? <PackageReceiveIcon className="w-5 h-5" /> : 
-                   t.type === 'APPROVAL' ? <ShoppingBasket01Icon className="w-5 h-5" /> :
-                   <Alert02Icon className="w-5 h-5" />}
+                  {t.type === 'RECEIPT' ? <PackageReceiveIcon className="w-5 h-5" /> :
+                    t.type === 'APPROVAL' ? <ShoppingBasket01Icon className="w-5 h-5" /> :
+                      <Alert02Icon className="w-5 h-5" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-black text-foreground/90 leading-tight truncate group-hover/row:text-primary transition-colors">{t.title}</p>

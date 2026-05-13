@@ -23,7 +23,7 @@ public class SupplierResource {
     private final SupplierService supplierService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<SupplierResponse>> createSupplier(@Valid @RequestBody SupplierRequest request) {
         log.info("API: Creating supplier name={}, taxId={}", request.getName(), request.getTaxId());
         SupplierResponse response = supplierService.createSupplier(request);
@@ -65,7 +65,7 @@ public class SupplierResource {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<SupplierResponse>> updateSupplier(@PathVariable int id,
             @Valid @RequestBody SupplierRequest request) {
         log.info("API: Updating supplier ID={}, taxId={}", id, request.getTaxId());
@@ -74,7 +74,7 @@ public class SupplierResource {
     }
 
     @PutMapping("/{id}/deactivate")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deactivateSupplier(@PathVariable int id) {
         log.info("API: Deactivating supplier ID={}", id);
         supplierService.deactivateSupplier(id);
@@ -82,7 +82,7 @@ public class SupplierResource {
     }
 
     @PutMapping("/{id}/reactivate")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> reactivateSupplier(@PathVariable int id) {
         log.info("API: Reactivating supplier ID={}", id);
         supplierService.reactivateSupplier(id);
@@ -90,7 +90,7 @@ public class SupplierResource {
     }
 
     @PutMapping("/{id}/rating")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> updateRating(@PathVariable int id, @RequestParam double rating) {
         log.info("API: Updating supplier rating ID={}, rating={}", id, rating);
         supplierService.updateRating(id, rating);

@@ -15,7 +15,8 @@ import {
   Edit02Icon,
   Search01Icon,
   ShoppingBasket01Icon,
-  FilterIcon
+  FilterIcon,
+  PackageMovingIcon
 } from 'hugeicons-react';
 import { 
   Table, 
@@ -28,7 +29,7 @@ import {
 import { showToast } from '@/lib/toast';
 import { productsApi } from '@/features/products/api';
 import type { Product, ProductRequest } from '@/features/products/types';
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { useAuthStore } from '@/stores/auth.store';
 
 const emptyProduct: ProductRequest = {
@@ -63,8 +64,9 @@ export const ProductsPage = () => {
   const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
   
   const getProductPath = (id: number) => {
-    const base = isManagerOrAdmin ? '/manager' : '/warehouse';
-    return `${base}/products/${id}`;
+    if (user?.role === 'ADMIN' || user?.role === 'MANAGER') return `/manager/products/${id}`;
+    if (user?.role === 'OFFICER') return `/purchase/products/${id}`;
+    return `/warehouse/products/${id}`;
   };
 
   const [activeTab, setActiveTab] = useState<TabType>('catalogue');
@@ -176,12 +178,12 @@ export const ProductsPage = () => {
           </h1>
         </div>
 
-        <div className="flex p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
+        <div className="flex p-2 bg-card/30 rounded-full border border-border shadow-app-card backdrop-blur-md">
           <button
             onClick={() => { setActiveTab('catalogue'); reset(); }}
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
-              activeTab === 'catalogue' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              activeTab === 'catalogue' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <ShoppingBasket01Icon className="w-5 h-5" />
@@ -192,11 +194,21 @@ export const ProductsPage = () => {
               onClick={() => setActiveTab('registration')}
               className={cn(
                 "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
-                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <PlusSignIcon className="w-5 h-5" />
               {editingId ? 'Modify SKU' : 'Register SKU'}
+            </button>
+          )}
+
+          {user?.role === 'ADMIN' && (
+            <button
+              onClick={() => navigate('/warehouse/issue')}
+              className="flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 text-muted-foreground hover:text-foreground border-l border-border/20 ml-2 pl-4"
+            >
+              <PackageMovingIcon className="w-5 h-5" />
+              Issue Stock
             </button>
           )}
         </div>
@@ -219,9 +231,9 @@ export const ProductsPage = () => {
               <button 
                 onClick={() => setLowStockOnly(!lowStockOnly)}
                 className={cn(
-                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-sm shrink-0",
+                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-app-subtle shrink-0",
                   lowStockOnly 
-                    ? "bg-rose-500 text-white border-rose-600 shadow-rose-500/20" 
+                    ? "bg-destructive text-destructive-foreground border-destructive/50 shadow-destructive/20" 
                     : "bg-card border-border text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -229,12 +241,12 @@ export const ProductsPage = () => {
                 {lowStockOnly ? "Critical Stock" : "All Density"}
               </button>
 
-              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-sm shrink-0">
+              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
                 <button 
                   onClick={() => setViewMode('grid')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
-                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <LayoutGridIcon className="w-5 h-5" />
@@ -243,7 +255,7 @@ export const ProductsPage = () => {
                   onClick={() => setViewMode('list')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
-                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <TableIcon className="w-5 h-5" />
@@ -270,7 +282,7 @@ export const ProductsPage = () => {
               {filtered.map((product) => (
                 <div 
                   key={product.productId} 
-                  className="group relative flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-[2.5rem] transition-all duration-500 text-left shadow-sm hover:shadow-2xl hover:-translate-y-2 cursor-pointer overflow-hidden"
+                  className="group relative flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-[2.5rem] transition-all duration-500 text-left shadow-app-card hover:shadow-app-hover hover:-translate-y-2 cursor-pointer overflow-hidden"
                   onClick={() => navigate(getProductPath(product.productId))}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[60px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
@@ -284,7 +296,7 @@ export const ProductsPage = () => {
                         {product.category}
                       </span>
                       {product.currentQuantity <= product.reorderLevel && (
-                        <span className="text-[10px] font-black px-4 py-1.5 bg-rose-500/10 text-rose-500 uppercase tracking-wider rounded-full border border-rose-500/20 animate-pulse">
+                        <span className="text-[10px] font-black px-4 py-1.5 bg-destructive/10 text-destructive uppercase tracking-wider rounded-full border border-destructive/20 animate-pulse">
                           CRITICAL
                         </span>
                       )}
@@ -302,7 +314,7 @@ export const ProductsPage = () => {
                         <p className="text-[10px] font-black text-foreground/70 uppercase tracking-wider">Density</p>
                         <p className={cn(
                           "text-xl font-black tabular-nums tracking-tighter",
-                          product.currentQuantity <= product.reorderLevel ? "text-rose-500" : "text-foreground"
+                          product.currentQuantity <= product.reorderLevel ? "text-destructive" : "text-foreground"
                         )}>
                           {product.currentQuantity} <span className="text-[10px] uppercase opacity-40 ml-1">{product.unitOfMeasure}</span>
                         </p>
@@ -310,7 +322,7 @@ export const ProductsPage = () => {
                       <div className="text-right space-y-1">
                         <p className="text-[10px] font-black text-foreground/70 uppercase tracking-wider">Valuation</p>
                         <p className="text-xl font-black tabular-nums tracking-tighter">
-                          ${product.sellingPrice.toLocaleString()}
+                          {formatCurrency(product.sellingPrice)}
                         </p>
                       </div>
                     </div>
@@ -319,7 +331,7 @@ export const ProductsPage = () => {
                       <div 
                         className={cn(
                           "h-full transition-all duration-1000 ease-out",
-                          product.currentQuantity <= product.reorderLevel ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                          product.currentQuantity <= product.reorderLevel ? "bg-destructive shadow-[0_0_10px_rgba(var(--destructive),0.5)]" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
                         )}
                         style={{ width: `${Math.min(100, (product.currentQuantity / (product.maxStockLevel || 100)) * 100)}%` }}
                       />
@@ -327,20 +339,20 @@ export const ProductsPage = () => {
                   </div>
 
                   <div className="mt-8 flex items-center justify-between pt-6 border-t border-border/10">
-                     <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                      <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                         {isManagerOrAdmin && (
-                          <button onClick={() => edit(product)} className="w-10 h-10 rounded-xl bg-muted/50 hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-all">
-                            <Edit02Icon className="w-4 h-4" />
+                          <button onClick={() => edit(product)} className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
+                            <Edit02Icon className="w-5 h-5" />
                           </button>
                         )}
-                     </div>
+                      </div>
                      <ArrowRight01Icon className="w-6 h-6 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-2 transition-all duration-500" />
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-sm bg-opacity-50">
+            <div className="bg-card border border-border rounded-[2.5rem] shadow-app-card overflow-hidden backdrop-blur-sm bg-opacity-50">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-b border-border/60 h-20">
@@ -375,39 +387,26 @@ export const ProductsPage = () => {
                         </span>
                       </TableCell>
                       <TableCell className="px-10 text-left">
-                        <div className="flex flex-col gap-3 w-48">
-                          <div className="flex justify-between items-end">
-                            <span className={cn(
-                              "text-sm font-black tabular-nums tracking-tighter",
-                              product.currentQuantity <= product.reorderLevel ? "text-rose-500" : "text-foreground"
-                            )}>
-                              {product.currentQuantity} <span className="text-[10px] uppercase opacity-40 ml-1">{product.unitOfMeasure}</span>
-                            </span>
-                            {product.currentQuantity <= product.reorderLevel && (
-                              <span className="text-[9px] font-black text-rose-500 uppercase tracking-wider animate-pulse">REORDER</span>
-                            )}
-                          </div>
-                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                            <div 
-                              className={cn(
-                                "h-full transition-all duration-1000", 
-                                product.currentQuantity <= product.reorderLevel ? "bg-rose-500" : "bg-primary"
-                              )}
-                              style={{ width: `${Math.min(100, (product.currentQuantity / (product.maxStockLevel || 100)) * 100)}%` }}
-                            />
-                          </div>
+                        <div className={cn(
+                          "inline-flex items-center gap-3 px-6 py-2.5 rounded-full border text-[11px] font-black uppercase tracking-widest",
+                          product.currentQuantity <= product.reorderLevel 
+                            ? "bg-destructive/10 text-destructive border-destructive/20" 
+                            : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                        )}>
+                          <div className={cn("w-2 h-2 rounded-full", product.currentQuantity <= product.reorderLevel ? "bg-destructive animate-pulse" : "bg-emerald-500")} />
+                          {product.currentQuantity.toLocaleString()} {product.unitOfMeasure} LEFT
                         </div>
                       </TableCell>
                       <TableCell className="px-10">
                          <span className="text-xl font-black tabular-nums tracking-tighter">
-                            ${product.sellingPrice.toLocaleString()}
+                            {formatCurrency(product.sellingPrice)}
                          </span>
                       </TableCell>
                       <TableCell className="px-10 text-right" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-4">
                           {isManagerOrAdmin && (
-                            <button onClick={() => edit(product)} className="w-12 h-12 rounded-2xl bg-muted/50 hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-all duration-300">
-                              <Edit02Icon className="w-5 h-5" />
+                            <button onClick={() => edit(product)} className="w-12 h-12 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
+                              <Edit02Icon className="w-6 h-6" />
                             </button>
                           )}
                           <ArrowRight01Icon className="w-8 h-8 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-2 transition-all duration-500" />
@@ -443,7 +442,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3 sm:col-span-2 lg:col-span-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Resource Identity <span className="text-rose-500">*</span>
+                      Resource Identity <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -459,7 +458,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Protocol SKU <span className="text-rose-500">*</span>
+                      Protocol SKU <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <Tag01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -491,7 +490,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Classification <span className="text-rose-500">*</span>
+                      Classification <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <Grid02Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -507,7 +506,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Registry Unit <span className="text-rose-500">*</span>
+                      Registry Unit <span className="text-destructive">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -597,15 +596,15 @@ export const ProductsPage = () => {
 
                   {editingId && (
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black text-rose-500 uppercase tracking-wider px-2 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      <label className="text-[10px] font-black text-destructive uppercase tracking-wider px-2 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
                         Manual Density Override
                       </label>
                       <div className="relative group">
-                        <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-500/60" />
+                        <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive/60" />
                         <input
                           type="number"
-                          className="h-14 w-full rounded-2xl border border-rose-500/20 bg-rose-500/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-rose-500/10 outline-none transition-all text-rose-500"
+                          className="h-14 w-full rounded-2xl border border-destructive/20 bg-destructive/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-destructive/10 outline-none transition-all text-destructive"
                           placeholder="CURRENT QTY"
                           value={form.currentQuantity ?? 0}
                           onChange={(e) => update("currentQuantity", e.target.value)}
@@ -620,7 +619,7 @@ export const ProductsPage = () => {
                 <button 
                   type="submit" 
                   disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
+                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
                 >
                   {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT SPECIFICATIONS' : 'AUTHORIZE INITIALIZATION'}
                 </button>

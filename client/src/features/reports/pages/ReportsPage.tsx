@@ -6,7 +6,8 @@ import {
   Chart01Icon,
   ArrowReloadHorizontalIcon,
   Alert02Icon,
-  Analytics01Icon
+  Analytics01Icon,
+  FilterIcon
 } from "hugeicons-react";
 import {
   Table,
@@ -26,7 +27,7 @@ import {
   RiskAnalysisModal 
 } from "../components/BreakdownModals";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { WarehouseDistributionWidget } from "@/features/dashboard/components/WarehouseDistributionWidget";
 import { SupplierPerformanceWidget } from "@/features/dashboard/components/SupplierPerformanceWidget";
 import { StockVelocityWidget } from "@/features/dashboard/components/StockVelocityWidget";
@@ -36,6 +37,8 @@ export function ReportsPage() {
   const user = useAuthStore((s) => s.user);
   const role = user?.role || Role.STAFF;
   
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
+
   const { 
     loading, 
     totalValue, 
@@ -48,7 +51,7 @@ export function ReportsPage() {
     movements,
     orders,
     refresh
-  } = useReportsData();
+  } = useReportsData(selectedWarehouseId);
 
   const [showValuationModal, setShowValuationModal] = useState(false);
   const [showSpendModal, setShowSpendModal] = useState(false);
@@ -66,16 +69,57 @@ export function ReportsPage() {
     return `${base}${suffix}`;
   };
 
+  const activeWarehouse = useMemo(() => {
+    if (!selectedWarehouseId) return null;
+    return warehouses.find(w => w.warehouseId === selectedWarehouseId);
+  }, [selectedWarehouseId, warehouses]);
+
+  const activeWarehouseName = activeWarehouse?.name || "Global Network";
+
   const PageHeader = () => (
     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4 mb-12">
-      <div>
-        <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Intelligence Hub</p>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">Inventory Analytics</h1>
+      <div className="text-left">
+        <div className="flex items-center gap-3 mb-3">
+          <p className="text-sm font-black text-foreground/40 uppercase tracking-[0.2em]">
+            {selectedWarehouseId ? `Operational Hub: ${activeWarehouseName}` : "Intelligence Hub"}
+          </p>
+          {selectedWarehouseId && activeWarehouse && (
+            <div className={cn(
+              "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border",
+              activeWarehouse.active ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-400/10 text-rose-400 border-rose-400/20"
+            )}>
+              {activeWarehouse.active ? "Active" : "Suspended"}
+            </div>
+          )}
+        </div>
+        <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground leading-none">
+          {role === Role.ADMIN 
+            ? (selectedWarehouseId ? "Hub Analytics" : "Global Analytics") 
+            : role === Role.MANAGER ? "Hub Operations" : "Procurement Info"}
+        </h1>
       </div>
 
       <div className="flex items-center gap-4">
+        {role === Role.ADMIN && (
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-foreground/40 group-hover:text-primary transition-colors">
+              <FilterIcon className="w-4 h-4" />
+            </div>
+            <select
+              value={selectedWarehouseId || ""}
+              onChange={(e) => setSelectedWarehouseId(e.target.value ? Number(e.target.value) : null)}
+              className="h-14 pl-12 pr-10 rounded-full bg-card/40 border border-border/60 text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-primary/20 outline-none transition-all appearance-none cursor-pointer hover:bg-card/60 min-w-[220px]"
+            >
+              <option value="">Global Network</option>
+              {warehouses.map(w => (
+                <option key={w.warehouseId} value={w.warehouseId}>{w.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <button
-          className="w-14 h-14 flex items-center justify-center bg-card/30 hover:bg-muted rounded-full border border-border shadow-xl transition-all active:scale-95 text-muted-foreground backdrop-blur-md"
+          className="w-14 h-14 flex items-center justify-center bg-card/40 hover:bg-primary hover:text-white rounded-full border border-border/60 shadow-app-subtle transition-all active:scale-95 text-foreground/60 backdrop-blur-md"
           onClick={refresh}
           disabled={loading}
         >
@@ -91,33 +135,33 @@ export function ReportsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <ReportMetricCard
-          label="Registry Valuation"
+          label={selectedWarehouseId || role === Role.MANAGER ? "Hub Asset Value" : "Global Valuation"}
           value={totalValue !== null ? formatCurrency(totalValue) : '...'}
-          hint="Global Asset Valuation"
+          hint={selectedWarehouseId ? "Local Hub Equity" : "Aggregate Market Valuation"}
           icon={Chart01Icon}
           onClick={() => setShowValuationModal(true)}
           color="primary"
         />
         <ReportMetricCard
-          label="Risk Critical"
+          label={selectedWarehouseId || role === Role.MANAGER ? "Hub Low Stock" : "Global Low Stock"}
           value={String(lowStock.length)}
-          hint="Density Risk Protocols"
+          hint={selectedWarehouseId ? "Local Critical Inventory" : "Network Density Risk"}
           icon={Alert02Icon}
           color="destructive"
           onClick={() => navigate(getProductPath(), { state: { filter: 'LOW_STOCK' } })}
         />
         <ReportMetricCard
-          label="Procurement Flux"
+          label={selectedWarehouseId || role === Role.MANAGER ? "Hub Spend Flux" : "Global Spend"}
           value={poSummary && poSummary.totalAmount !== undefined ? formatCurrency(poSummary.totalAmount) : '₹0'}
-          hint="Total Spend Evaluation"
+          hint={selectedWarehouseId ? "Verified Hub Expenditure" : "Operational Spend Evaluation"}
           icon={ShoppingBasket01Icon}
           color="warning"
           onClick={() => setShowSpendModal(true)}
         />
         <ReportMetricCard
-          label="Node Throughput"
+          label={selectedWarehouseId || role === Role.MANAGER ? "Hub Activity" : "Network cycles"}
           value={String(poSummary?.totalOrders || 0)}
-          hint="Operational Cycles"
+          hint={selectedWarehouseId ? "Local Hub Cycles" : "Global Operational Cycles"}
           icon={PackageIcon}
           color="primary"
           onClick={() => navigate(getRolePath('/purchase-orders'))}
@@ -127,14 +171,16 @@ export function ReportsPage() {
       <div className="grid gap-8 lg:grid-cols-12 items-start">
         {/* --- Main Analytics Column --- */}
         <div className="lg:col-span-7 space-y-8">
-          <Card className="rounded-[2.5rem] border border-border/60 bg-rose-500/[0.02] dark:bg-rose-500/[0.05] backdrop-blur-xl shadow-sm overflow-hidden flex flex-col group relative">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-rose-500/10 blur-[60px] -ml-16 -mt-16 rounded-full pointer-events-none" />
+          <Card className="rounded-[2.5rem] border border-border/60 bg-rose-400/[0.02] dark:bg-rose-400/[0.05] backdrop-blur-xl shadow-app-card overflow-hidden flex flex-col group relative">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-rose-400/10 blur-[60px] -ml-16 -mt-16 rounded-full pointer-events-none" />
             <CardHeader className="bg-muted/5 border-b border-border/10 p-5 pb-2 relative text-left">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
               <div className="flex items-center justify-between relative">
                 <div>
                   <CardTitle className="text-xl md:text-3xl font-black tracking-tighter text-foreground">Inventory Watchlist</CardTitle>
-                  <CardDescription className="text-[10px] font-black  uppercase tracking-widest mt-1 text-left">Stock Level Alerts</CardDescription>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest mt-1 text-left">
+                    {selectedWarehouseId ? `Hub Specific Alerts` : `Stock Level Alerts`}
+                  </CardDescription>
                 </div>
                 <button 
                    onClick={() => navigate(getProductPath(), { state: { filter: 'LOW_STOCK' } })}
@@ -170,7 +216,7 @@ export function ReportsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="px-4 md:px-6 py-4 text-center">
-                            <span className="inline-flex items-center px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-wide bg-rose-500/10 text-rose-600 dark:text-rose-500 border border-rose-500/20 shadow-sm whitespace-nowrap">
+                            <span className="inline-flex items-center px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-wide bg-rose-400/10 text-rose-600 dark:text-rose-400 border border-rose-400/20 shadow-app-subtle whitespace-nowrap">
                               {entry.quantity} Items Left
                             </span>
                           </TableCell>
@@ -197,13 +243,15 @@ export function ReportsPage() {
             </CardContent>
           </Card>
           
-          <WarehouseDistributionWidget warehouses={warehouses} userRole={role} />
+          {role === Role.ADMIN && !selectedWarehouseId && (
+            <WarehouseDistributionWidget warehouses={warehouses} userRole={role} />
+          )}
           <SupplierPerformanceWidget suppliers={suppliers} orders={orders} />
         </div>
 
         {/* --- Insights Column --- */}
         <div className="lg:col-span-5 space-y-6">
-          <Card className="rounded-[2.5rem] border border-border/90 bg-primary/[0.01] backdrop-blur-xl shadow-sm overflow-hidden flex flex-col group">
+          <Card className="rounded-[2.5rem] border border-border/90 bg-primary/[0.01] backdrop-blur-xl shadow-app-card overflow-hidden flex flex-col group">
             <CardHeader className="bg-muted/5 p-5 relative text-left">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
               <div className="flex items-center gap-5 relative">
@@ -218,8 +266,12 @@ export function ReportsPage() {
             <CardContent className="p-0">
               <div className="relative h-80 flex items-center justify-center overflow-hidden">
                 {(() => {
-                  const totalCap = warehouses.reduce((acc, w) => acc + w.capacity, 0);
-                  const usedCap = warehouses.reduce((acc, w) => acc + w.usedCapacity, 0);
+                  const filteredWarehouses = selectedWarehouseId 
+                    ? warehouses.filter(w => w.warehouseId === selectedWarehouseId)
+                    : warehouses;
+                  
+                  const totalCap = filteredWarehouses.reduce((acc, w) => acc + w.capacity, 0);
+                  const usedCap = filteredWarehouses.reduce((acc, w) => acc + w.usedCapacity, 0);
                   const utilPercent = totalCap > 0 ? Math.round((usedCap / totalCap) * 100) : 0;
                   
                   return (
@@ -236,8 +288,10 @@ export function ReportsPage() {
                           )} />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                        <span className="text-xs font-black text-foreground/60 uppercase tracking-widest mb-3">Warehouse Fill</span>
-                        <span className={cn("text-7xl font-black tabular-nums tracking-tighter", utilPercent > 80 ? "text-rose-500" : "text-foreground")}>{utilPercent}%</span>
+                        <span className="text-xs font-black text-foreground/60 uppercase tracking-widest mb-3">
+                          {selectedWarehouseId ? "Hub Fill" : "Global Fill"}
+                        </span>
+                        <span className={cn("text-7xl font-black tabular-nums tracking-tighter", utilPercent > 80 ? "text-rose-400" : "text-foreground")}>{utilPercent}%</span>
                         <div className="mt-6 px-5 py-2 rounded-full bg-muted/40 border border-border/60 shadow-inner">
                            <p className="text-[11px] font-black uppercase tracking-widest text-foreground/80">
                              {usedCap.toLocaleString()} / {totalCap.toLocaleString()} Units

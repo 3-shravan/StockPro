@@ -43,6 +43,7 @@ public class RestTemplateInterceptor implements ClientHttpRequestInterceptor {
             propagateHeader(inbound, outbound, USER_NAME_HEADER);
             propagateHeader(inbound, outbound, USER_ROLES_HEADER);
             propagateHeader(inbound, outbound, USER_ID_HEADER);
+            propagateHeader(inbound, outbound, "X-User-Department");
             propagateHeader(inbound, outbound, "Authorization");
         }
 

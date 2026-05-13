@@ -39,9 +39,12 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Suppress toasts if 'silent' flag is set in request config
+    const isSilent = error.config?.silent === true;
+
     // Network failure (server unreachable, no internet)
     if (error.code === 'ERR_NETWORK' || !error.response) {
-      toast.error('Network error — please check your connection.');
+      if (!isSilent) toast.error('Network error — please check your connection.');
       return Promise.reject(error);
     }
 
@@ -49,35 +52,37 @@ apiClient.interceptors.response.use(
     const message: string =
       error.response.data?.message || 'Something went wrong';
 
-    switch (status) {
-      case 400:
-        toast.error(message || 'Invalid request — please check your inputs.');
-        break;
-
-      case 401:
-        if (window.location.pathname.includes('/login')) {
-          toast.error(message || 'Invalid email or password.');
-        } else {
-          toast.error('Session expired. Please log in again.');
-          useAuthStore.getState().logout();
-        }
-        break;
-
-      case 403:
-        toast.error('Access denied — insufficient permissions.');
-        break;
-
-      case 404:
-        toast.error(message || 'Resource not found.');
-        break;
-
-      case 409:
-        toast.error(`Conflict: ${message}`);
-        break;
-
-      case 500:
-        toast.error('Internal server error — please try again later.');
-        break;
+    if (!isSilent) {
+      switch (status) {
+        case 400:
+          toast.error(message || 'Invalid request — please check your inputs.');
+          break;
+  
+        case 401:
+          if (window.location.pathname.includes('/login')) {
+            toast.error(message || 'Invalid email or password.');
+          } else {
+            toast.error('Session expired. Please log in again.');
+            useAuthStore.getState().logout();
+          }
+          break;
+  
+        case 403:
+          toast.error('Access denied — insufficient permissions.');
+          break;
+  
+        case 404:
+          toast.error(message || 'Resource not found.');
+          break;
+  
+        case 409:
+          toast.error(`Conflict: ${message}`);
+          break;
+  
+        case 500:
+          toast.error('Internal server error — please try again later.');
+          break;
+      }
     }
 
     return Promise.reject(error);

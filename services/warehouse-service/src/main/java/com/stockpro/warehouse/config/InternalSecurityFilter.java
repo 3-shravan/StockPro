@@ -70,9 +70,10 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
         }
 
         // Secret validated — reconstruct Security Context from gateway headers
-        String username = request.getHeader("X-User-Name");
-        String roles    = request.getHeader("X-User-Roles");
-        String userId   = request.getHeader("X-User-Id");
+        String username   = request.getHeader("X-User-Name");
+        String roles      = request.getHeader("X-User-Roles");
+        String userId     = request.getHeader("X-User-Id");
+        String department = request.getHeader("X-User-Department");
 
         if (username != null && roles != null && !username.isBlank() && !roles.isBlank()) {
             List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
@@ -84,14 +85,16 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(username, null, authorities);
             
-            // Inject userId into details map
+            // Inject context into details map
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("remoteAddress", request.getRemoteAddr());
-            details.put("sessionId", request.getSession(false) != null ? request.getSession(false).getId() : null);
             if (userId != null && !userId.isBlank()) {
                 try {
                     details.put("userId", Integer.parseInt(userId));
                 } catch (NumberFormatException ignored) {}
+            }
+            if (department != null) {
+                details.put("department", department);
             }
             authentication.setDetails(details);
             

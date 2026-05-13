@@ -9,8 +9,10 @@ import {
   Settings02Icon,
   ChartBarLineIcon,
   DatabaseIcon,
-  RefreshIcon
+  RefreshIcon,
+  UserIcon
 } from "hugeicons-react";
+import { authApi } from "@/features/auth/api/auth.api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { warehousesApi } from "@/features/warehouses/api";
@@ -38,13 +40,14 @@ export const WarehouseDetailPage = () => {
   const [isReconciling, setIsReconciling] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [editForm, setEditForm] = useState<WarehouseRequest>({
+  const [editForm, setEditForm] = useState<WarehouseRequest & { active: boolean }>({
     name: "",
     location: "",
     address: "",
     managerId: 0,
     capacity: 0,
-    phone: ""
+    phone: "",
+    active: true
   });
 
   const user = useAuthStore((s) => s.user);
@@ -72,7 +75,8 @@ export const WarehouseDetailPage = () => {
         address: fullDetails.address,
         managerId: fullDetails.managerId,
         capacity: fullDetails.capacity,
-        phone: fullDetails.phone ?? ""
+        phone: fullDetails.phone ?? "",
+        active: fullDetails.active
       });
     } catch (error: any) {
       showToast.error("Failed to load warehouse statistics.");
@@ -135,17 +139,25 @@ export const WarehouseDetailPage = () => {
             variant="ghost" 
             size="icon" 
             onClick={() => navigate(-1)}
-            className="rounded-full hover:bg-card/60 backdrop-blur-sm shadow-sm w-12 h-12 border border-border/40 shrink-0"
+            className="rounded-full hover:bg-card/60 backdrop-blur-sm shadow-app-subtle w-12 h-12 border border-border/40 shrink-0"
           >
             <ArrowLeft01Icon className="w-5 h-5" />
           </Button>
-          <div>
-            <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Distribution Hub</p>
+          <div className="text-left">
+            <div className="flex items-center gap-3 mb-3">
+              <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider">Distribution Hub</p>
+              <span className={cn(
+                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                editForm.active ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-400/10 text-rose-400 border-rose-400/20"
+              )}>
+                {editForm.active ? "Active" : "Deactivated"}
+              </span>
+            </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
               {stats.warehouseName}
             </h1>
             <div className="flex items-center gap-2 mt-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm" />
+              <div className={cn("w-2 h-2 rounded-full shadow-app-subtle", editForm.active ? "bg-emerald-500 animate-pulse" : "bg-rose-400")} />
               <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider">
                 Operational Node • ID #{stats.warehouseId}
               </p>
@@ -153,9 +165,9 @@ export const WarehouseDetailPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
+        <div className="flex items-center gap-4 p-2 bg-card/30 rounded-full border border-border shadow-app-card backdrop-blur-md">
           <button 
-            className="flex items-center gap-2 px-6 py-3 bg-card text-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:bg-muted active:scale-95 border border-border shadow-sm"
+            className="flex items-center gap-2 px-6 py-3 bg-card text-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:bg-muted active:scale-95 border border-border shadow-app-subtle"
             onClick={handleReconcile}
             disabled={isReconciling}
           >
@@ -163,7 +175,7 @@ export const WarehouseDetailPage = () => {
             Sync Capacity
           </button>
           <button 
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-primary/20"
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-app-subtle shadow-primary/20"
             onClick={() => setIsEditModalOpen(true)}
           >
             <Settings02Icon className="w-4 h-4" />
@@ -187,6 +199,28 @@ export const WarehouseDetailPage = () => {
                 onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                 required
               />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2 p-4 rounded-2xl bg-muted/30 border border-border/40">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold">Operational Status</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Activate or suspend hub activities</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditForm({ ...editForm, active: !editForm.active })}
+                  className={cn(
+                    "w-12 h-6 rounded-full relative transition-all duration-300",
+                    editForm.active ? "bg-emerald-500" : "bg-muted-foreground/30"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300",
+                    editForm.active ? "left-7" : "left-1"
+                  )} />
+                </button>
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold px-1">Location / City</label>
@@ -276,7 +310,8 @@ export const WarehouseDetailPage = () => {
       {/* Detail Sections */}
       <div className="grid gap-10 lg:grid-cols-3">
         {/* Top Products Table */}
-        <Card className="lg:col-span-2 rounded-[2.5rem] border border-border/40 bg-card shadow-2xl overflow-hidden">
+        <Card className="lg:col-span-2 rounded-[2.5rem] border border-border/40 bg-card shadow-app-card overflow-hidden">
+          {/* ... existing card header and content ... */}
           <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -294,97 +329,122 @@ export const WarehouseDetailPage = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/40 h-16">
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Asset Parameters</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Inventory Load</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest text-right">Integrity Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stats.topProducts.map((product) => (
-                  <TableRow key={product.productId} className="group hover:bg-muted/10 border-b border-border/40 transition-colors last:border-0 h-24">
-                    <TableCell className="px-8">
-                      <div className="flex items-center gap-6 whitespace-nowrap">
-                        <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center text-base font-black text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                          #{product.productId}
-                        </div>
-                        <span className="font-black text-xl text-foreground tracking-tighter">{product.productName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-8 font-black text-xl text-foreground whitespace-nowrap tracking-tighter">
-                      {product.quantity.toLocaleString()} Units
-                    </TableCell>
-                    <TableCell className="px-8 text-right whitespace-nowrap">
-                      <span className="inline-flex items-center px-5 py-2 rounded-full bg-emerald-500/10 text-emerald-500 text-[11px] font-black uppercase tracking-widest border border-emerald-500/10">
-                        Optimal
-                      </span>
-                    </TableCell>
+            <div className="w-full overflow-x-auto no-scrollbar">
+              <Table className="min-w-[600px]">
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/40 h-16">
+                    <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Asset Parameters</TableHead>
+                    <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Inventory Load</TableHead>
+                    <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest text-right">Integrity Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {stats.topProducts.map((product) => (
+                    <TableRow key={product.productId} className="group hover:bg-muted/10 border-b border-border/40 transition-colors last:border-0 h-24">
+                      <TableCell className="px-8">
+                        <div className="flex items-center gap-6 whitespace-nowrap">
+                          <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center text-base font-black text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            #{product.productId}
+                          </div>
+                          <span className="font-black text-xl text-foreground tracking-tighter">{product.productName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-8 font-black text-xl text-foreground whitespace-nowrap tracking-tighter">
+                        {product.quantity.toLocaleString()} Units
+                      </TableCell>
+                      <TableCell className="px-8 text-right whitespace-nowrap">
+                        <span className="inline-flex items-center px-5 py-2 rounded-full bg-emerald-500/10 text-emerald-500 text-[11px] font-black uppercase tracking-widest border border-emerald-500/10">
+                          Optimal
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Capacity Visualization */}
-        <Card className="rounded-[2.5rem] border border-border/40 bg-card shadow-2xl">
-          <CardHeader className="p-6">
-            <CardTitle className="text-lg">Capacity Analytics</CardTitle>
-            <CardDescription className="text-xs">Storage utilization breakdown.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 pt-0 space-y-6">
-            <div className="relative flex items-center justify-center py-4">
-              <svg className="w-48 h-48 transform -rotate-90">
-                <circle
-                  cx="96"
-                  cy="96"
-                  r="80"
-                  stroke="currentColor"
-                  strokeWidth="16"
-                  fill="transparent"
-                  className="text-muted/30"
-                />
-                <circle
-                  cx="96"
-                  cy="96"
-                  r="80"
-                  stroke="currentColor"
-                  strokeWidth="16"
-                  fill="transparent"
-                  strokeDasharray={502.4}
-                  strokeDashoffset={502.4 - (502.4 * stats.utilizedPercentage) / 100}
-                  strokeLinecap="round"
-                  className={cn(
-                    "transition-all duration-1000 ease-in-out",
-                    stats.utilizedPercentage > 90 ? "text-destructive" : stats.utilizedPercentage > 75 ? "text-amber-500" : "text-primary"
-                  )}
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center">
-                <span className="text-4xl font-bold tracking-tight">{Math.round(stats.utilizedPercentage)}%</span>
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Full</span>
-              </div>
+        {/* Personnel Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <div>
+              <h3 className="text-2xl font-bold tracking-tight text-foreground">Assigned Personnel</h3>
+              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">Operational Team Registry for {stats.warehouseName}</p>
             </div>
+            {(role === Role.ADMIN || role === Role.MANAGER) && (
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 className="rounded-full font-bold text-[10px] uppercase tracking-wider h-10 px-6 border-border/40 bg-card/50"
+                 onClick={() => navigate('/admin/users')}
+               >
+                 Manage Team
+               </Button>
+            )}
+          </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 border border-border/40 group/item hover:bg-muted/50 transition-colors">
-                <span className="text-sm font-black text-muted-foreground uppercase tracking-wider">Used Space</span>
-                <span className="text-xl font-black text-foreground tracking-tighter">{stats.usedCapacity.toLocaleString()} Units</span>
-              </div>
-              <div className="flex items-center justify-between p-5 rounded-2xl bg-muted/30 border border-border/40 group/item hover:bg-muted/50 transition-colors">
-                <span className="text-sm font-black text-muted-foreground uppercase tracking-wider">Free Space</span>
-                <span className="text-xl font-black text-foreground tracking-tighter">{(stats.capacity - stats.usedCapacity).toLocaleString()} Units</span>
-              </div>
-            </div>
-            
-            <p className="text-[11px] text-center text-muted-foreground leading-relaxed px-4">
-              Warehouse efficiency is currently rated as <span className="text-emerald-500 font-bold">Excellent</span> based on storage optimization patterns.
-            </p>
-          </CardContent>
-        </Card>
+          <PersonnelList warehouseName={stats.warehouseName} />
+        </div>
       </div>
+    </div>
+  );
+};
+
+const PersonnelList = ({ warehouseName }: { warehouseName: string }) => {
+  const [personnel, setPersonnel] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPersonnel = async () => {
+      try {
+        const allUsers = await authApi.getAll();
+        const filtered = allUsers.filter(u => u.department === warehouseName);
+        setPersonnel(filtered);
+      } catch (error) {
+        console.error("Failed to load personnel", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchPersonnel();
+  }, [warehouseName]);
+
+  if (loading) return (
+    <div className="h-32 flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+    </div>
+  );
+
+  if (personnel.length === 0) return (
+    <div className="bg-white/[0.03] rounded-[2rem] border border-dashed border-border/40 p-12 text-center">
+      <p className="text-muted-foreground text-sm font-medium">No personnel currently assigned to this hub.</p>
+    </div>
+  );
+
+  return (
+    <div className="grid gap-4 grid-cols-1 px-2">
+      {personnel.map(user => (
+        <div key={user.userId} className="bg-white/[0.05] p-5 rounded-[2rem] border border-border/10 flex items-center gap-5 hover:bg-white/[0.08] transition-all group">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shrink-0">
+            <UserIcon className="w-7 h-7" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-base text-foreground truncate">{user.fullName}</h4>
+            <div className="flex items-center gap-2 mt-1.5">
+               <span className={cn(
+                 "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border",
+                 user.role === Role.ADMIN ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : 
+                 user.role === Role.MANAGER ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : 
+                 "bg-primary/10 text-primary border-primary/20"
+               )}>
+                 {user.role}
+               </span>
+               <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Active</span>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
@@ -402,7 +462,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, unit, icon, description, trend, trendType, progress, variant = 'default' }: StatCardProps) => (
-  <Card className="rounded-[2.5rem] border-none bg-white/[0.05] shadow-2xl backdrop-blur-xl overflow-hidden group hover:bg-white/[0.08] transition-all">
+  <Card className="rounded-[2.5rem] border-none bg-white/[0.05] shadow-app-card backdrop-blur-xl overflow-hidden group hover:bg-white/[0.08] transition-all">
     <CardContent className="p-6">
       <div className="flex items-center justify-between">
         <div className={cn(

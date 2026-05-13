@@ -1,14 +1,10 @@
 package com.stockpro.purchase.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class POLineItemResponse {
     private int lineItemId;
     private int productId;

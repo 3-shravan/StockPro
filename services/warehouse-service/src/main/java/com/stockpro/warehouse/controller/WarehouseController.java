@@ -15,9 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/warehouses")
@@ -50,8 +54,43 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<List<WarehouseResponse>>> getAll(
             @RequestParam(defaultValue = "false") boolean includeInactive) {
         log.info("API: Retrieving warehouses (includeInactive={})", includeInactive);
-        List<WarehouseResponse> response = warehouseService.getAllWarehouses(includeInactive);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isOfficer = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_OFFICER"));
+
+        List<WarehouseResponse> response;
+        if (isAdmin || isOfficer) {
+            // High-level roles see everything
+            response = warehouseService.getAllWarehouses(includeInactive);
+        } else {
+            // Managers and Staff see only their assigned hubs
+            String department = getCurrentUserDepartment();
+            log.info("Scoping warehouse list to department: {}", department);
+            
+            if (department != null && !department.isBlank() && !department.equalsIgnoreCase("GLOBAL HUB (UNASSIGNED)")) {
+                response = warehouseService.getAllWarehouses(includeInactive).stream()
+                        .filter(w -> department.equalsIgnoreCase(w.getName()))
+                        .collect(Collectors.toList());
+            } else {
+                response = List.of();
+            }
+        }
+
         return ResponseEntity.ok(ApiResponse.success("Warehouses retrieved successfully", response));
+    }
+
+    private String getCurrentUserDepartment() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> details = (Map<String, Object>) auth.getDetails();
+            Object deptObj = details.get("department");
+            if (deptObj instanceof String) {
+                return (String) deptObj;
+            }
+        }
+        return null;
     }
 
     @PutMapping("/{id}")
@@ -98,8 +137,17 @@ public class WarehouseController {
                 .orElseThrow(() -> new CustomException("Stock not found", HttpStatus.NOT_FOUND));
     }
 
+    @GetMapping("/{warehouseId}/stock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'OFFICER')")
+    public ResponseEntity<ApiResponse<List<StockLevelResponse>>> getAllStockByWarehouse(
+            @PathVariable int warehouseId) {
+        log.info("API: Retrieving all stock levels for warehouse {}", warehouseId);
+        List<StockLevelResponse> response = warehouseService.getAllStockByWarehouse(warehouseId);
+        return ResponseEntity.ok(ApiResponse.success("Stock levels retrieved", response));
+    }
+
     @GetMapping("/stock/product/{productId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'OFFICER')")
     public ResponseEntity<ApiResponse<List<StockLevelResponse>>> getStockByProduct(@PathVariable int productId) {
         log.info("API: Retrieving all stock levels for product ID: {}", productId);
         List<StockLevelResponse> response = warehouseService.getStockLevelsByProductId(productId);
@@ -145,7 +193,7 @@ public class WarehouseController {
     }
 
     @GetMapping("/{warehouseId}/stock/low")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'OFFICER')")
     public ResponseEntity<ApiResponse<List<StockLevelResponse>>> getLowStock(@PathVariable int warehouseId) {
         log.info("API: Retrieving low stock items for warehouse ID: {}", warehouseId);
         List<StockLevelResponse> response = warehouseService.getLowStockItems(warehouseId);
@@ -153,7 +201,7 @@ public class WarehouseController {
     }
 
     @GetMapping("/{id}/stats")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'OFFICER')")
     public ResponseEntity<ApiResponse<com.stockpro.warehouse.dto.response.WarehouseStatsResponse>> getStats(@PathVariable int id) {
         log.info("API: Retrieving statistics for warehouse ID: {}", id);
         return ResponseEntity.ok(ApiResponse.success("Warehouse statistics retrieved", warehouseService.getWarehouseStats(id)));
@@ -166,4 +214,5 @@ public class WarehouseController {
         warehouseService.reconcileWarehouseCapacity(id);
         return ResponseEntity.ok(ApiResponse.success("Warehouse capacity reconciled successfully", null));
     }
+
 }

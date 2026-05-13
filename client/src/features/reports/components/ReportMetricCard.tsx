@@ -18,7 +18,7 @@ interface ReportMetricCardProps {
 export const ReportMetricCard = ({ label, value, hint, icon: Icon, color = 'primary', onClick, trend }: ReportMetricCardProps) => {
   const colors: any = {
     primary: 'text-primary bg-primary/10 border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground',
-    destructive: 'text-rose-500 bg-rose-500/10 border-rose-500/20 group-hover:bg-rose-500 group-hover:text-white',
+    destructive: 'text-rose-400 bg-rose-400/10 border-rose-400/20 group-hover:bg-rose-400 group-hover:text-white',
     emerald: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white',
     amber: 'text-amber-600 bg-amber-500/10 border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white',
     warning: 'text-amber-600 bg-amber-500/10 border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white',
@@ -27,9 +27,9 @@ export const ReportMetricCard = ({ label, value, hint, icon: Icon, color = 'prim
   return (
     <Card
       className={cn(
-        "relative overflow-hidden group cursor-pointer transition-all duration-500 rounded-[2.5rem] border-border/60 backdrop-blur-xl shadow-sm hover:shadow-2xl hover:-translate-y-2",
+        "relative overflow-hidden group cursor-pointer transition-all duration-500 rounded-[2.5rem] border-border/60 backdrop-blur-xl shadow-app-card hover:shadow-app-hover hover:-translate-y-2",
         color === 'primary' ? "bg-primary/[0.03]" : 
-        color === 'destructive' ? "bg-rose-500/[0.04]" : 
+        color === 'destructive' ? "bg-rose-400/[0.04]" : 
         (color === 'warning' || color === 'amber') ? "bg-amber-500/[0.04]" : 
         color === 'emerald' ? "bg-emerald-500/[0.03]" : "bg-card/40"
       )}
@@ -55,7 +55,7 @@ export const ReportMetricCard = ({ label, value, hint, icon: Icon, color = 'prim
               <div className={cn(
                 "flex items-center gap-1 px-2 py-0.5 rounded-full border",
                 trend.value.startsWith('+') ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
-                trend.value.startsWith('-') ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-muted text-muted-foreground border-border"
+                trend.value.startsWith('-') ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : "bg-muted text-muted-foreground border-border"
               )}>
                  <Chart01Icon className="w-3 h-3" />
                  <span className="text-[10px] font-black tabular-nums">{trend.value}</span>

@@ -32,4 +32,5 @@ export interface ProductRequest {
   imageUrl?: string;
   barcode?: string;
   currentQuantity: number;
+  active: boolean;
 }

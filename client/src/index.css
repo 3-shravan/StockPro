@@ -21,7 +21,7 @@
     --muted-foreground: oklch(0.56 0.021 213.5);
     --accent: oklch(0.963 0.002 197.1);
     --accent-foreground: oklch(0.218 0.008 223.9);
-    --destructive: oklch(0.577 0.245 27.325);
+    --destructive: oklch(0.55 0.08 27.325);
     --border: oklch(0.925 0.005 214.3);
     --input: oklch(0.925 0.005 214.3);
     --ring: oklch(0.723 0.014 214.4);
@@ -56,7 +56,7 @@
     --muted-foreground: oklch(0.65 0 0); /* Dimmer muted text */
     --accent: oklch(0.18 0 0);
     --accent-foreground: oklch(0.94 0 0);
-    --destructive: oklch(0.55 0.15 15);
+    --destructive: oklch(0.55 0.05 15);
     --border: oklch(1 0 0 / 25%); /* Increased visibility */
     --input: oklch(1 0 0 / 20%);
     --ring: oklch(0.5 0.05 185);
@@ -116,6 +116,22 @@
     --radius-2xl: 2rem;
     --radius-3xl: 3rem;
     --radius-full: 9999px;
+
+    --shadow-app-subtle: var(--shadow-subtle);
+    --shadow-app-card: var(--shadow-card);
+    --shadow-app-hover: var(--shadow-hover);
+}
+
+:root {
+    --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-card: 0 4px 12px -1px rgb(0 0 0 / 0.03), 0 2px 6px -2px rgb(0 0 0 / 0.02);
+    --shadow-hover: 0 10px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+}
+
+.dark {
+    --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-card: 0 4px 12px -1px rgb(0 0 0 / 0.5), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+    --shadow-hover: 0 10px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.5);
 }
 
 @layer base {

@@ -23,8 +23,9 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { authApi } from '@/features/auth/api/auth.api';
+import { warehousesApi } from '@/features/warehouses/api';
 import { showToast } from '@/lib/toast';
-import { Role, type Role as RoleType, type User } from '@/types';
+import { Role, type Role as RoleType, type User, type Warehouse } from '@/types';
 import { cn } from "@/lib/utils";
 
 const assignableRoles = [Role.ADMIN, Role.MANAGER, Role.STAFF, Role.OFFICER];
@@ -54,6 +55,8 @@ export const AdminUsersPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | RoleType>('ALL');
+  const [hubFilter, setHubFilter] = useState<string>('ALL');
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [formData, setFormData] = useState<UserFormState>(emptyForm);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,6 +69,10 @@ export const AdminUsersPage = () => {
     
     if (roleFilter !== 'ALL') {
       result = result.filter(u => u.role === roleFilter);
+    }
+
+    if (hubFilter !== 'ALL') {
+      result = result.filter(u => u.department === hubFilter);
     }
 
     if (query.trim()) {
@@ -82,7 +89,7 @@ export const AdminUsersPage = () => {
     }
 
     return result;
-  }, [users, query, roleFilter]);
+  }, [users, query, roleFilter, hubFilter]);
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -96,8 +103,18 @@ export const AdminUsersPage = () => {
     }
   };
 
+  const loadWarehouses = async () => {
+    try {
+      const data = await warehousesApi.getAll();
+      setWarehouses(data);
+    } catch (error) {
+      console.error('Failed to load warehouses', error);
+    }
+  };
+
   useEffect(() => {
     void loadUsers();
+    void loadWarehouses();
   }, []);
 
   const updateField = (field: keyof UserFormState, value: string | boolean) => {
@@ -212,12 +229,12 @@ export const AdminUsersPage = () => {
       {activeTab === 'manage' && (
         <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
         <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
-          <div className="flex items-center gap-4 w-full max-w-4xl">
-            <div className="relative group flex-1">
+          <div className="flex flex-wrap items-center gap-4 w-full max-w-5xl">
+            <div className="relative group flex-1 min-w-[300px]">
               <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
                 className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
-                placeholder="Search identities by name, email, department..."
+                placeholder="Search identities by name, email, hub..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -227,11 +244,28 @@ export const AdminUsersPage = () => {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value as any)}
-                className="h-16 w-64 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
+                className="h-16 w-48 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
               >
                 <option value="ALL">ALL ROLES</option>
                 {assignableRoles.map(r => (
                   <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40">
+                 ▼
+              </div>
+            </div>
+
+            <div className="relative group shrink-0">
+              <select
+                value={hubFilter}
+                onChange={(e) => setHubFilter(e.target.value)}
+                className="h-16 w-56 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
+              >
+                <option value="ALL">ALL HUBS</option>
+                <option value="">GLOBAL HUB</option>
+                {warehouses.map(w => (
+                  <option key={w.warehouseId} value={w.name}>{w.name}</option>
                 ))}
               </select>
               <div className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40">
@@ -279,8 +313,8 @@ export const AdminUsersPage = () => {
                     >
                       <TableCell className="px-10">
                         <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 rounded-[1.5rem] bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
-                            <UserIcon className="w-8 h-8" />
+                          <div className="w-12 h-12 rounded-[1.25rem] bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
+                            <UserIcon className="w-6 h-6" />
                           </div>
                           <div className="text-left">
                             <span className="font-bold text-xl block leading-tight tracking-tight group-hover:text-primary transition-colors">{user.fullName}</span>
@@ -291,7 +325,7 @@ export const AdminUsersPage = () => {
                       <TableCell className="px-10">
                         <span className={cn(
                           "text-[10px] font-black px-4 py-2 rounded-full border shadow-sm uppercase tracking-wider",
-                          user.role === Role.ADMIN ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : 
+                          user.role === Role.ADMIN ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : 
                           user.role === Role.MANAGER ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : 
                           "bg-primary/10 text-primary border-primary/20"
                         )}>
@@ -308,7 +342,7 @@ export const AdminUsersPage = () => {
                         <div className="flex items-center gap-2">
                           <div className={cn(
                             "w-2 h-2 rounded-full shadow-sm animate-pulse",
-                            (user.isActive ?? true) ? "bg-emerald-500" : "bg-rose-500"
+
                           )} />
                           <span className="text-[10px] font-black uppercase tracking-wider">
                             {(user.isActive ?? true) ? 'Active' : 'Locked'}
@@ -316,18 +350,18 @@ export const AdminUsersPage = () => {
                         </div>
                       </TableCell>
                       <TableCell className="px-10 text-right">
-                        <div className="flex items-center justify-end gap-4 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-4 group-hover:translate-x-0">
+                        <div className="flex items-center justify-end gap-4">
                           <button 
                             onClick={() => editUser(user)}
-                            className="w-12 h-12 rounded-2xl bg-muted/50 hover:bg-primary hover:text-primary-foreground flex items-center justify-center transition-all duration-300"
+                            className="w-12 h-12 flex items-center justify-center transition-all duration-300 text-primary/60 hover:text-primary"
                           >
-                            <Edit02Icon className="w-5 h-5" />
+                            <Edit02Icon className="w-6 h-6" />
                           </button>
                           <button 
                             onClick={() => deleteUser(user)}
-                            className="w-12 h-12 rounded-2xl bg-muted/50 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all duration-300"
+                            className="w-12 h-12 flex items-center justify-center transition-all duration-300 text-rose-400/60 hover:text-rose-400"
                           >
-                            <Delete02Icon className="w-5 h-5" />
+                            <Delete02Icon className="w-6 h-6" />
                           </button>
                         </div>
                       </TableCell>
@@ -361,7 +395,7 @@ export const AdminUsersPage = () => {
                   <div className="space-y-3 sm:col-span-2">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Legal Designation <span className="text-rose-500">*</span>
+                      Legal Designation <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -375,7 +409,7 @@ export const AdminUsersPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Email <span className="text-rose-500">*</span></label>
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Email <span className="text-rose-400">*</span></label>
                     <div className="relative group">
                       <Mail01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
@@ -389,7 +423,7 @@ export const AdminUsersPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px) font-black text-foreground/70 uppercase tracking-wider px-2">Access Protocol {!isEditing && <span className="text-rose-500">*</span>}</label>
+                    <label className="text-[10px) font-black text-foreground/70 uppercase tracking-wider px-2">Access Protocol {!isEditing && <span className="text-rose-400">*</span>}</label>
                     <div className="relative group">
                       <LockPasswordIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
@@ -402,18 +436,35 @@ export const AdminUsersPage = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Deployment Hub</label>
-                    <div className="relative group">
-                      <Building05Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <input
-                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                        placeholder="DEPARTMENT / UNIT"
-                        value={formData.department}
-                        onChange={(e) => updateField("department", e.target.value)}
-                      />
+                  {formData.role !== Role.ADMIN && formData.role !== Role.OFFICER ? (
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Deployment Hub</label>
+                      <div className="relative group">
+                        <Building05Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
+                        <select
+                          className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-12 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all"
+                          value={formData.department}
+                          onChange={(e) => updateField("department", e.target.value)}
+                        >
+                          <option value="">GLOBAL HUB (UNASSIGNED)</option>
+                          {warehouses.map(w => (
+                            <option key={w.warehouseId} value={w.name}>{w.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none opacity-40 text-xs">
+                          ▼
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-3 opacity-60">
+                      <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Operational Scope</label>
+                      <div className="h-14 w-full rounded-2xl border border-border/40 bg-muted/20 flex items-center px-6 gap-3">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Global Authorized Scope</span>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Comms Protocol</label>
@@ -429,7 +480,7 @@ export const AdminUsersPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Role <span className="text-rose-500">*</span></label>
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Role <span className="text-rose-400">*</span></label>
                     <div className="relative">
                       <select
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 px-6 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all"
@@ -455,7 +506,7 @@ export const AdminUsersPage = () => {
                         "h-14 w-full rounded-2xl border transition-all flex items-center justify-center gap-4 px-6",
                         formData.isActive 
                         ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.1)]" 
-                        : "bg-rose-500/10 border-rose-500/20 text-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+                        : "bg-rose-400/10 border-rose-400/20 text-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
                       )}
                     >
                       {formData.isActive ? <ViewIcon className="w-4 h-4" /> : <ViewOffIcon className="w-4 h-4" />}

@@ -57,7 +57,8 @@ export const ProductDetailPage = () => {
     reorderLevel: 0,
     maxStockLevel: 1000,
     leadTimeDays: 0,
-    currentQuantity: 0
+    currentQuantity: 0,
+    active: true
   });
 
   const loadData = async () => {
@@ -86,7 +87,8 @@ export const ProductDetailPage = () => {
         reorderLevel: pData.reorderLevel,
         maxStockLevel: pData.maxStockLevel,
         leadTimeDays: pData.leadTimeDays,
-        currentQuantity: pData.currentQuantity
+        currentQuantity: pData.currentQuantity,
+        active: pData.active
       });
     } catch (error: any) {
       showToast.error("Failed to load product details.");
@@ -152,10 +154,16 @@ export const ProductDetailPage = () => {
               </span>
             </div>
             <div className="flex items-center gap-2 mt-3">
-              <div className={cn("w-2 h-2 rounded-full shadow-sm", product.currentQuantity > product.reorderLevel ? "bg-emerald-500 shadow-emerald-500/50" : "bg-destructive animate-pulse shadow-destructive-500/50")} />
+              <div className={cn("w-2 h-2 rounded-full shadow-sm", product.active ? (product.currentQuantity > product.reorderLevel ? "bg-emerald-500 shadow-emerald-500/50" : "bg-rose-400/80 animate-pulse shadow-rose-400/50") : "bg-muted-foreground/40")} />
               <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider">
-                {product.category} • {product.currentQuantity > product.reorderLevel ? "Inventory Nominal" : "Critical Depletion"}
+                {product.category} • {product.active ? (product.currentQuantity > product.reorderLevel ? "Inventory Nominal" : "Critical Depletion") : "Product Suspended"}
               </p>
+              <span className={cn(
+                "ml-3 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                product.active ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/40 text-foreground/40 border-border/40"
+              )}>
+                {product.active ? "Active SKU" : "Deactivated"}
+              </span>
             </div>
           </div>
         </div>
@@ -218,13 +226,14 @@ export const ProductDetailPage = () => {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-full">
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/40 h-16">
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Storage Node</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Physical Qty</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest">Reserved</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest text-right">Availability</TableHead>
+                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest whitespace-nowrap">Storage Node</TableHead>
+                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest whitespace-nowrap">Physical Qty</TableHead>
+                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest whitespace-nowrap">Reserved</TableHead>
+                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest text-right whitespace-nowrap">Availability</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -235,22 +244,22 @@ export const ProductDetailPage = () => {
                 ) : (
                   stockBreakdown.map((stock) => (
                     <TableRow key={stock.warehouseId} className="group hover:bg-muted/10 border-b border-border/40 transition-colors last:border-0 h-24">
-                      <TableCell className="px-8">
-                        <div className="flex items-center gap-6 whitespace-nowrap">
-                          <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center text-base font-black text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <TableCell className="px-8 whitespace-nowrap">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center text-base font-black text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
                             <Building05Icon className="w-5 h-5" />
                           </div>
-                          <span className="font-black text-xl text-foreground tracking-tighter">{getWarehouseName(stock.warehouseId)}</span>
+                          <span className="font-black text-lg text-foreground tracking-tighter truncate">{getWarehouseName(stock.warehouseId)}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="px-8 font-black text-xl text-foreground whitespace-nowrap tracking-tighter">
+                      <TableCell className="px-8 font-black text-xl text-foreground tracking-tighter whitespace-nowrap">
                         {stock.quantity.toLocaleString()}
                       </TableCell>
                       <TableCell className="px-8 text-muted-foreground text-sm whitespace-nowrap">
                         {stock.reservedQuantity.toLocaleString()}
                       </TableCell>
                       <TableCell className="px-8 text-right whitespace-nowrap">
-                        <span className="inline-flex items-center px-5 py-2 rounded-full bg-emerald-500/10 text-emerald-500 text-[11px] font-black uppercase tracking-widest border border-emerald-500/10">
+                        <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[11px] font-black uppercase tracking-widest border border-emerald-500/10 whitespace-nowrap">
                           {(stock.quantity - stock.reservedQuantity).toLocaleString()} Units
                         </span>
                       </TableCell>
@@ -259,6 +268,7 @@ export const ProductDetailPage = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
           </CardContent>
         </Card>
 
@@ -324,6 +334,28 @@ export const ProductDetailPage = () => {
                 onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                 required
               />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2 p-4 rounded-2xl bg-muted/30 border border-border/40">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold">Catalog Status</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Activate or suspend this SKU globally</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditForm({ ...editForm, active: !editForm.active })}
+                  className={cn(
+                    "w-12 h-6 rounded-full relative transition-all duration-300",
+                    editForm.active ? "bg-primary" : "bg-muted-foreground/30"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300",
+                    editForm.active ? "left-7" : "left-1"
+                  )} />
+                </button>
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold px-1">Category</label>

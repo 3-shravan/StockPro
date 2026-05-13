@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface StockLevelRepository extends JpaRepository<StockLevel, Integer> {
     Optional<StockLevel> findByWarehouseIdAndProductId(int warehouseId, int productId);
 
+    List<StockLevel> findByWarehouseId(int warehouseId);
+
     @Query("SELECT s FROM StockLevel s WHERE (s.quantity - s.reservedQuantity) < :threshold")
     List<StockLevel> findAllBelowAvailableThreshold(@Param("threshold") int threshold);
 

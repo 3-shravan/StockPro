@@ -74,7 +74,7 @@ export const WarehouseDistributionWidget = ({ warehouses, userRole }: WarehouseD
                            <div className="flex flex-col gap-3.5">
                             <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide text-foreground/80">
                                <span className="tabular-nums">{w.usedCapacity.toLocaleString()} / {w.capacity.toLocaleString()}</span>
-                               <span className={cn(percent > 80 ? "text-rose-500" : "text-emerald-500")}>{percent}%</span>
+                               <span className={cn(percent > 80 ? "text-rose-400" : "text-emerald-500")}>{percent}%</span>
                             </div>
                             <div className="w-full h-2.5 bg-foreground/10 dark:bg-white/10 rounded-full overflow-hidden border border-foreground/10 dark:border-white/10 shadow-inner">
                                <div 

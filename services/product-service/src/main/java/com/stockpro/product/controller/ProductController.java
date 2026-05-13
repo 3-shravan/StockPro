@@ -78,13 +78,14 @@ public class ProductController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<ProductResponse>>> getAll() {
         List<ProductResponse> response = productService.getAllProducts();
         return ResponseEntity.ok(ApiResponse.success("Products retrieved successfully", response));
     }
 
     @GetMapping("/low-stock")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<ProductResponse>>> getLowStockProducts() {
         List<ProductResponse> response = productService.getLowStockProducts();
         return ResponseEntity.ok(ApiResponse.success("Low stock products retrieved successfully", response));

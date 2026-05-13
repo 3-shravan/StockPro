@@ -81,33 +81,33 @@ export const IssuePage = () => {
               <div className="grid gap-8 sm:grid-cols-2">
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    Source Node Hub <span className="text-rose-500">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400/40" />
+                    Source Node Hub <span className="text-rose-400/60">*</span>
                   </label>
                   <WarehouseSelect value={warehouseId} onChange={setWarehouseId} placeholder="SELECT ORIGIN HUB" />
                 </div>
 
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    Resource Designation <span className="text-rose-500">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400/40" />
+                    Resource Designation <span className="text-rose-400/60">*</span>
                   </label>
                   <ProductSelect value={productId} onChange={setProductId} warehouseId={warehouseId} placeholder="SELECT SKU" />
                 </div>
 
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    Verified Quantity <span className="text-rose-500">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400/40" />
+                    Verified Quantity <span className="text-rose-400/60">*</span>
                   </label>
                   <div className="relative group">
-                    <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-rose-500 transition-colors" />
+                    <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-rose-400 transition-colors" />
                     <input
                       type="number"
                       min="1"
                       value={quantity || ''}
                       onChange={(e) => setQuantity(Number(e.target.value))}
-                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-rose-500/10 outline-none transition-all"
+                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-rose-400/10 outline-none transition-all"
                       placeholder="UNIT COUNT"
                     />
                   </div>
@@ -115,14 +115,14 @@ export const IssuePage = () => {
 
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    Dispatch Rationale <span className="text-rose-500">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400/40" />
+                    Dispatch Rationale <span className="text-rose-400/60">*</span>
                   </label>
                   <div className="relative">
                     <select
                       value={reason}
                       onChange={(e) => setReason(e.target.value as MovementType)}
-                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 px-6 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-rose-500/10 outline-none appearance-none cursor-pointer transition-all"
+                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 px-6 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-rose-400/10 outline-none appearance-none cursor-pointer transition-all"
                     >
                       {issueReasons.map((r) => (
                         <option key={r.label} value={r.value}>{r.label.toUpperCase()} SEGMENT</option>
@@ -136,13 +136,13 @@ export const IssuePage = () => {
 
                 <div className="space-y-3 sm:col-span-2 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400/40" />
                     Audit Reference / Strategic Notes
                   </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-[120px] w-full rounded-2xl border border-border bg-muted/5 p-6 text-sm font-bold focus:ring-4 focus:ring-rose-500/10 outline-none transition-all resize-none placeholder:text-muted-foreground/20"
+                    className="min-h-[120px] w-full rounded-2xl border border-border bg-muted/5 p-6 text-sm font-bold focus:ring-4 focus:ring-rose-400/10 outline-none transition-all resize-none placeholder:text-muted-foreground/20"
                     placeholder="DESCRIBE DISPATCH CONTEXT..."
                   />
                 </div>
@@ -153,7 +153,7 @@ export const IssuePage = () => {
               <button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="flex-1 h-14 rounded-full bg-rose-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-rose-500/20 disabled:opacity-50"
+                className="flex-1 h-14 rounded-full bg-rose-400/80 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:bg-rose-400 hover:shadow-rose-400/30 active:scale-[0.98] shadow-lg shadow-rose-400/10 disabled:opacity-50"
               >
                 {isSubmitting ? 'SYNCHRONIZING...' : 'AUTHORIZE DISPATCH'}
               </button>
@@ -163,7 +163,7 @@ export const IssuePage = () => {
 
         <div className="space-y-8">
           <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-8">
-            <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-wider flex items-center gap-3">
+            <h3 className="text-[10px] font-black text-rose-400/60 uppercase tracking-wider flex items-center gap-3">
               <HelpCircleIcon className="w-5 h-5" />
               Operational Guidelines
             </h3>
@@ -174,7 +174,7 @@ export const IssuePage = () => {
                 "Categorize as 'Write-off' only for verified damage or expiration events."
               ].map((text, i) => (
                 <li key={i} className="flex gap-4 group">
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500/20 mt-1.5 shrink-0 group-hover:bg-rose-500 transition-colors" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-400/20 mt-1.5 shrink-0 group-hover:bg-rose-400 transition-colors" />
                   <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider leading-relaxed">
                     {text}
                   </p>

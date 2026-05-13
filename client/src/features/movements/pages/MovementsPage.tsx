@@ -69,46 +69,46 @@ export const MovementsPage = () => {
         </div>
       </div>
 
-        {/* Action Bar */}
-        <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
-          <div className="flex items-center gap-4 w-full max-w-4xl">
-            <div className="relative group flex-1">
-              <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <input
-                className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
-                placeholder="Search by product, warehouse, or reference..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="relative group shrink-0">
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as any)}
-                className="h-16 w-64 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
-              >
-                <option value="ALL">ALL ACTIVITY</option>
-                {Object.values(MovementType).map(t => (
-                  <option key={t} value={t}>{t.replace('_', ' ')}</option>
-                ))}
-              </select>
-              <ArrowDown01Icon className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40" />
-            </div>
-
-            <button 
-              onClick={() => void load()}
-              disabled={isLoading}
-              className="h-16 px-8 rounded-2xl border border-border bg-card/50 hover:bg-muted/50 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 shadow-sm shrink-0"
-            >
-              <ArrowReloadHorizontalIcon className={cn("w-5 h-5 text-primary", isLoading && "animate-spin")} />
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Sync</span>
-            </button>
+      {/* Action Bar */}
+      <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+        <div className="flex items-center gap-4 w-full max-w-4xl">
+          <div className="relative group flex-1">
+            <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <input
+              className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+              placeholder="Search by product, warehouse, or reference..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
+
+          <div className="relative group shrink-0">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+              className="h-16 w-64 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-app-subtle"
+            >
+              <option value="ALL">ALL ACTIVITY</option>
+              {Object.values(MovementType).map(t => (
+                <option key={t} value={t}>{t.replace('_', ' ')}</option>
+              ))}
+            </select>
+            <ArrowDown01Icon className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40" />
+          </div>
+
+          <button
+            onClick={() => void load()}
+            disabled={isLoading}
+            className="h-16 px-8 rounded-2xl border border-border bg-card/50 hover:bg-muted/50 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 shadow-app-subtle shrink-0"
+          >
+            <ArrowReloadHorizontalIcon className={cn("w-5 h-5 text-primary", isLoading && "animate-spin")} />
+            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Sync</span>
+          </button>
         </div>
+      </div>
 
       {/* Ledger Table */}
-      <div className="bg-card border border-border/40 rounded-3xl shadow-sm overflow-hidden px-2">
+      <div className="bg-card border border-border/40 rounded-3xl shadow-app-card overflow-hidden px-2">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent border-b border-border/40 h-14">
@@ -134,7 +134,7 @@ export const MovementsPage = () => {
               <TableRow>
                 <TableCell colSpan={6} className="h-64 text-center">
                   <div className="space-y-4">
-                    <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto shadow-sm border border-border/40">
+                    <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto shadow-app-subtle border border-border/40">
                       <Activity01Icon className="w-8 h-8 text-muted-foreground" />
                     </div>
                     <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">No activity identified in current audit</p>
@@ -156,16 +156,16 @@ export const MovementsPage = () => {
                   </TableCell>
                   <TableCell className="px-8">
                     <span className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit flex items-center gap-2 border whitespace-nowrap shadow-sm",
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit flex items-center gap-2 border whitespace-nowrap shadow-app-subtle",
                       getMovementStyles(m.movementType)
                     )}>
-                      <span className="w-1.5 h-1.5 rounded-full bg-current shadow-sm" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-current shadow-app-subtle" />
                       {m.movementType.replace('_', ' ')}
                     </span>
                   </TableCell>
                   <TableCell className="px-8">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center shrink-0 border border-border/40 group-hover:border-primary/20 transition-all shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center shrink-0 border border-border/40 group-hover:border-primary/20 transition-all shadow-app-subtle">
                         <PackageIcon className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <div className="min-w-0 text-left">
@@ -180,7 +180,7 @@ export const MovementsPage = () => {
                   <TableCell className="px-8 text-center">
                     <div className={cn(
                       "inline-flex items-center gap-2 font-bold",
-                      m.quantity >= 0 ? "text-emerald-500" : "text-rose-500"
+                      m.quantity >= 0 ? "text-emerald-500" : "text-rose-400"
                     )}>
                       <span className="text-sm tracking-tight tabular-nums">
                         {m.quantity >= 0 ? '+' : ''}{m.quantity}
@@ -209,7 +209,7 @@ export const MovementsPage = () => {
 const getMovementStyles = (type: MovementType) => {
   switch (type) {
     case MovementType.STOCK_IN: return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-    case MovementType.STOCK_OUT: return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
+    case MovementType.STOCK_OUT: return 'bg-rose-400/10 text-rose-600 border-rose-400/20';
     case MovementType.TRANSFER_IN:
     case MovementType.TRANSFER_OUT: return 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20';
     case MovementType.ADJUSTMENT: return 'bg-purple-500/10 text-purple-600 border-purple-500/20';

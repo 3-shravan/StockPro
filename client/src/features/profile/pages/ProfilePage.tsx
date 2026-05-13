@@ -6,12 +6,14 @@ import {
   Briefcase01Icon, 
   LockPasswordIcon, 
   Shield01Icon,
-  CheckmarkCircle02Icon
+  CheckmarkCircle02Icon,
+  Building05Icon
 } from 'hugeicons-react';
 import { authApi } from '@/features/auth/api/auth.api';
 import { useAuthStore } from '@/stores/auth.store';
 import { showToast } from '@/lib/toast';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
+import { Role } from '@/types';
 
 export const ProfilePage = () => {
   const { user, setAuth, token } = useAuthStore();
@@ -156,18 +158,28 @@ export const ProfilePage = () => {
                 </div>
               </div>
 
-              <div className="space-y-2.5">
-                <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider px-1">Department</label>
-                <div className="relative group">
-                  <Briefcase01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    value={profileData.department}
-                    onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
-                    className="h-14 w-full rounded-2xl border border-border/40 bg-background/50 pl-12 pr-4 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all shadow-inner"
-                  />
+              {user?.role !== Role.ADMIN && user?.role !== Role.OFFICER && (
+                <div className="space-y-2.5">
+                  <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider px-1">Assigned Operational Hub</label>
+                  <div className={cn("relative group", (user?.role === Role.STAFF) && "opacity-60")}>
+                    <Briefcase01Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <input
+                      type="text"
+                      value={profileData.department}
+                      onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
+                      disabled={user?.role === Role.STAFF}
+                      className={cn(
+                        "h-14 w-full rounded-2xl border border-border/40 bg-background/50 pl-12 pr-4 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all shadow-inner",
+                        (user?.role === Role.STAFF) && "cursor-not-allowed bg-muted/30"
+                      )}
+                      placeholder="Unassigned (Global Hub)"
+                    />
+                  </div>
+                  {(user?.role === Role.STAFF) && (
+                    <p className="text-[10px] text-muted-foreground px-1 font-medium italic">Contact Administrator to re-assign your hub.</p>
+                  )}
                 </div>
-              </div>
+              )}
 
               <div className="sm:col-span-2 pt-2">
                 <button type="submit" disabled={isSaving} className="h-12 px-10 rounded-2xl bg-primary text-primary-foreground font-bold text-xs uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/20">
@@ -249,9 +261,16 @@ export const ProfilePage = () => {
                 <span className="truncate">{user?.email}</span>
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <Briefcase01Icon className="w-4 h-4 text-primary/60" />
-                <span>{user?.department || 'Operations'}</span>
+                <Building05Icon className="w-4 h-4 text-primary/60" />
+                <span className="font-bold text-primary/80 uppercase tracking-wider">
+                  {user?.role === Role.ADMIN ? 'Global Surveillance' : (user?.department || 'GLOBAL HUB')}
+                </span>
               </div>
+              {user?.role === Role.ADMIN && (
+                <div className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] mt-1 pl-7">
+                  All Facilities Active
+                </div>
+              )}
             </div>
           </div>
 

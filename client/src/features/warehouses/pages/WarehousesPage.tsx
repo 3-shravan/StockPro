@@ -220,12 +220,12 @@ export const WarehousesPage = () => {
           </h1>
         </div>
 
-        <div className="flex p-2 bg-card rounded-full border border-border shadow-sm">
+        <div className="flex p-2 bg-card rounded-full border border-border shadow-app-subtle">
           <button
             onClick={() => { setActiveTab('directory'); reset(); }}
             className={cn(
               "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-              activeTab === 'directory' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              activeTab === 'directory' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Building05Icon className="w-5 h-5" />
@@ -236,7 +236,7 @@ export const WarehousesPage = () => {
               onClick={() => setActiveTab('registration')}
               className={cn(
                 "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <PlusSignIcon className="w-5 h-5" />
@@ -248,7 +248,7 @@ export const WarehousesPage = () => {
               onClick={() => setActiveTab('transfer')}
               className={cn(
                 "flex items-center gap-3 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-                activeTab === 'transfer' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                activeTab === 'transfer' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
               )}
             >
               <ArrowLeftRightIcon className="w-5 h-5" />
@@ -275,7 +275,7 @@ export const WarehousesPage = () => {
               <button 
                 onClick={toggleInactive}
                 className={cn(
-                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-sm shrink-0",
+                  "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-app-subtle shrink-0",
                   showInactive 
                     ? "bg-primary text-primary-foreground border-primary" 
                     : "bg-card text-muted-foreground border-border hover:bg-muted/5"
@@ -285,12 +285,12 @@ export const WarehousesPage = () => {
                 {showInactive ? "All Nodes" : "Active Nodes"}
               </button>
 
-              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-sm shrink-0">
+              <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
                 <button 
                   onClick={() => setViewMode('grid')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
-                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    viewMode === 'grid' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <LayoutGridIcon className="w-5 h-5" />
@@ -299,7 +299,7 @@ export const WarehousesPage = () => {
                   onClick={() => setViewMode('list')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
-                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    viewMode === 'list' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <TableIcon className="w-5 h-5" />
@@ -332,7 +332,7 @@ export const WarehousesPage = () => {
                   <div 
                     key={warehouse.warehouseId} 
                     className={cn(
-                      "group flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-3xl transition-all duration-300 cursor-pointer shadow-sm relative overflow-hidden",
+                      "group flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-3xl transition-all duration-300 cursor-pointer shadow-app-card relative overflow-hidden",
                       !warehouse.active && "opacity-60 grayscale"
                     )}
                     onClick={() => {
@@ -353,25 +353,25 @@ export const WarehousesPage = () => {
                         {warehouse.active && isAdmin && (
                           <button 
                             onClick={() => edit(warehouse)}
-                            className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                            className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300"
                           >
-                            <Edit02Icon className="w-5 h-5" />
+                            <Edit02Icon className="w-6 h-6" />
                           </button>
                         )}
                         {isAdmin && (
                           warehouse.active ? (
                             <button 
                               onClick={() => remove(warehouse.warehouseId, warehouse.name)}
-                              className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-rose-500 hover:text-white transition-all duration-300"
+                              className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
                             >
-                              <Delete02Icon className="w-5 h-5" />
+                              <Delete02Icon className="w-6 h-6" />
                             </button>
                           ) : (
                             <button 
                               onClick={() => activate(warehouse.warehouseId, warehouse.name)}
-                              className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-emerald-500 hover:text-white transition-all duration-300"
+                              className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300"
                             >
-                              <Tick01Icon className="w-5 h-5" />
+                              <Tick01Icon className="w-6 h-6" />
                             </button>
                           )
                         )}
@@ -394,14 +394,14 @@ export const WarehousesPage = () => {
                         </div>
                         <span className={cn(
                           "px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider border",
-                          usedPercent > 90 ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-primary/10 text-primary border-primary/20"
+                          usedPercent > 90 ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : "bg-primary/10 text-primary border-primary/20"
                         )}>{usedPercent}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div 
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            usedPercent > 90 ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : usedPercent > 70 ? "bg-amber-500" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                            usedPercent > 90 ? "bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : usedPercent > 70 ? "bg-amber-500" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
                           )}
                           style={{ width: `${usedPercent}%` }}
                         />
@@ -425,7 +425,7 @@ export const WarehousesPage = () => {
               })}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-3xl shadow-sm overflow-hidden px-2">
+            <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-hidden px-2">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
@@ -477,14 +477,14 @@ export const WarehousesPage = () => {
                               <span className="text-foreground/70 uppercase tracking-wider tabular-nums">{warehouse.usedCapacity.toLocaleString()} Units</span>
                               <span className={cn(
                                 "px-2 py-0.5 rounded-full border",
-                                usedPercent > 90 ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-primary/10 text-primary border-primary/20"
+                                usedPercent > 90 ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : "bg-primary/10 text-primary border-primary/20"
                               )}>{usedPercent}%</span>
                             </div>
                             <div className="h-2 rounded-full bg-muted overflow-hidden">
                               <div 
                                 className={cn(
                                   "h-full rounded-full transition-all duration-500", 
-                                  usedPercent > 90 ? "bg-rose-500" : usedPercent > 70 ? "bg-amber-500" : "bg-primary"
+                                  usedPercent > 90 ? "bg-rose-400" : usedPercent > 70 ? "bg-amber-500" : "bg-primary"
                                 )}
                                 style={{ width: `${usedPercent}%` }}
                               />
@@ -506,16 +506,16 @@ export const WarehousesPage = () => {
                           <div className="flex items-center justify-end gap-3">
                             {isAdmin && (
                               <>
-                                <button onClick={() => edit(warehouse)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300">
-                                  <Edit02Icon className="w-4 h-4" />
+                                <button onClick={() => edit(warehouse)} className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
+                                  <Edit02Icon className="w-5 h-5" />
                                 </button>
                                 {warehouse.active ? (
-                                  <button onClick={() => remove(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-rose-500 hover:text-white transition-all duration-300">
-                                    <Delete02Icon className="w-4 h-4" />
+                                  <button onClick={() => remove(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300">
+                                    <Delete02Icon className="w-5 h-5" />
                                   </button>
                                 ) : (
-                                  <button onClick={() => activate(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground hover:bg-emerald-500 hover:text-white transition-all duration-300">
-                                    <Tick01Icon className="w-4 h-4" />
+                                  <button onClick={() => activate(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300">
+                                    <Tick01Icon className="w-5 h-5" />
                                   </button>
                                 )}
                               </>
@@ -556,7 +556,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Facility Identifier <span className="text-rose-500">*</span>
+                      Facility Identifier <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <Building05Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -576,7 +576,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Geographic Hub <span className="text-rose-500">*</span>
+                      Geographic Hub <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <MapsIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -612,7 +612,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Operational Command <span className="text-rose-500">*</span>
+                      Operational Command <span className="text-rose-400">*</span>
                     </label>
                     <UserSelect 
                       value={form.managerId} 
@@ -625,7 +625,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Unit Capacity <span className="text-rose-500">*</span>
+                      Unit Capacity <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -645,7 +645,7 @@ export const WarehousesPage = () => {
                 <button 
                   type="submit" 
                   disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
+                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
                 >
                   {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE DEPLOYMENT'}
                 </button>
@@ -683,7 +683,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Source Node <span className="text-rose-500">*</span>
+                      Source Node <span className="text-rose-400">*</span>
                     </label>
                     <WarehouseSelect 
                       value={transfer.fromWarehouseId} 
@@ -695,7 +695,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Target Node <span className="text-rose-500">*</span>
+                      Target Node <span className="text-rose-400">*</span>
                     </label>
                     <WarehouseSelect 
                       value={transfer.toWarehouseId} 
@@ -707,7 +707,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Asset Designation <span className="text-rose-500">*</span>
+                      Asset Designation <span className="text-rose-400">*</span>
                     </label>
                     <ProductSelect 
                       value={transfer.productId} 
@@ -719,7 +719,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Quantity <span className="text-rose-500">*</span>
+                      Quantity <span className="text-rose-400">*</span>
                     </label>
                     <div className="relative group">
                       <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-amber-500 transition-colors" />
@@ -739,7 +739,7 @@ export const WarehousesPage = () => {
                 <button 
                   type="submit" 
                   disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                  className="flex-1 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-amber-500/20 disabled:opacity-50"
                 >
                   {isSubmitting ? 'PROCESSING...' : 'AUTHORIZE TRANSFER'}
                 </button>

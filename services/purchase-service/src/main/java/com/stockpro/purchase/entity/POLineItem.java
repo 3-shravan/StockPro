@@ -7,9 +7,7 @@ import lombok.*;
 @Table(name = "po_line_items")
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class POLineItem {
 
     @Id

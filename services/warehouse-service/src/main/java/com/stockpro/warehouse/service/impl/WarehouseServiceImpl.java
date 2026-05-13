@@ -192,9 +192,17 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
-    public List<WarehouseResponse> getWarehousesByManager(int managerId) {
-        log.debug("Service: Fetching warehouses for manager ID: {}", managerId);
-        return warehouseRepository.findByManagerId(managerId).stream()
+    public List<WarehouseResponse> getWarehousesByManager(int managerId, boolean includeInactive) {
+        log.debug("Service: Fetching warehouses for manager ID: {} (includeInactive={})", managerId, includeInactive);
+        List<Warehouse> warehouses = warehouseRepository.findByManagerId(managerId);
+        
+        if (!includeInactive) {
+            warehouses = warehouses.stream()
+                    .filter(Warehouse::isActive)
+                    .collect(Collectors.toList());
+        }
+
+        return warehouses.stream()
                 .map(warehouseMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -206,6 +214,14 @@ public class WarehouseServiceImpl implements WarehouseService {
         log.debug("Service: Fetching stock level for warehouse {} product {}", warehouseId, productId);
         return stockLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)
                 .map(stockMapper::toResponse);
+    }
+
+    @Override
+    public List<StockLevelResponse> getAllStockByWarehouse(int warehouseId) {
+        log.debug("Service: Fetching all stock levels for warehouse {}", warehouseId);
+        return stockLevelRepository.findByWarehouseId(warehouseId).stream()
+                .map(stockMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override

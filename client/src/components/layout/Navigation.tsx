@@ -38,31 +38,45 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/admin', icon: DashboardCircleIcon, roles: [Role.ADMIN] },
-  { label: 'Dashboard', path: '/manager', icon: DashboardCircleIcon, roles: [Role.MANAGER] },
-  { label: 'Dashboard', path: '/warehouse', icon: DashboardCircleIcon, roles: [Role.STAFF] },
-  { label: 'Dashboard', path: '/purchase', icon: DashboardCircleIcon, roles: [Role.OFFICER] },
-  
-  { label: 'Intelligence', path: '/admin/analytics', icon: Chart01Icon, roles: [Role.ADMIN] },
-  { label: 'Intelligence', path: '/manager/reports', icon: Chart01Icon, roles: [Role.MANAGER] },
+  { label: 'Dashboard',       path: '/admin',                    icon: DashboardCircleIcon,  roles: [Role.ADMIN] },
+  { label: 'Dashboard',       path: '/manager',                  icon: DashboardCircleIcon,  roles: [Role.MANAGER] },
+  { label: 'Dashboard',       path: '/warehouse',                icon: DashboardCircleIcon,  roles: [Role.STAFF] },
+  { label: 'Dashboard',       path: '/purchase',                 icon: DashboardCircleIcon,  roles: [Role.OFFICER] },
 
-  { label: 'Products', path: '/manager/products', icon: PackageIcon, roles: [Role.MANAGER, Role.ADMIN, Role.STAFF] },
-  { label: 'Suppliers', path: '/purchase/suppliers', icon: UserGroupIcon, roles: [Role.OFFICER, Role.ADMIN] },
+  // Analytics / Reports — Admin & Manager only
+  { label: 'Intelligence',    path: '/admin/analytics',          icon: Chart01Icon,          roles: [Role.ADMIN] },
+  { label: 'Intelligence',    path: '/manager/reports',          icon: Chart01Icon,          roles: [Role.MANAGER] },
 
-  { label: 'Purchase Orders', path: '/manager/purchase-orders', icon: ShoppingBasket01Icon, roles: [Role.MANAGER, Role.ADMIN] },
-  { label: 'Purchase Orders', path: '/purchase/orders', icon: ShoppingBasket01Icon, roles: [Role.OFFICER] },
-  { label: 'Receive Goods', path: '/warehouse/receive', icon: PackageReceiveIcon, roles: [Role.STAFF, Role.ADMIN] },
+  // Inventory — hub-scoped for Manager/Staff; global catalogue for Admin; OFFICER has no inventory nav
+  { label: 'Products',        path: '/admin/products',           icon: PackageIcon,          roles: [Role.ADMIN] },
+  { label: 'Hub Inventory',   path: '/manager/products',         icon: PackageIcon,          roles: [Role.MANAGER] },
+  { label: 'Hub Inventory',   path: '/warehouse/products',       icon: PackageIcon,          roles: [Role.STAFF] },
 
-  { label: 'Warehouses', path: '/manager/stock', icon: WarehouseIcon, roles: [Role.MANAGER, Role.ADMIN] },
-  { label: 'Movements', path: '/manager/movements', icon: ArrowLeftRightIcon, roles: [Role.MANAGER, Role.ADMIN, Role.STAFF] },
-  { label: 'Issue Stock', path: '/warehouse/issue', icon: PackageMovingIcon, roles: [Role.STAFF] },
-  
-  { label: 'Operations Pulse', path: '/admin/alerts', icon: Notification01Icon, roles: [Role.ADMIN] },
-  { label: 'Operations Pulse', path: '/manager/alerts', icon: Notification01Icon, roles: [Role.MANAGER] },
-  { label: 'Operations Pulse', path: '/warehouse/alerts', icon: Notification01Icon, roles: [Role.STAFF] },
-  { label: 'Operations Pulse', path: '/purchase/alerts', icon: Notification01Icon, roles: [Role.OFFICER] },
+  // Suppliers — Officer and Admin only
+  { label: 'Suppliers',       path: '/purchase/suppliers',       icon: UserGroupIcon,        roles: [Role.OFFICER, Role.ADMIN] },
 
-  { label: 'Users', path: '/admin/users', icon: UserGroupIcon, roles: [Role.ADMIN] },
+  // Purchase Orders
+  { label: 'Purchase Orders', path: '/manager/purchase-orders',  icon: ShoppingBasket01Icon, roles: [Role.MANAGER] },
+  { label: 'Purchase Orders', path: '/purchase/orders',          icon: ShoppingBasket01Icon, roles: [Role.OFFICER] },
+  { label: 'Purchase Orders', path: '/admin/purchase-orders',    icon: ShoppingBasket01Icon, roles: [Role.ADMIN] },
+
+  // Warehouse / Stock operations
+  { label: 'Warehouses',      path: '/manager/stock',            icon: WarehouseIcon,        roles: [Role.MANAGER, Role.ADMIN] },
+  { label: 'Receive Goods',   path: '/warehouse/receive',        icon: PackageReceiveIcon,   roles: [Role.STAFF, Role.ADMIN] },
+  { label: 'Issue Stock',     path: '/warehouse/issue',          icon: PackageMovingIcon,    roles: [Role.STAFF] },
+
+  // Movements (audit trail)
+  { label: 'Movements',       path: '/manager/movements',        icon: ArrowLeftRightIcon,   roles: [Role.MANAGER, Role.ADMIN] },
+  { label: 'Movements',       path: '/warehouse/movements',      icon: ArrowLeftRightIcon,   roles: [Role.STAFF] },
+
+  // Alerts
+  { label: 'Operations Pulse', path: '/admin/alerts',            icon: Notification01Icon,   roles: [Role.ADMIN] },
+  { label: 'Operations Pulse', path: '/manager/alerts',          icon: Notification01Icon,   roles: [Role.MANAGER] },
+  { label: 'Operations Pulse', path: '/warehouse/alerts',        icon: Notification01Icon,   roles: [Role.STAFF] },
+  { label: 'Operations Pulse', path: '/purchase/alerts',         icon: Notification01Icon,   roles: [Role.OFFICER] },
+
+  // Admin-only
+  { label: 'Users',           path: '/admin/users',              icon: UserGroupIcon,        roles: [Role.ADMIN] },
 ];
 
 export const Navigation = () => {
@@ -75,13 +89,7 @@ export const Navigation = () => {
 
   const filteredNavItems = useMemo(() => {
     if (!user) return [];
-    const items = navItems.filter(item => item.roles.includes(user.role));
-    const seen = new Set();
-    return items.filter(item => {
-      if (seen.has(item.label)) return false;
-      seen.add(item.label);
-      return true;
-    });
+    return navItems.filter(item => item.roles.includes(user.role));
   }, [user]);
 
   useEffect(() => {
@@ -200,9 +208,11 @@ export const Navigation = () => {
           {!collapsed && (
             <div className="min-w-0">
               <p className="truncate text-[10px] font-black uppercase tracking-[0.15em] text-foreground/80 group-hover:text-foreground transition-colors leading-none">{user?.email || 'User Account'}</p>
-              <div className="flex items-center gap-1.5 mt-2">
-                <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                <p className="truncate text-[9px] font-black text-foreground/30 uppercase tracking-widest">{user?.role}</p>
+              <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-border/10">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
+                <p className="truncate text-[9px] font-black text-primary uppercase tracking-[0.1em]">
+                  {user?.role === Role.ADMIN ? 'GLOBAL OPERATIONS' : (user?.department || 'UNASSIGNED HUB')}
+                </p>
               </div>
             </div>
           )}

@@ -105,16 +105,18 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             Claims claims = jwtUtil.extractAllClaims(token);
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
+            String department = claims.get("department", String.class);
             Object userIdObj = claims.get("userId");
             String userId = userIdObj != null ? userIdObj.toString() : "";
 
-            log.debug("Authenticated user={} role={} for path={}", username, role,
-                    sanitizedRequest.getPath());
+            log.debug("Authenticated user={} role={} department={} for path={}", 
+                    username, role, department, sanitizedRequest.getPath());
 
             ServerHttpRequest enrichedRequest = sanitizedRequest.mutate()
                     .header(USER_NAME_HEADER, username)
                     .header(USER_ROLES_HEADER, role != null ? role : "")
                     .header(USER_ID_HEADER, userId)
+                    .header("X-User-Department", department != null ? department : "")
                     .header(GATEWAY_SECRET_HEADER, GATEWAY_SECRET)
                     .build();
 

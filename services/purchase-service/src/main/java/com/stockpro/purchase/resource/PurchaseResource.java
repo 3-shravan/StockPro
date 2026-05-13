@@ -78,7 +78,7 @@ public class PurchaseResource {
      */
     /** Purchase Officers (and Admins) create new POs. */
     @PostMapping
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> create(@Valid @RequestBody PurchaseOrderRequest request) {
         log.info("API: Creating purchase order");
 
@@ -174,7 +174,7 @@ public class PurchaseResource {
      * What: Moves order from DRAFT to PENDING_APPROVAL.
      */
     @PutMapping("/{id}/submit")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> submit(@PathVariable int id) {
         log.info("API: Submitting PO ID: {} for approval", id);
         purchaseService.submitForApproval(id);
@@ -217,10 +217,12 @@ public class PurchaseResource {
         // Why: This allows the service layer to work with rich objects instead of raw
         // maps or DTOs.
         List<POLineItem> receivedItems = request.getItems().stream()
-                .map(item -> POLineItem.builder()
-                        .productId(item.getProductId())
-                        .quantity(item.getQuantity())
-                        .build())
+                .map(item -> {
+                    POLineItem pi = new POLineItem();
+                    pi.setProductId(item.getProductId());
+                    pi.setQuantity(item.getQuantity());
+                    return pi;
+                })
                 .collect(Collectors.toList());
 
         // What: Execute the multi-service receipt logic.
@@ -254,7 +256,7 @@ public class PurchaseResource {
      */
     /** Officers can update DRAFT POs before submission. */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> update(@PathVariable int id,
             @Valid @RequestBody PurchaseOrderRequest request) {
         log.info("API: Updating draft PO ID: {}", id);
@@ -299,20 +301,72 @@ public class PurchaseResource {
         return ResponseEntity.ok(ApiResponse.success("Purchase orders retrieved", responses));
     }
 
-    /**
-     * Fetches all Purchase Orders in the system.
-     * Why: For administrative oversight and global export capabilities.
-     */
     /** All management roles can view the full PO list. */
     @GetMapping
     @PreAuthorize("hasAnyRole('STAFF', 'OFFICER', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<PurchaseOrderResponse>>> getAll() {
-        log.info("API: Listing all purchase orders");
-        List<PurchaseOrder> orders = purchaseService.getAllPOs();
+        log.info("API: Listing purchase orders");
+        
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isOfficer = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_OFFICER"));
+        
+        List<PurchaseOrder> orders;
+        
+        if (isAdmin || isOfficer) {
+            // Admins and Officers see everything
+            orders = purchaseService.getAllPOs();
+        } else {
+            // Managers and Staff see only their assigned warehouse
+            String department = getCurrentUserDepartment();
+            log.info("Scoping PO list to department: {}", department);
+            
+            if (department != null && !department.isBlank() && !department.equalsIgnoreCase("GLOBAL HUB (UNASSIGNED)")) {
+                Integer warehouseId = resolveWarehouseIdByName(department);
+                if (warehouseId != null) {
+                    log.info("Filtering by resolved warehouseId: {}", warehouseId);
+                    orders = purchaseService.getPOsByWarehouse(warehouseId);
+                } else {
+                    log.warn("Could not resolve warehouseId for department: {}; returning empty list", department);
+                    orders = List.of();
+                }
+            } else {
+                // If no department assigned, show nothing (or everything? typically nothing for safety)
+                log.warn("No department assigned to user; returning empty list for safety");
+                orders = List.of();
+            }
+        }
+        
         List<PurchaseOrderResponse> responses = purchaseMapper.toResponseList(orders).stream()
                 .map(this::enrichResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success("Purchase orders retrieved", responses));
+    }
+
+    /**
+     * Helper to resolve a Warehouse Name (Department) to its ID.
+     */
+    private Integer resolveWarehouseIdByName(String name) {
+        try {
+            String url = warehouseServiceUrl + "/warehouses";
+            HttpHeaders headers = getInternalHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            
+            ResponseEntity<ApiResponse<List<Map<String, Object>>>> res = restTemplate.exchange(
+                url, HttpMethod.GET, entity, new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
+            );
+            
+            if (res.getBody() != null && res.getBody().getData() != null) {
+                return res.getBody().getData().stream()
+                    .filter(w -> name.equalsIgnoreCase((String) w.get("name")))
+                    .map(w -> (Integer) w.get("warehouseId"))
+                    .findFirst()
+                    .orElse(null);
+            }
+        } catch (Exception e) {
+            log.error("Failed to resolve warehouse ID for name {}: {}", name, e.getMessage());
+        }
+        return null;
     }
 
     /**
@@ -405,6 +459,22 @@ public class PurchaseResource {
             }
         }
         log.warn("Could not extract userId from SecurityContextDetails; falling back to 0");
-        return 0; // Or throw an exception if strictness is required
+        return 0;
+    }
+
+    /**
+     * Extracts the current user's Department (Warehouse Name) from the SecurityContext details.
+     */
+    private String getCurrentUserDepartment() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> details = (Map<String, Object>) auth.getDetails();
+            Object deptObj = details.get("department");
+            if (deptObj instanceof String) {
+                return (String) deptObj;
+            }
+        }
+        return null;
     }
 }

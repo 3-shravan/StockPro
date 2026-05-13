@@ -48,9 +48,9 @@ export const ProcurementPipelineWidget = ({ orders, userRole }: ProcurementPipel
           <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow className="hover:bg-transparent border-b border-border/40 h-16">
-                <TableHead className="px-4 md:px-6 font-black text-xs text-foreground/90 uppercase tracking-widest w-[50%]">ID & Entity</TableHead>
-                <TableHead className="px-4 md:px-6 font-black text-xs text-foreground/90 uppercase tracking-widest text-center hidden md:table-cell w-[25%]">Status</TableHead>
-                <TableHead className="px-4 md:px-6 font-black text-xs text-foreground/90 uppercase tracking-widest text-right w-[25%]">Valuation</TableHead>
+                <TableHead className="px-4 md:px-6 font-black text-xs text-foreground/90 uppercase tracking-widest w-[40%]">ID & Entity</TableHead>
+                <TableHead className="px-4 md:px-6 font-black text-xs text-foreground/90 uppercase tracking-widest text-center hidden md:table-cell w-[32%]">Status</TableHead>
+                <TableHead className="px-4 md:px-6 font-black text-xs text-foreground/90 uppercase tracking-widest text-right w-[28%]">Valuation</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -58,13 +58,13 @@ export const ProcurementPipelineWidget = ({ orders, userRole }: ProcurementPipel
                 <TableRow>
                   <TableCell colSpan={3} className="h-40 px-6">
                     <div className="flex flex-col items-center justify-center gap-4">
-                       <div className="w-14 h-14 rounded-2xl bg-muted/5 border border-dashed border-border/20 flex items-center justify-center text-muted-foreground/20">
-                          <ShoppingBasket01Icon className="w-7 h-7" />
-                       </div>
-                       <div className="text-center">
-                          <p className="font-black text-[11px] uppercase tracking-widest text-foreground/40">Pipeline Empty</p>
-                          <p className="text-[10px] font-bold text-muted-foreground/30 uppercase mt-1">No active procurement streams</p>
-                       </div>
+                      <div className="w-14 h-14 rounded-2xl bg-muted/5 border border-dashed border-border/20 flex items-center justify-center text-muted-foreground/20">
+                        <ShoppingBasket01Icon className="w-7 h-7" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-black text-[11px] uppercase tracking-widest text-foreground/40">Pipeline Empty</p>
+                        <p className="text-[10px] font-bold text-muted-foreground/30 uppercase mt-1">No active procurement streams</p>
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -77,26 +77,26 @@ export const ProcurementPipelineWidget = ({ orders, userRole }: ProcurementPipel
                   >
                     <TableCell className="px-5 py-4">
                       <div className="flex items-center gap-5 whitespace-nowrap">
-                         <span className="font-black text-2xl text-primary tracking-tighter shrink-0">#{o.poId}</span>
-                         <div className="min-w-0">
-                            <p className="font-bold text-lg md:text-xl text-foreground leading-none truncate mb-1.5">{o.supplierName}</p>
-                            <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest leading-none">{formatDate(o.orderDate)}</p>
-                         </div>
+                        <span className="font-black text-2xl text-primary tracking-tighter shrink-0">#{o.poId}</span>
+                        <div className="min-w-0">
+                          <p className="font-bold text-lg md:text-xl text-foreground leading-none truncate mb-1.5">{o.supplierName}</p>
+                          <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest leading-none">{formatDate(o.orderDate)}</p>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-center hidden md:table-cell whitespace-nowrap">
+                    <TableCell className="px-5 py-4 text-center hidden md:table-cell">
                       <span className={cn(
-                        "inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all",
+                        "inline-flex items-center px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm transition-all",
                         o.status === 'FULLY_RECEIVED' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                        o.status === 'PARTIALLY_RECEIVED' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                        "bg-muted/40 text-foreground/60 border-border/40"
+                          o.status === 'PARTIALLY_RECEIVED' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                            "bg-muted/40 text-foreground/60 border-border/40"
                       )}>
-                        {o.status.replace('_', ' ')}
+                        {o.status.replace(/_/g, ' ')}
                       </span>
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-right whitespace-nowrap">
-                       <p className="font-black text-2xl md:text-3xl tabular-nums tracking-tighter leading-none text-foreground">{formatCurrency(o.totalAmount)}</p>
-                       <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mt-1.5">Value</p>
+                    <TableCell className="px-4 py-4 text-right">
+                      <p className="font-black text-xl md:text-2xl tabular-nums tracking-tighter leading-none text-foreground">{formatCurrency(o.totalAmount)}</p>
+                      <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mt-1.5">Value</p>
                     </TableCell>
                   </TableRow>
                 ))

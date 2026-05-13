@@ -20,13 +20,13 @@ import type { Supplier, SupplierRequest } from "@/features/suppliers/types";
 import type { PurchaseOrder } from "@/features/purchases/types";
 import { showToast } from "@/lib/toast";
 import { cn, formatDate, formatCurrency } from "@/lib/utils";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Modal } from "@/components/ui/modal";
 import { useAuthStore } from "@/stores/auth.store";
@@ -44,7 +44,7 @@ export const SupplierDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [editForm, setEditForm] = useState<SupplierRequest>({
+  const [editForm, setEditForm] = useState<SupplierRequest & { active: boolean }>({
     name: "",
     contactPerson: "",
     email: "",
@@ -54,7 +54,8 @@ export const SupplierDetailPage = () => {
     country: "",
     taxId: "",
     paymentTerms: "",
-    leadTimeDays: 0
+    leadTimeDays: 0,
+    active: true
   });
 
   const loadData = async () => {
@@ -67,7 +68,7 @@ export const SupplierDetailPage = () => {
       ]);
       setSupplier(sData);
       setOrders(oData.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()));
-      
+
       setEditForm({
         name: sData.name,
         contactPerson: sData.contactPerson ?? "",
@@ -78,7 +79,8 @@ export const SupplierDetailPage = () => {
         country: sData.country ?? "",
         taxId: sData.taxId ?? "",
         paymentTerms: sData.paymentTerms ?? "",
-        leadTimeDays: sData.leadTimeDays
+        leadTimeDays: sData.leadTimeDays,
+        active: sData.active
       });
     } catch (error: any) {
       showToast.error("Failed to load supplier details.");
@@ -126,9 +128,9 @@ export const SupplierDetailPage = () => {
       {/* Header Section */}
       <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between pt-4">
         <div className="flex items-center gap-6">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate(-1)}
             className="rounded-full hover:bg-card/60 backdrop-blur-sm shadow-sm w-12 h-12 border border-border/40 shrink-0"
           >
@@ -146,17 +148,23 @@ export const SupplierDetailPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 mt-3">
-              <div className={cn("w-2 h-2 rounded-full animate-pulse shadow-sm", supplier.active ? "bg-emerald-500" : "bg-destructive")} />
+              <div className={cn("w-2 h-2 rounded-full animate-pulse shadow-sm", supplier.active ? "bg-emerald-500" : "bg-rose-400")} />
               <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider">
                 {supplier.active ? "Active Strategic Partner" : "Inactive Partner"} • ID #{supplier.supplierId}
               </p>
+              <span className={cn(
+                "ml-3 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                supplier.active ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-400/10 text-rose-400 border-rose-400/20"
+              )}>
+                {supplier.active ? "Operational" : "Suspended"}
+              </span>
             </div>
           </div>
         </div>
 
         {isOfficerOrAdmin && (
           <div className="flex items-center gap-4 p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
-            <button 
+            <button
               className="flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-primary/20"
               onClick={() => setIsEditModalOpen(true)}
             >
@@ -169,29 +177,29 @@ export const SupplierDetailPage = () => {
 
       {/* Main Stats Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Total Fulfillment" 
+        <StatCard
+          title="Total Fulfillment"
           value={fulfilledOrders.toString()}
           unit="Orders"
           icon={<CheckmarkCircle02Icon className="w-6 h-6" />}
           description="Successfully delivered and received"
         />
-        <StatCard 
-          title="Lead Time Efficiency" 
+        <StatCard
+          title="Lead Time Efficiency"
           value={`${supplier.leadTimeDays}d`}
           unit="Avg"
           icon={<Timer02Icon className="w-6 h-6" />}
           description="Expected arrival after order placement"
         />
-        <StatCard 
-          title="Payment Terms" 
+        <StatCard
+          title="Payment Terms"
           value={supplier.paymentTerms || "N/A"}
           unit=""
           icon={<CreditCardIcon className="w-6 h-6" />}
           description="Standard financial agreement"
         />
-        <StatCard 
-          title="Total Volume" 
+        <StatCard
+          title="Total Volume"
           value={formatCurrency(totalSpent)}
           unit=""
           icon={<InvoiceIcon className="w-6 h-6" />}
@@ -213,7 +221,7 @@ export const SupplierDetailPage = () => {
               <DetailItem icon={<Location01Icon className="w-4 h-4" />} label="Location" value={`${supplier.city}, ${supplier.country}`} />
               <DetailItem icon={<InvoiceIcon className="w-4 h-4" />} label="Tax ID" value={supplier.taxId || "N/A"} />
             </div>
-            
+
             <div className="pt-5 border-t border-border/50">
               <p className="text-[10px] font-black uppercase text-muted-foreground/60 mb-2 tracking-wider">Registered Address</p>
               <p className="text-xs leading-relaxed text-foreground/80 bg-muted/30 p-4 rounded-2xl italic">
@@ -278,25 +286,47 @@ export const SupplierDetailPage = () => {
       </div>
 
       {/* Edit Modal */}
-      <Modal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
         title="Edit Partner Profile"
       >
         <form onSubmit={handleUpdate} className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <label className="text-sm font-bold px-1">Company Name</label>
-              <input 
+              <input
                 className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                 value={editForm.name}
                 onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                 required
               />
             </div>
+
+            <div className="space-y-2 sm:col-span-2 p-4 rounded-2xl bg-muted/30 border border-border/40">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold">Partner Status</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Suspend or resume procurement cycles</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditForm({ ...editForm, active: !editForm.active })}
+                  className={cn(
+                    "w-12 h-6 rounded-full relative transition-all duration-300",
+                    editForm.active ? "bg-emerald-500" : "bg-muted-foreground/30"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300",
+                    editForm.active ? "left-7" : "left-1"
+                  )} />
+                </button>
+              </div>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-bold px-1">Email</label>
-              <input 
+              <input
                 type="email"
                 className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                 value={editForm.email}
@@ -306,7 +336,7 @@ export const SupplierDetailPage = () => {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold px-1">Phone</label>
-              <input 
+              <input
                 className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                 value={editForm.phone}
                 onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
@@ -314,7 +344,7 @@ export const SupplierDetailPage = () => {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold px-1">City</label>
-              <input 
+              <input
                 className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                 value={editForm.city}
                 onChange={e => setEditForm({ ...editForm, city: e.target.value })}
@@ -322,7 +352,7 @@ export const SupplierDetailPage = () => {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold px-1">Country</label>
-              <input 
+              <input
                 className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
                 value={editForm.country}
                 onChange={e => setEditForm({ ...editForm, country: e.target.value })}

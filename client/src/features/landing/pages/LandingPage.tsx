@@ -29,7 +29,7 @@ export const LandingPage = () => {
               <Button variant="ghost" className="hidden md:flex">Sign In</Button>
             </Link>
             <Link to="/login">
-              <Button size="lg" className="rounded-full px-6 shadow-lg shadow-primary/20">
+              <Button size="lg" className="rounded-full px-6 shadow-app-subtle shadow-primary/20">
                 Get Started
                 <ArrowRight01Icon className="w-4 h-4 ml-1" />
               </Button>
@@ -68,7 +68,7 @@ export const LandingPage = () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-500">
             <Link to="/login">
-              <Button size="lg" className="h-14 px-8 text-lg rounded-full shadow-2xl shadow-primary/30 group">
+              <Button size="lg" className="h-14 px-8 text-lg rounded-full shadow-app-subtle shadow-primary/30 group">
                 Start Free Trial
                 <MagicWand01Icon className="w-5 h-5 ml-2 group-hover:rotate-12 transition-transform" />
               </Button>
@@ -142,7 +142,7 @@ export const LandingPage = () => {
 };
 
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-  <div className="p-8 rounded-3xl border border-border/50 bg-card hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 group">
+  <div className="p-8 rounded-3xl border border-border/50 bg-card hover:border-primary/50 hover:shadow-app-hover transition-all duration-500 group">
     <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
       {icon}
     </div>

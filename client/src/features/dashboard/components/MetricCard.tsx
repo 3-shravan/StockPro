@@ -12,7 +12,7 @@ export const TrendIndicator = ({ value, label }: { value: string, label: string 
       <div className={cn(
         "flex items-center gap-0.5 px-2 py-0.5 rounded-full border",
         isPositive ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
-        isNegative ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-muted/10 text-muted-foreground border-border"
+        isNegative ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-muted/10 text-muted-foreground border-border"
       )}>
         <Chart01Icon className="w-3 h-3" />
         <span className="text-[10px] font-black tabular-nums">{value}</span>
@@ -39,13 +39,13 @@ interface MetricCardProps {
 export const MetricCard = ({ label, value, hint, icon: Icon, color = 'primary', to, state, trend }: MetricCardProps) => {
   const colors = {
     primary: 'bg-primary/10 text-primary border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground',
-    destructive: 'bg-rose-400/10 text-rose-400 border-rose-400/20 group-hover:bg-rose-400 group-hover:text-white',
+    destructive: 'bg-destructive/10 text-destructive border-destructive/20 group-hover:bg-destructive group-hover:text-destructive-foreground',
     warning: 'bg-amber-500/10 text-amber-600 border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white',
   };
 
   const content = (
     <Card className={cn(
-      "rounded-[2.5rem] border-none bg-white/[0.05] backdrop-blur-xl shadow-sm hover:shadow-2xl transition-all duration-500 group relative overflow-hidden",
+      "rounded-[2.5rem] border-none bg-white/[0.05] backdrop-blur-xl shadow-app-card hover:shadow-app-hover transition-all duration-500 group relative overflow-hidden",
       to && "hover:-translate-y-2 cursor-pointer"
     )}>
       <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-[40px] -mr-12 -mt-12 rounded-full group-hover:bg-primary/10 transition-colors" />

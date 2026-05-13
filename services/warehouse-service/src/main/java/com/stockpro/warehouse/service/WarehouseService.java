@@ -23,9 +23,10 @@ public interface WarehouseService {
 
     void deleteWarehouse(int warehouseId);
 
-    List<WarehouseResponse> getWarehousesByManager(int managerId);
+    List<WarehouseResponse> getWarehousesByManager(int managerId, boolean includeInactive);
 
     Optional<StockLevelResponse> getStockLevel(int warehouseId, int productId);
+    List<StockLevelResponse> getAllStockByWarehouse(int warehouseId);
     List<StockLevelResponse> getStockLevelsByProductId(int productId);
 
     void updateStock(int warehouseId, int productId, int quantity);

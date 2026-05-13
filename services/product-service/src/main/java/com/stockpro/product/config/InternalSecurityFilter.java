@@ -13,7 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -69,8 +68,10 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
         }
 
         // Secret validated — reconstruct Security Context from gateway headers
-        String username = request.getHeader("X-User-Name");
-        String roles    = request.getHeader("X-User-Roles");
+        String username   = request.getHeader("X-User-Name");
+        String roles      = request.getHeader("X-User-Roles");
+        String userId     = request.getHeader("X-User-Id");
+        String department = request.getHeader("X-User-Department");
 
         if (username != null && roles != null && !username.isBlank() && !roles.isBlank()) {
             List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
@@ -81,9 +82,22 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(username, null, authorities);
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            
+            // Inject context into details map
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("remoteAddress", request.getRemoteAddr());
+            if (userId != null && !userId.isBlank()) {
+                try {
+                    details.put("userId", Integer.parseInt(userId));
+                } catch (NumberFormatException ignored) {}
+            }
+            if (department != null) {
+                details.put("department", department);
+            }
+            authentication.setDetails(details);
+            
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("Authenticated user={} roles={} for path={}", username, roles, path);
+            log.debug("Authenticated user={} id={} roles={} for path={}", username, userId, roles, path);
         } else {
             log.warn("Gateway secret present but user headers missing for path={}", path);
             writeErrorResponse(response, HttpStatus.UNAUTHORIZED,
