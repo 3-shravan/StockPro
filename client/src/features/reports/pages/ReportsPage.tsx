@@ -21,35 +21,32 @@ import { useNavigate } from "react-router-dom";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useReportsData } from "../hooks/useReportsData";
 import { ReportMetricCard } from "../components/ReportMetricCard";
-import { 
-  ValuationBreakdownModal, 
-  SpendAnalysisModal, 
-  RiskAnalysisModal 
+import {
+  ValuationBreakdownModal,
+  SpendAnalysisModal,
+  RiskAnalysisModal
 } from "../components/BreakdownModals";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useMemo } from "react";
 import { WarehouseDistributionWidget } from "@/features/dashboard/components/WarehouseDistributionWidget";
-import { SupplierPerformanceWidget } from "@/features/dashboard/components/SupplierPerformanceWidget";
 import { StockVelocityWidget } from "@/features/dashboard/components/StockVelocityWidget";
 
 export function ReportsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const role = user?.role || Role.STAFF;
-  
+
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
 
-  const { 
-    loading, 
-    totalValue, 
-    lowStock, 
-    valuationDetails, 
-    poSummary, 
-    products, 
+  const {
+    loading,
+    totalValue,
+    lowStock,
+    valuationDetails,
+    poSummary,
+    products,
     warehouses,
-    suppliers,
     movements,
-    orders,
     refresh
   } = useReportsData(selectedWarehouseId);
 
@@ -92,9 +89,9 @@ export function ReportsPage() {
             </div>
           )}
         </div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-foreground leading-none">
-          {role === Role.ADMIN 
-            ? (selectedWarehouseId ? "Hub Analytics" : "Global Analytics") 
+        <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-foreground leading-none">
+          {role === Role.ADMIN
+            ? (selectedWarehouseId ? "Hub Analytics" : "Global Analytics")
             : role === Role.MANAGER ? "Hub Operations" : "Procurement Info"}
         </h1>
       </div>
@@ -133,7 +130,7 @@ export function ReportsPage() {
     <div className="w-full space-y-10 pb-20">
       <PageHeader />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <ReportMetricCard
           label={selectedWarehouseId || role === Role.MANAGER ? "Hub Asset Value" : "Global Valuation"}
           value={totalValue !== null ? formatCurrency(totalValue) : '...'}
@@ -177,16 +174,16 @@ export function ReportsPage() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
               <div className="flex items-center justify-between relative">
                 <div>
-                  <CardTitle className="text-xl md:text-3xl font-black tracking-tighter text-foreground">Inventory Watchlist</CardTitle>
+                  <CardTitle className="text-lg md:text-2xl font-black tracking-tighter text-foreground">Inventory Watchlist</CardTitle>
                   <CardDescription className="text-[10px] font-black uppercase tracking-widest mt-1 text-left">
                     {selectedWarehouseId ? `Hub Specific Alerts` : `Stock Level Alerts`}
                   </CardDescription>
                 </div>
-                <button 
-                   onClick={() => navigate(getProductPath(), { state: { filter: 'LOW_STOCK' } })}
-                   className="hidden sm:block px-6 py-2.5 bg-muted/50 hover:bg-primary hover:text-primary-foreground rounded-full text-[10px] font-black uppercase tracking-widest border border-border transition-all"
+                <button
+                  onClick={() => navigate(getProductPath(), { state: { filter: 'LOW_STOCK' } })}
+                  className="hidden sm:block px-6 py-2.5 bg-muted/50 hover:bg-primary hover:text-primary-foreground rounded-full text-[10px] font-black uppercase tracking-widest border border-border transition-all"
                 >
-                   Registry
+                  Registry
                 </button>
               </div>
             </CardHeader>
@@ -205,13 +202,13 @@ export function ReportsPage() {
                       {lowStock.slice(0, 6).map((entry) => (
                         <TableRow
                           key={entry.snapshotId || entry.productId}
-                          className="hover:bg-muted/50 transition-all border-b border-border/10 h-20 group/row cursor-pointer"
+                          className="hover:bg-muted/50 transition-all border-b border-border/10 h-16 group/row cursor-pointer"
                           onClick={() => navigate(`${getProductPath()}/${entry.productId}`)}
                         >
-                           <TableCell className="px-5 py-3">
+                          <TableCell className="px-5 py-3">
                             <div className="flex items-center gap-3">
                               <div className="min-w-0">
-                                <span className="font-black text-xl md:text-2xl block leading-tight text-foreground group-hover/row:translate-x-1 transition-all truncate tracking-tighter">{entry.productName || 'Unnamed SKU'}</span>
+                                <span className="font-black text-lg md:text-xl block leading-tight text-foreground group-hover/row:translate-x-1 transition-all truncate tracking-tighter">{entry.productName || 'Unnamed SKU'}</span>
                               </div>
                             </div>
                           </TableCell>
@@ -221,8 +218,8 @@ export function ReportsPage() {
                             </span>
                           </TableCell>
                           <TableCell className="px-5 py-3 text-right">
-                             <p className="font-black text-2xl md:text-3xl tabular-nums tracking-tighter leading-none whitespace-nowrap text-foreground">{formatCurrency(entry.stockValue)}</p>
-                             <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest mt-1.5 truncate">Total Worth</p>
+                            <p className="font-black text-2xl md:text-3xl tabular-nums tracking-tighter leading-none whitespace-nowrap text-foreground">{formatCurrency(entry.stockValue)}</p>
+                            <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest mt-1.5 truncate">Total Worth</p>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -242,11 +239,10 @@ export function ReportsPage() {
               )}
             </CardContent>
           </Card>
-          
+
           {role === Role.ADMIN && !selectedWarehouseId && (
             <WarehouseDistributionWidget warehouses={warehouses} userRole={role} />
           )}
-          <SupplierPerformanceWidget suppliers={suppliers} orders={orders} />
         </div>
 
         {/* --- Insights Column --- */}
@@ -266,24 +262,24 @@ export function ReportsPage() {
             <CardContent className="p-0">
               <div className="relative h-80 flex items-center justify-center overflow-hidden">
                 {(() => {
-                  const filteredWarehouses = selectedWarehouseId 
+                  const filteredWarehouses = selectedWarehouseId
                     ? warehouses.filter(w => w.warehouseId === selectedWarehouseId)
                     : warehouses;
-                  
+
                   const totalCap = filteredWarehouses.reduce((acc, w) => acc + w.capacity, 0);
                   const usedCap = filteredWarehouses.reduce((acc, w) => acc + w.usedCapacity, 0);
                   const utilPercent = totalCap > 0 ? Math.round((usedCap / totalCap) * 100) : 0;
-                  
+
                   return (
-                    <div className="relative group/chart scale-125">
+                    <div className="relative group/chart scale-110">
                       <svg className="w-64 h-64 transform -rotate-90">
                         <circle cx="128" cy="128" r="114" stroke="currentColor" strokeWidth="16" fill="transparent" className="text-muted/10" />
-                        <circle cx="128" cy="128" r="114" stroke="currentColor" strokeWidth="16" fill="transparent" 
-                          strokeDasharray={716} strokeDashoffset={716 - (716 * utilPercent) / 100} 
+                        <circle cx="128" cy="128" r="114" stroke="currentColor" strokeWidth="16" fill="transparent"
+                          strokeDasharray={716} strokeDashoffset={716 - (716 * utilPercent) / 100}
                           strokeLinecap="round" className={cn(
                             "transition-all duration-1000",
-                            utilPercent > 80 
-                              ? "text-rose-400 shadow-[0_0_40px_rgba(244,114,182,0.3)]" 
+                            utilPercent > 80
+                              ? "text-rose-400 shadow-[0_0_40px_rgba(244,114,182,0.3)]"
                               : "text-primary shadow-[0_0_35px_rgba(var(--primary),0.4)]"
                           )} />
                       </svg>
@@ -291,11 +287,11 @@ export function ReportsPage() {
                         <span className="text-xs font-black text-foreground/60 uppercase tracking-widest mb-3">
                           {selectedWarehouseId ? "Hub Fill" : "Global Fill"}
                         </span>
-                        <span className={cn("text-7xl font-black tabular-nums tracking-tighter", utilPercent > 80 ? "text-rose-400" : "text-foreground")}>{utilPercent}%</span>
+                        <span className={cn("text-6xl font-black tabular-nums tracking-tighter", utilPercent > 80 ? "text-rose-400" : "text-foreground")}>{utilPercent}%</span>
                         <div className="mt-6 px-5 py-2 rounded-full bg-muted/40 border border-border/60 shadow-inner">
-                           <p className="text-[11px] font-black uppercase tracking-widest text-foreground/80">
-                             {usedCap.toLocaleString()} / {totalCap.toLocaleString()} Units
-                           </p>
+                          <p className="text-[11px] font-black uppercase tracking-widest text-foreground/80">
+                            {usedCap.toLocaleString()} / {totalCap.toLocaleString()} Units
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -309,23 +305,23 @@ export function ReportsPage() {
         </div>
       </div>
 
-      <ValuationBreakdownModal 
-        isOpen={showValuationModal} 
-        onClose={() => setShowValuationModal(false)} 
-        totalValue={totalValue || 0} 
-        details={valuationDetails} 
+      <ValuationBreakdownModal
+        isOpen={showValuationModal}
+        onClose={() => setShowValuationModal(false)}
+        totalValue={totalValue || 0}
+        details={valuationDetails}
       />
 
-      <SpendAnalysisModal 
-        isOpen={showSpendModal} 
-        onClose={() => setShowSpendModal(false)} 
-        summary={poSummary} 
+      <SpendAnalysisModal
+        isOpen={showSpendModal}
+        onClose={() => setShowSpendModal(false)}
+        summary={poSummary}
       />
 
-      <RiskAnalysisModal 
-        isOpen={showLowStockModal} 
-        onClose={() => setShowLowStockModal(false)} 
-        lowStock={lowStock} 
+      <RiskAnalysisModal
+        isOpen={showLowStockModal}
+        onClose={() => setShowLowStockModal(false)}
+        lowStock={lowStock}
       />
     </div>
   );

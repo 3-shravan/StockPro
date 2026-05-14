@@ -378,20 +378,20 @@ export const HubInventoryPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT SPECIFICATIONS' : 'AUTHORIZE INITIALIZATION'}
-                </button>
+              <div className="flex items-center justify-end gap-4 pt-8">
                 <button 
                   type="button" 
                   onClick={resetForm}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
                   ABORT
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT SPECIFICATIONS' : 'AUTHORIZE INITIALIZATION'}
                 </button>
               </div>
             </form>
@@ -494,7 +494,7 @@ export const HubInventoryPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {filtered.map(p => (
                 <div key={p.productId} onClick={() => navigate(hubPath(p.productId))}
-                  className="group relative flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-[2.5rem] transition-all duration-500 shadow-app-card hover:shadow-app-hover hover:-translate-y-2 cursor-pointer overflow-hidden">
+                  className="group relative flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-[3rem] transition-all duration-700 shadow-app-card hover:shadow-app-hover hover:-translate-y-2 cursor-pointer overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[60px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
                   
                   <div className="flex items-start justify-between mb-10 relative">
@@ -531,16 +531,9 @@ export const HubInventoryPage = () => {
                         </p>
                       </div>
                     </div>
-                    
-                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden shadow-inner">
-                      <div 
-                        className={cn('h-full transition-all duration-1000 ease-out', p.isLowStock ? 'bg-rose-400/60 shadow-[0_0_10px_rgba(251,113,133,0.2)]' : 'bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]')}
-                        style={{ width: `${Math.min(100, (p.hubQty / (p.maxStockLevel || 100)) * 100)}%` }} 
-                      />
-                    </div>
                   </div>
 
-                  <div className="mt-8 flex items-center justify-between pt-6 border-t border-border/10 relative">
+                  <div className="mt-8 flex items-center justify-between pt-6 relative">
                     {isManager && (
                       <button onClick={e => { e.stopPropagation(); openEdit(p); }} className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
                         <Edit02Icon className="w-5 h-5" />

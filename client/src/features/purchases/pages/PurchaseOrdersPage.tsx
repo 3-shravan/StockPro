@@ -11,7 +11,6 @@ import {
   Money01Icon,
   Add01Icon,
   ArrowRight01Icon,
-  Edit02Icon,
 } from 'hugeicons-react';
 import { showToast } from '@/lib/toast';
 import { PurchaseOrderStatus } from '@/types/enums';
@@ -377,12 +376,12 @@ export const PurchaseOrdersPage = () => {
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Duties/Taxes</span>
                       <span className="text-sm font-bold tabular-nums text-muted-foreground/50">₹0.00</span>
                     </div>
-                    <div className="pt-6 border-t border-border/20 flex flex-col gap-1 mt-4">
+                    <div className="pt-6 flex flex-col gap-1 mt-4">
                       <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Gross Total</span>
                       <span className="text-4xl font-bold text-primary tracking-tighter tabular-nums">{formatCurrency(subtotal)}</span>
                     </div>
                   </div>
-                  <div className="pt-4 space-y-3 border-t border-border/10">
+                  <div className="pt-4 space-y-3">
                     <button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-full bg-primary text-primary-foreground font-bold text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 shadow-app-subtle">
                       {isSubmitting ? 'Processing...' : editingId ? 'Commit Changes' : 'Execute Order'}
                     </button>
@@ -629,113 +628,126 @@ export const PurchaseOrdersPage = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 px-2">
+          <div className="bg-card border border-border/40 rounded-[2rem] shadow-app-card overflow-hidden backdrop-blur-sm">
             {isLoading ? (
-              <div className="py-24 text-center space-y-4">
-                <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin mx-auto" />
-                <p className="text-sm text-muted-foreground">Loading orders...</p>
+              <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                <div className="w-10 h-10 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Synchronizing Ledgers...</p>
               </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="py-24 text-center space-y-4 bg-muted/10 rounded-3xl border border-dashed border-border/40">
-                <ShoppingBasket01Icon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
-                <div className="space-y-1">
-                  <p className="text-lg font-semibold text-foreground">No orders found</p>
-                  <p className="text-sm text-muted-foreground">There are no purchase orders matching your filters.</p>
+              <div className="flex-1 flex flex-col items-center justify-center py-24 gap-6 opacity-40">
+                <ShoppingBasket01Icon className="w-16 h-16" />
+                <div className="text-center space-y-1">
+                  <p className="text-xl font-bold">No Records Identified</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest">Adjust filters or issue a new procurement order</p>
                 </div>
               </div>
             ) : (
-              filteredOrders.map((order) => (
-                <div
-                  key={order.poId}
-                  className="group relative bg-card border border-border/40 rounded-3xl p-8 hover:border-primary/20 transition-all duration-500 shadow-app-card hover:shadow-app-hover hover:shadow-primary/5 cursor-pointer overflow-hidden"
-                  onClick={() => viewDetails(order.poId)}
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-16 translate-x-16 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative">
-                    <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center border border-border/10 shadow-inner group-hover:bg-primary/5 transition-colors">
-                        <ShoppingBasket01Icon className="w-7 h-7 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-primary/60">Log #{order.poId}</span>
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider border",
-                            order.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground border-border/40" :
-                              order.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                                order.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
-                                  order.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20" :
-                                    order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                                      order.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                        "bg-muted text-muted-foreground"
-                          )}>
-                            {order.status.replace('_', ' ')}
-                          </span>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Order Identifier</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Primary Asset</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Logistics Flux</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Status</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Valuation</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map((order) => (
+                    <TableRow
+                      key={order.poId}
+                      className="group hover:bg-primary/[0.02] transition-all cursor-pointer border-b border-border/10 h-20"
+                      onClick={() => viewDetails(order.poId)}
+                    >
+                      <TableCell className="px-8">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] font-black text-primary uppercase tracking-wider">Log #{order.poId}</span>
+                          <span className="text-[11px] font-bold text-muted-foreground mt-0.5">{formatDate(order.orderDate)}</span>
                         </div>
-                        <h3 className="text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors flex items-center gap-3">
-                          {order.lineItems?.[0]?.productName || 'Direct Procurement'}
-                          {order.lineItems && order.lineItems.length > 1 && (
-                            <span className="px-2 py-0.5 rounded-md bg-muted/50 text-[10px] text-muted-foreground font-black uppercase tracking-tighter">+{order.lineItems.length - 1} Units</span>
-                          )}
-                        </h3>
-                        <div className="flex items-center gap-4 mt-1.5">
-                          <p className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-wider flex items-center gap-2">
-                            <UserIcon className="w-3 h-3 text-primary/40" /> {order.supplierName || 'Unknown Supplier'}
-                          </p>
-                          <div className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-                          <p className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-wider flex items-center gap-2">
-                            <DeliveryTruck01Icon className="w-3 h-3 text-primary/40" /> {order.warehouseName || 'General Hub'}
-                          </p>
+                      </TableCell>
+                      <TableCell className="px-8">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center border border-border/10 group-hover:bg-primary/5 transition-colors">
+                            <ShoppingBasket01Icon className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-base leading-tight tracking-tight">
+                              {order.lineItems?.[0]?.productName || 'Direct Procurement'}
+                            </span>
+                            {order.lineItems && order.lineItems.length > 1 && (
+                              <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter mt-0.5">
+                                +{order.lineItems.length - 1} Additional Items
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4">
-                      <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
-                        {order.status === PurchaseOrderStatus.DRAFT && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
-                          <button
-                            onClick={() => submitForApproval(order.poId)}
-                            className="h-10 px-4 rounded-xl bg-primary/10 text-primary font-bold text-[9px] uppercase tracking-wider hover:bg-primary transition-all hover:text-primary-foreground shadow-app-subtle"
-                          >
-                            Submit
-                          </button>
-                        )}
-                        {order.status === PurchaseOrderStatus.PENDING_APPROVAL && (user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
-                          <button
-                            onClick={() => approve(order.poId)}
-                            className="h-10 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 font-bold text-[9px] uppercase tracking-wider hover:bg-emerald-600 transition-all hover:text-white shadow-app-subtle"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        {(order.status === PurchaseOrderStatus.DRAFT || order.status === PurchaseOrderStatus.PENDING_APPROVAL) && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
-                          <button
-                            onClick={() => { setActiveTab('create'); setEditingId(order.poId); }}
-                            className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300"
-                          >
-                            <Edit02Icon className="w-5 h-5" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="px-6 py-4 rounded-2xl bg-muted/20 border border-border/5 flex flex-col items-end">
-                        <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-wider mb-1 flex items-center gap-1">
-                          <Money01Icon className="w-2.5 h-2.5 text-primary/40" /> Total Valuation
+                      </TableCell>
+                      <TableCell className="px-8">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-wider">
+                            <UserIcon className="w-3 h-3 text-primary/40" />
+                            {order.supplierName || 'Unknown'}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-wider">
+                            <DeliveryTruck01Icon className="w-3 h-3 text-primary/40" />
+                            {order.warehouseName || 'General Hub'}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-8">
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                          order.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground border-border/40" :
+                            order.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                              order.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                                order.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20" :
+                                  order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                                    order.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                      "bg-muted text-muted-foreground"
+                        )}>
+                          {order.status.replace('_', ' ')}
                         </span>
-                        <span className="text-xl font-bold tabular-nums tracking-tighter text-foreground/90">{formatCurrency(order.totalAmount)}</span>
-                      </div>
-
-                      <button
-                        onClick={(e) => { e.stopPropagation(); viewDetails(order.poId); }}
-                        className="h-16 px-8 rounded-full border border-border/40 bg-background text-muted-foreground font-bold text-[10px] uppercase tracking-wider hover:bg-muted/50 transition-all flex items-center gap-3 shadow-app-subtle group-hover:border-primary/20"
-                      >
-                        Inspect Ledger <ArrowRight01Icon className="w-4 h-4 group-hover:text-primary transition-colors" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
+                      </TableCell>
+                      <TableCell className="px-8">
+                        <div className="flex flex-col items-start">
+                          <span className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                            <Money01Icon className="w-3 h-3 text-primary/40" /> Valuation
+                          </span>
+                          <span className="text-base font-bold tabular-nums tracking-tighter text-foreground/90">{formatCurrency(order.totalAmount)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-8 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-3">
+                          {order.status === PurchaseOrderStatus.DRAFT && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
+                            <button
+                              onClick={() => submitForApproval(order.poId)}
+                              className="h-9 px-4 rounded-xl bg-primary/10 text-primary font-bold text-[10px] uppercase tracking-wider hover:bg-primary transition-all hover:text-primary-foreground shadow-app-subtle"
+                            >
+                              Submit
+                            </button>
+                          )}
+                          {order.status === PurchaseOrderStatus.PENDING_APPROVAL && (user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
+                            <button
+                              onClick={() => approve(order.poId)}
+                              className="h-9 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 font-bold text-[10px] uppercase tracking-wider hover:bg-emerald-600 transition-all hover:text-white shadow-app-subtle"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          <button
+                            onClick={() => viewDetails(order.poId)}
+                            className="w-9 h-9 flex items-center justify-center text-muted-foreground/40 hover:text-primary transition-all duration-300 border border-transparent hover:border-border/40 hover:bg-card rounded-xl"
+                          >
+                            <ArrowRight01Icon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </div>

@@ -9,7 +9,7 @@ import {
 import { movementsApi } from '@/features/movements/api/movements.api';
 import type { StockMovement } from '@/features/movements/types';
 import { showToast } from '@/lib/toast';
-import { cn, formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { MovementType } from '@/types/enums';
 import {
   ArrowDown01Icon,
@@ -86,7 +86,7 @@ export const MovementsPage = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
-              className="h-16 w-64 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-app-subtle"
+              className="h-16 w-64 rounded-2xl border border-border bg-card/50 px-8 text-[11px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-app-subtle"
             >
               <option value="ALL">ALL ACTIVITY</option>
               {Object.values(MovementType).map(t => (
@@ -102,22 +102,22 @@ export const MovementsPage = () => {
             className="h-16 px-8 rounded-2xl border border-border bg-card/50 hover:bg-muted/50 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 shadow-app-subtle shrink-0"
           >
             <ArrowReloadHorizontalIcon className={cn("w-5 h-5 text-primary", isLoading && "animate-spin")} />
-            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Sync</span>
+            <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">Sync</span>
           </button>
         </div>
       </div>
 
       {/* Ledger Table */}
-      <div className="bg-card border border-border/40 rounded-3xl shadow-app-card overflow-hidden px-2">
+      <div className="bg-card border border-border rounded-[2.5rem] shadow-app-card overflow-hidden backdrop-blur-sm bg-opacity-50">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent border-b border-border/40 h-14">
-              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Protocol Date</TableHead>
-              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Operation Type</TableHead>
-              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Resource Node</TableHead>
-              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-center">Unit Δ</TableHead>
-              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-center">Density Post</TableHead>
-              <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-right">System Logs</TableHead>
+              <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Protocol Date</TableHead>
+              <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Operation Type</TableHead>
+              <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Resource Node</TableHead>
+              <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-center">Unit Δ</TableHead>
+              <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-center">Density Post</TableHead>
+              <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-right">System Logs</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-border/40">
@@ -126,7 +126,7 @@ export const MovementsPage = () => {
                 <TableCell colSpan={6} className="h-64 text-center">
                   <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-                    <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">Loading Ledger Protocols...</p>
+                    <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-wider">Loading Ledger Protocols...</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -137,7 +137,7 @@ export const MovementsPage = () => {
                     <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto shadow-app-subtle border border-border/40">
                       <Activity01Icon className="w-8 h-8 text-muted-foreground" />
                     </div>
-                    <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">No activity identified in current audit</p>
+                    <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-wider">No activity identified in current audit</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -149,14 +149,14 @@ export const MovementsPage = () => {
                       <p className="font-bold text-sm text-foreground tracking-tight whitespace-nowrap">
                         {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(m.movementDate))}
                       </p>
-                      <p className="text-[10px] font-bold text-foreground/50 uppercase tracking-wider tabular-nums mt-0.5">
+                      <p className="text-[11px] font-bold text-foreground/50 uppercase tracking-wider tabular-nums mt-0.5">
                         {new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(m.movementDate))}
                       </p>
                     </div>
                   </TableCell>
                   <TableCell className="px-8">
                     <span className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit flex items-center gap-2 border whitespace-nowrap shadow-app-subtle",
+                      "px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider w-fit flex items-center gap-2 border whitespace-nowrap shadow-app-subtle",
                       getMovementStyles(m.movementType)
                     )}>
                       <span className="w-1.5 h-1.5 rounded-full bg-current shadow-app-subtle" />
@@ -170,7 +170,7 @@ export const MovementsPage = () => {
                       </div>
                       <div className="min-w-0 text-left">
                         <p className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors tracking-tight">{m.productName || `Protocol #${m.productId}`}</p>
-                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-foreground/70 uppercase tracking-wider whitespace-nowrap">
+                        <div className="flex items-center gap-2 mt-1 text-[11px] font-bold text-foreground/70 uppercase tracking-wider whitespace-nowrap">
                           <Building05Icon className="w-3.5 h-3.5" />
                           {m.warehouseName || `Hub #${m.warehouseId}`}
                         </div>
@@ -192,7 +192,7 @@ export const MovementsPage = () => {
                     <span className="text-base font-bold text-muted-foreground tracking-tight tabular-nums">{m.balanceAfter || 0}</span>
                   </TableCell>
                   <TableCell className="px-8 text-right">
-                    <p className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider leading-relaxed max-w-[200px] ml-auto truncate">
+                    <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-wider leading-relaxed max-w-[200px] ml-auto truncate">
                       {m.notes || 'System Protocol Handshake Successful'}
                     </p>
                   </TableCell>

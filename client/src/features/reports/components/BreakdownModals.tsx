@@ -58,10 +58,10 @@ export const ValuationBreakdownModal = ({ isOpen, onClose, totalValue, details }
       <div className="space-y-6 p-1">
 
         {/* Summary row */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Summary row */}
+        <div className="grid grid-cols-2 gap-3">
           <SummaryTile label="Total Portfolio Value" value={formatCurrency(totalValue)} accent="primary" />
           <SummaryTile label="Unique SKUs" value={`${details.length}`} sub="Catalogued products" accent="primary" />
-          <SummaryTile label="Avg SKU Value" value={formatCurrency(avgValue)} sub="Per product" accent="primary" />
         </div>
 
         {/* Product list */}
@@ -111,17 +111,53 @@ export const ValuationBreakdownModal = ({ isOpen, onClose, totalValue, details }
                     </div>
                     {/* Value */}
                     <div className="text-right shrink-0">
-                      <p className="text-lg font-black tracking-tighter tabular-nums text-foreground">
-                        ₹{entry.stockValue.toLocaleString("en-IN")}
-                      </p>
-                      <p className="text-[9px] font-black text-foreground/30 uppercase tracking-wider mt-0.5">
-                        {((entry.stockValue / totalValue) * 100).toFixed(1)}% of total
-                      </p>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-foreground/40 uppercase tracking-widest">
+                          <span className="tabular-nums">{entry.quantity.toLocaleString()} UNITS</span>
+                          <span>×</span>
+                          <span className="tabular-nums">₹{(entry.stockValue / (entry.quantity || 1)).toLocaleString("en-IN")}</span>
+                        </div>
+                        <p className="text-xl font-black tracking-tighter tabular-nums text-foreground group-hover:text-primary transition-colors">
+                          ₹{entry.stockValue.toLocaleString("en-IN")}
+                        </p>
+                        <p className="text-[9px] font-black text-foreground/30 uppercase tracking-wider">
+                          {((entry.stockValue / totalValue) * 100).toFixed(1)}% weight
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Mathematical Summation Footer */}
+        <div className="mt-8 pt-8">
+          <div className="bg-foreground/[0.03] dark:bg-white/[0.03] rounded-3xl p-8 border border-border/10">
+            <div className="flex items-center justify-between mb-6">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Portfolio Mathematical Summation</h4>
+              <div className="h-px flex-1 mx-6 bg-border/10" />
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest">Aggregate Registry</span>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-black text-foreground/60 uppercase tracking-wider">Gross Physical Units</span>
+                <span className="text-lg font-black tabular-nums">{details.reduce((acc, curr) => acc + curr.quantity, 0).toLocaleString()} UNITS</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-black text-foreground/60 uppercase tracking-wider">Mean Unit Valuation</span>
+                <span className="text-lg font-black tabular-nums">{formatCurrency(avgValue)} / SKU</span>
+              </div>
+              <div className="pt-4 flex justify-between items-end">
+                <span className="text-xs font-black text-primary uppercase tracking-[0.2em]">Final Computed Value</span>
+                <div className="text-right">
+                  <p className="text-4xl font-black tracking-tighter tabular-nums text-foreground">{formatCurrency(totalValue)}</p>
+                  <p className="text-[9px] font-black text-foreground/30 uppercase tracking-widest mt-1">Verified Digital Ledger Asset Total</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -147,12 +183,12 @@ export const SpendAnalysisModal = ({ isOpen, onClose, summary }: SpendAnalysisMo
   const pending = orders.filter(o => o.status === "PENDING_APPROVAL" || o.status === "SUBMITTED").length;
 
   const statusConfig: Record<string, { bg: string; text: string; border: string }> = {
-    FULLY_RECEIVED:     { bg: "bg-emerald-500/10", text: "text-emerald-600", border: "border-emerald-500/20" },
-    PARTIALLY_RECEIVED: { bg: "bg-amber-500/10",   text: "text-amber-600",   border: "border-amber-500/20" },
-    PENDING_APPROVAL:   { bg: "bg-amber-500/10",   text: "text-amber-600",   border: "border-amber-500/20" },
-    SUBMITTED:          { bg: "bg-primary/10",     text: "text-primary",     border: "border-primary/20" },
-    APPROVED:           { bg: "bg-emerald-500/10", text: "text-emerald-600", border: "border-emerald-500/20" },
-    CANCELLED:          { bg: "bg-muted/40",       text: "text-foreground/40", border: "border-border/40" },
+    FULLY_RECEIVED: { bg: "bg-emerald-500/10", text: "text-emerald-600", border: "border-emerald-500/20" },
+    PARTIALLY_RECEIVED: { bg: "bg-amber-500/10", text: "text-amber-600", border: "border-amber-500/20" },
+    PENDING_APPROVAL: { bg: "bg-amber-500/10", text: "text-amber-600", border: "border-amber-500/20" },
+    SUBMITTED: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
+    APPROVED: { bg: "bg-emerald-500/10", text: "text-emerald-600", border: "border-emerald-500/20" },
+    CANCELLED: { bg: "bg-muted/40", text: "text-foreground/40", border: "border-border/40" },
   };
 
   return (

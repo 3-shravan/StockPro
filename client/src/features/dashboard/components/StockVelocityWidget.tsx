@@ -53,7 +53,7 @@ export const StockVelocityWidget = ({ products, movements }: StockVelocityWidget
             <Analytics01Icon className="w-5 h-5" />
           </div>
           <div>
-            <CardTitle className="text-xl md:text-2xl font-black tracking-tighter text-foreground">Stock Movement</CardTitle>
+            <CardTitle className="text-lg md:text-xl font-black tracking-tighter text-foreground">Stock Movement</CardTitle>
             <CardDescription className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mt-0.5 text-left">Inventory Flow Rate</CardDescription>
           </div>
         </div>
@@ -78,25 +78,25 @@ export const StockVelocityWidget = ({ products, movements }: StockVelocityWidget
                 velocityData.map((s) => (
                   <TableRow
                     key={s.productId}
-                    className="cursor-pointer hover:bg-primary/[0.04] transition-all border-b border-border/20 h-20 group/row"
+                    className="cursor-pointer hover:bg-primary/[0.04] transition-all border-b border-border/20 h-16 group/row"
                     onClick={() => handleRowClick(s.productId)}
                   >
                     <TableCell className="px-5 py-3">
-                      <p className="font-black text-xl md:text-2xl text-foreground group-hover/row:translate-x-1 transition-all leading-tight truncate tracking-tighter">{s.name}</p>
+                      <p className="font-black text-lg md:text-xl text-foreground group-hover/row:translate-x-1 transition-all leading-tight truncate tracking-tighter">{s.name}</p>
                       <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mt-1 truncate">SKU: {s.productId}</p>
                     </TableCell>
                     <TableCell className="px-5 py-3 text-right">
-                       <div className="flex flex-col items-end gap-2">
-                          <p className="font-black text-2xl md:text-3xl tabular-nums tracking-tighter leading-none text-foreground">
-                            {s.movements} <span className="text-[9px] font-bold uppercase text-foreground/30 ml-1">Movements</span>
-                          </p>
-                          <div className="w-24 h-2 bg-muted/60 rounded-full overflow-hidden border border-border/30 shadow-inner">
-                             <div
-                              className="h-full bg-primary transition-all duration-1000"
-                              style={{ width: `${s.score}%` }}
-                             />
-                          </div>
-                       </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <p className="font-black text-xl md:text-2xl tabular-nums tracking-tighter leading-none text-foreground">
+                          {s.movements} <span className="text-[9px] font-bold uppercase text-foreground/30 ml-1">Movements</span>
+                        </p>
+                        <div className="w-24 h-2 bg-muted/60 rounded-full overflow-hidden border border-border/30 shadow-inner">
+                          <div
+                            className="h-full bg-primary transition-all duration-1000"
+                            style={{ width: `${s.score}%` }}
+                          />
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

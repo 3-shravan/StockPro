@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { 
-  Delete02Icon, 
-  Edit02Icon, 
-  LockPasswordIcon, 
-  Mail01Icon, 
-  UserIcon, 
-  Search01Icon, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Delete02Icon,
+  Edit02Icon,
+  LockPasswordIcon,
+  Mail01Icon,
+  UserIcon,
+  Search01Icon,
   UserAdd01Icon,
   UserGroupIcon,
   Building05Icon,
@@ -14,13 +15,13 @@ import {
   ViewOffIcon,
   PlusSignIcon
 } from 'hugeicons-react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { authApi } from '@/features/auth/api/auth.api';
 import { warehousesApi } from '@/features/warehouses/api';
@@ -51,6 +52,7 @@ const emptyForm: UserFormState = {
 };
 
 export const AdminUsersPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'manage' | 'create'>('manage');
   const [users, setUsers] = useState<User[]>([]);
   const [query, setQuery] = useState('');
@@ -66,7 +68,7 @@ export const AdminUsersPage = () => {
 
   const filteredUsers = useMemo(() => {
     let result = users;
-    
+
     if (roleFilter !== 'ALL') {
       result = result.filter(u => u.role === roleFilter);
     }
@@ -77,13 +79,13 @@ export const AdminUsersPage = () => {
 
     if (query.trim()) {
       const q = query.toLowerCase();
-      result = result.filter(user => 
+      result = result.filter(user =>
         [user.fullName, user.email, user.department, user.phone]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(q))
       );
     } else {
-      result = [...result].sort((a, b) => 
+      result = [...result].sort((a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     }
@@ -201,7 +203,7 @@ export const AdminUsersPage = () => {
             Identity Grid
           </h1>
         </div>
-        
+
         <div className="flex p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
           <button
             onClick={() => { setActiveTab('manage'); setEditingUserId(null); setFormData(emptyForm); }}
@@ -228,140 +230,148 @@ export const AdminUsersPage = () => {
 
       {activeTab === 'manage' && (
         <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
-        <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
-          <div className="flex flex-wrap items-center gap-4 w-full max-w-5xl">
-            <div className="relative group flex-1 min-w-[300px]">
-              <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <input
-                className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
-                placeholder="Search identities by name, email, hub..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="relative group shrink-0">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as any)}
-                className="h-16 w-48 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
-              >
-                <option value="ALL">ALL ROLES</option>
-                {assignableRoles.map(r => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40">
-                 ▼
+          <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+            <div className="flex flex-wrap items-center gap-4 w-full max-w-5xl">
+              <div className="relative group flex-1 min-w-[300px]">
+                <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <input
+                  className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                  placeholder="Search identities by name, email, hub..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
               </div>
-            </div>
 
-            <div className="relative group shrink-0">
-              <select
-                value={hubFilter}
-                onChange={(e) => setHubFilter(e.target.value)}
-                className="h-16 w-56 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
-              >
-                <option value="ALL">ALL HUBS</option>
-                <option value="">GLOBAL HUB</option>
-                {warehouses.map(w => (
-                  <option key={w.warehouseId} value={w.name}>{w.name}</option>
-                ))}
-              </select>
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40">
-                 ▼
+              <div className="relative group shrink-0">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as any)}
+                  className="h-16 w-48 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
+                >
+                  <option value="ALL">ALL ROLES</option>
+                  {assignableRoles.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40">
+                  ▼
+                </div>
+              </div>
+
+              <div className="relative group shrink-0">
+                <select
+                  value={hubFilter}
+                  onChange={(e) => setHubFilter(e.target.value)}
+                  className="h-16 w-56 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
+                >
+                  <option value="ALL">ALL HUBS</option>
+                  <option value="">GLOBAL HUB</option>
+                  {warehouses.map(w => (
+                    <option key={w.warehouseId} value={w.name}>{w.name}</option>
+                  ))}
+                </select>
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40">
+                  ▼
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-          <div className="bg-card border border-border rounded-[2.5rem] shadow-2xl overflow-hidden backdrop-blur-sm bg-opacity-50">
+          <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-hidden px-2 backdrop-blur-sm bg-opacity-50">
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-transparent border-b border-border/60 h-20">
-                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Identity Details</TableHead>
-                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Protocol Role</TableHead>
-                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Deployment Hub</TableHead>
-                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
+                <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
+                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Identity Details</TableHead>
+                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Protocol Role</TableHead>
+                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Deployment Hub</TableHead>
+                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-64 text-center">
-                       <div className="flex flex-col items-center gap-6">
-                          <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
-                          <p className="text-muted-foreground font-black text-[10px] uppercase tracking-wider">Synchronizing Identity Grid...</p>
-                       </div>
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+                        <p className="text-muted-foreground font-black text-[10px] uppercase tracking-wider">Synchronizing Identity Grid...</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-64 text-center">
-                       <div className="py-20 space-y-6">
-                          <UserIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
-                          <p className="text-xl font-bold text-foreground/50 uppercase tracking-tight">No identities located</p>
-                       </div>
+                      <div className="py-20 space-y-6">
+                        <UserIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
+                        <p className="text-xl font-bold text-foreground/50 uppercase tracking-tight">No identities located</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
-                    <TableRow 
-                      key={user.userId} 
-                      className="group hover:bg-primary/[0.02] transition-all border-b border-border/10 h-28"
+                    <TableRow
+                      key={user.userId}
+                      className="group hover:bg-primary/[0.02] transition-all border-b border-border/10 h-20 cursor-pointer"
+                      onClick={() => navigate(`/admin/users/${user.userId}`)}
                     >
                       <TableCell className="px-10">
                         <div className="flex items-center gap-6">
-                          <div className="w-12 h-12 rounded-[1.25rem] bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
-                            <UserIcon className="w-6 h-6" />
+                          <div className="w-10 h-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
+                            <UserIcon className="w-5 h-5" />
                           </div>
                           <div className="text-left">
-                            <span className="font-bold text-xl block leading-tight tracking-tight group-hover:text-primary transition-colors">{user.fullName}</span>
-                            <span className="text-[10px] font-black text-foreground/70 uppercase tracking-wider mt-2 block">{user.email}</span>
+                            <span className="font-black text-sm block leading-none tracking-tight group-hover:text-primary transition-all">{user.fullName}</span>
+                            <span className="text-[11px] font-bold text-foreground/40 mt-1 block">{user.email}</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-10">
                         <span className={cn(
-                          "text-[10px] font-black px-4 py-2 rounded-full border shadow-sm uppercase tracking-wider",
-                          user.role === Role.ADMIN ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : 
-                          user.role === Role.MANAGER ? "bg-amber-500/10 text-amber-500 border-amber-500/20" : 
-                          "bg-primary/10 text-primary border-primary/20"
+                          "text-[10px] font-black px-4 py-2 rounded-full border shadow-sm tracking-wide",
+                          user.role === Role.ADMIN ? "bg-rose-400/10 text-rose-400 border-rose-400/20" :
+                            user.role === Role.MANAGER ? "bg-violet-400/10 text-violet-400 border-violet-400/20" :
+                              user.role === Role.OFFICER ? "bg-zinc-400/10 text-zinc-400 border-zinc-400/20" :
+                                user.role === Role.STAFF ? "bg-cyan-400/10 text-cyan-400 border-cyan-400/20" :
+                                  "bg-primary/10 text-primary border-primary/20"
                         )}>
                           {user.role}
                         </span>
                       </TableCell>
                       <TableCell className="px-10">
-                         <div className="flex items-center gap-3 text-[10px] font-black text-foreground/70 uppercase tracking-wider">
-                           <Building05Icon className="w-4 h-4 opacity-40" />
-                           {user.department || 'GLOBAL HUB'}
-                         </div>
-                      </TableCell>
-                      <TableCell className="px-10">
-                        <div className="flex items-center gap-2">
-                          <div className={cn(
-                            "w-2 h-2 rounded-full shadow-sm animate-pulse",
-
-                          )} />
-                          <span className="text-[10px] font-black uppercase tracking-wider">
-                            {(user.isActive ?? true) ? 'Active' : 'Locked'}
-                          </span>
+                        <div className="flex items-center gap-3 text-xs font-bold text-foreground/70 tracking-tight whitespace-nowrap">
+                          <Building05Icon className="w-4 h-4 opacity-40" />
+                          {user.department || 'Global Hub'}
                         </div>
                       </TableCell>
+                      <TableCell className="px-10">
+                        <span className={cn(
+                          "px-4 py-1.5 rounded-full text-[10px] font-black tracking-wide border",
+                          (user.isActive ?? true)
+                            ? "bg-primary/10 text-primary border-primary/20"
+                            : "bg-rose-400/10 text-rose-400 border-rose-400/20"
+                        )}>
+                          {(user.isActive ?? true) ? 'Active' : 'Locked'}
+                        </span>
+                      </TableCell>
                       <TableCell className="px-10 text-right">
-                        <div className="flex items-center justify-end gap-4">
-                          <button 
-                            onClick={() => editUser(user)}
-                            className="w-12 h-12 flex items-center justify-center transition-all duration-300 text-primary/60 hover:text-primary"
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              editUser(user);
+                            }}
+                            className="w-10 h-10 flex items-center justify-center transition-all duration-300 text-primary/60 hover:text-primary hover:bg-primary/5 rounded-xl"
                           >
-                            <Edit02Icon className="w-6 h-6" />
+                            <Edit02Icon className="w-4 h-4" />
                           </button>
-                          <button 
-                            onClick={() => deleteUser(user)}
-                            className="w-12 h-12 flex items-center justify-center transition-all duration-300 text-rose-400/60 hover:text-rose-400"
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteUser(user);
+                            }}
+                            className="w-10 h-10 flex items-center justify-center transition-all duration-300 text-rose-400/60 hover:text-rose-400 hover:bg-rose-400/5 rounded-xl"
                           >
-                            <Delete02Icon className="w-6 h-6" />
+                            <Delete02Icon className="w-4 h-4" />
                           </button>
                         </div>
                       </TableCell>
@@ -504,9 +514,9 @@ export const AdminUsersPage = () => {
                       onClick={() => updateField("isActive", !formData.isActive)}
                       className={cn(
                         "h-14 w-full rounded-2xl border transition-all flex items-center justify-center gap-4 px-6",
-                        formData.isActive 
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.1)]" 
-                        : "bg-rose-400/10 border-rose-400/20 text-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+                        formData.isActive
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                          : "bg-rose-400/10 border-rose-400/20 text-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
                       )}
                     >
                       {formData.isActive ? <ViewIcon className="w-4 h-4" /> : <ViewOffIcon className="w-4 h-4" />}
@@ -518,20 +528,20 @@ export const AdminUsersPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'SYNCHRONIZING...' : isEditing ? 'COMMIT IDENTITY CHANGES' : 'AUTHORIZE PROVISIONING'}
-                </button>
-                <button 
-                  type="button" 
+              <div className="flex items-center justify-end gap-4 pt-8">
+                <button
+                  type="button"
                   onClick={resetForm}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
                   ABORT
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'SYNCHRONIZING...' : isEditing ? 'COMMIT IDENTITY CHANGES' : 'AUTHORIZE PROVISIONING'}
                 </button>
               </div>
             </form>

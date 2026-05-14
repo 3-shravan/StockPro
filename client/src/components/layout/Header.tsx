@@ -7,7 +7,7 @@ export const Header = () => {
   const { user, logout } = useAuthStore();
 
   return (
-    <header className="sticky top-0 z-30 bg-black/[0.02] dark:bg-white/[0.02] backdrop-blur-2xl border-b border-border/5 transition-all duration-300">
+    <header className="sticky top-0 z-30 bg-background border-b border-border/5 transition-all duration-300">
       <div className="max-w-8xl mx-auto flex h-14 items-center justify-between px-10">
         <div className="flex items-center gap-5">
           {/* Mobile Logo */}
@@ -26,15 +26,15 @@ export const Header = () => {
                 {user?.fullName || user?.email || "User Account"}
               </p>
               <div className="flex items-center justify-end gap-2 mt-1.5">
-                 <p className="text-[8px] font-black uppercase text-foreground/30 tracking-widest border-r border-border/10 pr-2">
-                   {user?.role}
-                 </p>
-                 <div className="flex items-center gap-1">
-                   <div className="w-1 h-1 rounded-full bg-primary" />
-                   <p className="text-[8px] font-black uppercase text-primary tracking-widest">
-                     {user?.department || 'GLOBAL HUB'}
-                   </p>
-                 </div>
+                <p className="text-[8px] font-black uppercase text-foreground/30 tracking-widest border-r border-border/10 pr-2">
+                  {user?.role}
+                </p>
+                <div className="flex items-center gap-1">
+                  <div className="w-1 h-1 rounded-full bg-primary" />
+                  <p className="text-[8px] font-black uppercase text-primary tracking-widest">
+                    {user?.department || 'GLOBAL HUB'}
+                  </p>
+                </div>
               </div>
             </div>
             <div className="w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center group-hover:scale-105 transition-all duration-500 shadow-sm border border-foreground/10">

@@ -17,13 +17,13 @@ import {
   ArrowRight01Icon,
   Search01Icon,
 } from "hugeicons-react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { showToast } from "@/lib/toast";
 import { useAuthStore } from "@/stores/auth.store";
@@ -76,7 +76,7 @@ export const WarehousesPage = () => {
         authApi.getAll()
       ]);
       setWarehouses(wRes);
-      
+
       const userMap = uRes.reduce((acc, u) => {
         acc[u.userId] = u.fullName;
         return acc;
@@ -272,12 +272,12 @@ export const WarehousesPage = () => {
                 />
               </div>
 
-              <button 
+              <button
                 onClick={toggleInactive}
                 className={cn(
                   "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all border shadow-app-subtle shrink-0",
-                  showInactive 
-                    ? "bg-primary text-primary-foreground border-primary" 
+                  showInactive
+                    ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card text-muted-foreground border-border hover:bg-muted/5"
                 )}
               >
@@ -286,7 +286,7 @@ export const WarehousesPage = () => {
               </button>
 
               <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
-                <button 
+                <button
                   onClick={() => setViewMode('grid')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
@@ -295,7 +295,7 @@ export const WarehousesPage = () => {
                 >
                   <LayoutGridIcon className="w-5 h-5" />
                 </button>
-                <button 
+                <button
                   onClick={() => setViewMode('list')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
@@ -309,17 +309,17 @@ export const WarehousesPage = () => {
           </div>
 
           {loading ? (
-             <div className="p-24 text-center flex flex-col items-center gap-4">
-                <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
-                <p className="text-muted-foreground text-sm">Synchronizing facilities...</p>
-             </div>
+            <div className="p-24 text-center flex flex-col items-center gap-4">
+              <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
+              <p className="text-muted-foreground text-sm">Synchronizing facilities...</p>
+            </div>
           ) : filteredWarehouses.length === 0 ? (
             <div className="py-24 text-center space-y-4 bg-muted/10 rounded-3xl border border-dashed border-border">
-                <Building05Icon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
-                <div className="space-y-1">
-                  <p className="text-lg font-semibold text-foreground">No facilities located</p>
-                  <p className="text-sm text-muted-foreground">Adjust parameters or provision a new hub.</p>
-                </div>
+              <Building05Icon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-foreground">No facilities located</p>
+                <p className="text-sm text-muted-foreground">Adjust parameters or provision a new hub.</p>
+              </div>
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -327,10 +327,10 @@ export const WarehousesPage = () => {
                 const usedPercent = warehouse.capacity
                   ? Math.min(100, Math.round((warehouse.usedCapacity / warehouse.capacity) * 100))
                   : 0;
-                
+
                 return (
-                  <div 
-                    key={warehouse.warehouseId} 
+                  <div
+                    key={warehouse.warehouseId}
                     className={cn(
                       "group flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-3xl transition-all duration-300 cursor-pointer shadow-app-card relative overflow-hidden",
                       !warehouse.active && "opacity-60 grayscale"
@@ -351,7 +351,7 @@ export const WarehousesPage = () => {
                       </div>
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         {warehouse.active && isAdmin && (
-                          <button 
+                          <button
                             onClick={() => edit(warehouse)}
                             className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300"
                           >
@@ -360,14 +360,14 @@ export const WarehousesPage = () => {
                         )}
                         {isAdmin && (
                           warehouse.active ? (
-                            <button 
+                            <button
                               onClick={() => remove(warehouse.warehouseId, warehouse.name)}
                               className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
                             >
                               <Delete02Icon className="w-6 h-6" />
                             </button>
                           ) : (
-                            <button 
+                            <button
                               onClick={() => activate(warehouse.warehouseId, warehouse.name)}
                               className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300"
                             >
@@ -398,7 +398,7 @@ export const WarehousesPage = () => {
                         )}>{usedPercent}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
-                        <div 
+                        <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
                             usedPercent > 90 ? "bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : usedPercent > 70 ? "bg-amber-500" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
@@ -408,7 +408,7 @@ export const WarehousesPage = () => {
                       </div>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-border/10 flex items-center justify-between">
+                    <div className="mt-8 pt-6 flex items-center justify-between">
                       <div className="flex items-center gap-4 text-left">
                         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground border border-border">
                           {users[warehouse.managerId]?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
@@ -425,7 +425,7 @@ export const WarehousesPage = () => {
               })}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-hidden px-2">
+            <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-hidden px-2 backdrop-blur-sm bg-opacity-50">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
@@ -441,12 +441,12 @@ export const WarehousesPage = () => {
                     const usedPercent = warehouse.capacity
                       ? Math.min(100, Math.round((warehouse.usedCapacity / warehouse.capacity) * 100))
                       : 0;
-                    
+
                     return (
-                      <TableRow 
-                        key={warehouse.warehouseId} 
+                      <TableRow
+                        key={warehouse.warehouseId}
                         className={cn(
-                          "group hover:bg-muted/30 transition-all cursor-pointer border-b border-border/10 h-24",
+                          "group hover:bg-muted/30 transition-all cursor-pointer border-b border-border/10 h-20",
                           !warehouse.active && "opacity-60 grayscale"
                         )}
                         onClick={() => {
@@ -481,9 +481,9 @@ export const WarehousesPage = () => {
                               )}>{usedPercent}%</span>
                             </div>
                             <div className="h-2 rounded-full bg-muted overflow-hidden">
-                              <div 
+                              <div
                                 className={cn(
-                                  "h-full rounded-full transition-all duration-500", 
+                                  "h-full rounded-full transition-all duration-500",
                                   usedPercent > 90 ? "bg-rose-400" : usedPercent > 70 ? "bg-amber-500" : "bg-primary"
                                 )}
                                 style={{ width: `${usedPercent}%` }}
@@ -492,15 +492,15 @@ export const WarehousesPage = () => {
                           </div>
                         </TableCell>
                         <TableCell className="px-8">
-                           <div className="flex items-center gap-4 text-left">
-                             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground border border-border">
-                               {users[warehouse.managerId]?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
-                             </div>
-                             <div className="min-w-0">
-                               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Leadership</p>
-                               <p className="text-sm font-bold truncate tracking-tight">{users[warehouse.managerId] || `User #${warehouse.managerId}`}</p>
-                             </div>
-                           </div>
+                          <div className="flex items-center gap-4 text-left">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground border border-border">
+                              {users[warehouse.managerId]?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Leadership</p>
+                              <p className="text-sm font-bold truncate tracking-tight">{users[warehouse.managerId] || `User #${warehouse.managerId}`}</p>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className="px-8 text-right" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-3">
@@ -614,9 +614,9 @@ export const WarehousesPage = () => {
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                       Operational Command <span className="text-rose-400">*</span>
                     </label>
-                    <UserSelect 
-                      value={form.managerId} 
-                      onChange={(id) => setForm(f => ({ ...f, managerId: id }))} 
+                    <UserSelect
+                      value={form.managerId}
+                      onChange={(id) => setForm(f => ({ ...f, managerId: id }))}
                       placeholder="SELECT MANAGER"
                       roleFilter="MANAGER"
                     />
@@ -641,20 +641,20 @@ export const WarehousesPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE DEPLOYMENT'}
-                </button>
-                <button 
-                  type="button" 
+              <div className="flex items-center justify-end gap-4 pt-8">
+                <button
+                  type="button"
                   onClick={reset}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
                   ABORT
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE DEPLOYMENT'}
                 </button>
               </div>
             </form>
@@ -685,9 +685,9 @@ export const WarehousesPage = () => {
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       Source Node <span className="text-rose-400">*</span>
                     </label>
-                    <WarehouseSelect 
-                      value={transfer.fromWarehouseId} 
-                      onChange={(id) => setTransfer(v => ({ ...v, fromWarehouseId: id }))} 
+                    <WarehouseSelect
+                      value={transfer.fromWarehouseId}
+                      onChange={(id) => setTransfer(v => ({ ...v, fromWarehouseId: id }))}
                       placeholder="ORIGIN HUB"
                     />
                   </div>
@@ -697,9 +697,9 @@ export const WarehousesPage = () => {
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       Target Node <span className="text-rose-400">*</span>
                     </label>
-                    <WarehouseSelect 
-                      value={transfer.toWarehouseId} 
-                      onChange={(id) => setTransfer(v => ({ ...v, toWarehouseId: id }))} 
+                    <WarehouseSelect
+                      value={transfer.toWarehouseId}
+                      onChange={(id) => setTransfer(v => ({ ...v, toWarehouseId: id }))}
                       placeholder="DESTINATION HUB"
                     />
                   </div>
@@ -709,9 +709,9 @@ export const WarehousesPage = () => {
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       Asset Designation <span className="text-rose-400">*</span>
                     </label>
-                    <ProductSelect 
-                      value={transfer.productId} 
-                      onChange={(id) => setTransfer(v => ({ ...v, productId: id }))} 
+                    <ProductSelect
+                      value={transfer.productId}
+                      onChange={(id) => setTransfer(v => ({ ...v, productId: id }))}
                       placeholder="SELECT SKU"
                     />
                   </div>
@@ -735,20 +735,20 @@ export const WarehousesPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-amber-500/20 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'PROCESSING...' : 'AUTHORIZE TRANSFER'}
-                </button>
-                <button 
-                  type="button" 
+              <div className="flex items-center justify-end gap-4 pt-8">
+                <button
+                  type="button"
                   onClick={() => setActiveTab('directory')}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
                   ABORT
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-10 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-amber-500/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'PROCESSING...' : 'AUTHORIZE TRANSFER'}
                 </button>
               </div>
             </form>

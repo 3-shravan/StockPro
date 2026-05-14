@@ -21,9 +21,9 @@ export const WarehouseDistributionWidget = ({ warehouses, userRole }: WarehouseD
   const navigate = useNavigate();
 
   const handleRowClick = (whId: number) => {
-    const path = userRole === Role.ADMIN ? `/admin/warehouses/${whId}` : 
-                 userRole === Role.MANAGER ? `/manager/stock/${whId}` : 
-                 `/warehouse/stock/${whId}`;
+    const path = userRole === Role.ADMIN ? `/admin/warehouses/${whId}` :
+      userRole === Role.MANAGER ? `/manager/stock/${whId}` :
+        `/warehouse/stock/${whId}`;
     navigate(path);
   };
 
@@ -35,7 +35,7 @@ export const WarehouseDistributionWidget = ({ warehouses, userRole }: WarehouseD
             <Activity01Icon className="w-5 h-5" />
           </div>
           <div>
-            <CardTitle className="text-xl md:text-3xl font-black tracking-tighter text-foreground">Warehouse Capacity</CardTitle>
+            <CardTitle className="text-lg md:text-2xl font-black tracking-tighter text-foreground">Warehouse Capacity</CardTitle>
             <CardDescription className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mt-1 text-left">Storage Load Overview</CardDescription>
           </div>
         </div>
@@ -63,35 +63,35 @@ export const WarehouseDistributionWidget = ({ warehouses, userRole }: WarehouseD
                   return (
                     <TableRow
                       key={w.warehouseId}
-                      className="cursor-pointer hover:bg-card/50 transition-all border-b border-border/10 h-20 group/row"
+                      className="cursor-pointer hover:bg-card/50 transition-all border-b border-border/10 h-16 group/row"
                       onClick={() => handleRowClick(w.warehouseId)}
                     >
                       <TableCell className="px-5 py-4">
-                        <p className="text-2xl md:text-3xl font-black text-foreground group-hover/row:translate-x-1 transition-all leading-tight truncate tracking-tighter">{w.name}</p>
+                        <p className="text-lg md:text-xl font-black text-foreground group-hover/row:translate-x-1 transition-all leading-tight truncate tracking-tighter">{w.name}</p>
                         <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest mt-1.5 truncate">Loc: {w.location}</p>
                       </TableCell>
                       <TableCell className="px-4 md:px-6 py-4">
-                           <div className="flex flex-col gap-3.5">
-                            <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide text-foreground/80">
-                               <span className="tabular-nums">{w.usedCapacity.toLocaleString()} / {w.capacity.toLocaleString()}</span>
-                               <span className={cn(percent > 80 ? "text-rose-400" : "text-emerald-500")}>{percent}%</span>
-                            </div>
-                            <div className="w-full h-2.5 bg-foreground/10 dark:bg-white/10 rounded-full overflow-hidden border border-foreground/10 dark:border-white/10 shadow-inner">
-                               <div 
-                                className={cn(
-                                  "h-full transition-all duration-1000 shadow-sm", 
-                                  percent > 80 
-                                    ? "bg-gradient-to-r from-rose-400/80 to-rose-400/90 shadow-[0_0_10px_rgba(244,114,182,0.3)]" 
-                                    : "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-                                )} 
-                                style={{ width: `${percent}%` }}
-                               />
-                            </div>
-                         </div>
+                        <div className="flex flex-col gap-3.5">
+                          <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide text-foreground/80">
+                            <span className="tabular-nums">{w.usedCapacity.toLocaleString()} / {w.capacity.toLocaleString()}</span>
+                            <span className={cn(percent > 80 ? "text-rose-400" : "text-emerald-500")}>{percent}%</span>
+                          </div>
+                          <div className="w-full h-2.5 bg-foreground/10 dark:bg-white/10 rounded-full overflow-hidden border border-foreground/10 dark:border-white/10 shadow-inner">
+                            <div
+                              className={cn(
+                                "h-full transition-all duration-1000 shadow-sm",
+                                percent > 80
+                                  ? "bg-gradient-to-r from-rose-400/80 to-rose-400/90 shadow-[0_0_10px_rgba(244,114,182,0.3)]"
+                                  : "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                              )}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell className="px-4 md:px-6 py-6 text-right hidden md:table-cell">
-                         <p className="font-black text-3xl md:text-4xl tabular-nums tracking-tighter leading-none">{w.usedCapacity}</p>
-                         <p className="text-[10px] font-black text-foreground/40 uppercase tracking-wide mt-2">Active Units</p>
+                        <p className="font-black text-2xl md:text-3xl tabular-nums tracking-tighter leading-none">{w.usedCapacity}</p>
+                        <p className="text-[10px] font-black text-foreground/40 uppercase tracking-wide mt-2">Active Units</p>
                       </TableCell>
                     </TableRow>
                   );

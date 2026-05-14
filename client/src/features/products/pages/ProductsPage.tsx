@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  PlusSignIcon, 
-  PackageIcon, 
-  Tag01Icon, 
-  BarCode01Icon, 
-  Grid02Icon, 
-  Money01Icon, 
-  ChartUpIcon, 
+import {
+  PlusSignIcon,
+  PackageIcon,
+  Tag01Icon,
+  BarCode01Icon,
+  Grid02Icon,
+  Money01Icon,
+  ChartUpIcon,
   InformationCircleIcon,
   LayoutGridIcon,
   TableIcon,
@@ -18,13 +18,13 @@ import {
   FilterIcon,
   PackageMovingIcon
 } from 'hugeicons-react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { showToast } from '@/lib/toast';
 import { productsApi } from '@/features/products/api';
@@ -47,6 +47,7 @@ const emptyProduct: ProductRequest = {
   imageUrl: '',
   barcode: '',
   currentQuantity: 0,
+  active: true,
 };
 
 type TabType = 'catalogue' | 'registration';
@@ -62,7 +63,7 @@ export const ProductsPage = () => {
   const { user } = useAuthStore();
   const location = useLocation();
   const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
-  
+
   const getProductPath = (id: number) => {
     if (user?.role === 'ADMIN' || user?.role === 'MANAGER') return `/manager/products/${id}`;
     if (user?.role === 'OFFICER') return `/purchase/products/${id}`;
@@ -70,7 +71,7 @@ export const ProductsPage = () => {
   };
 
   const [activeTab, setActiveTab] = useState<TabType>('catalogue');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [products, setProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState<boolean>((location.state as any)?.filter === 'LOW_STOCK');
@@ -139,6 +140,7 @@ export const ProductsPage = () => {
       imageUrl: product.imageUrl ?? '',
       barcode: product.barcode ?? '',
       currentQuantity: product.currentQuantity ?? 0,
+      active: product.active ?? true,
     });
     setActiveTab('registration');
   };
@@ -228,12 +230,12 @@ export const ProductsPage = () => {
                 />
               </div>
 
-              <button 
+              <button
                 onClick={() => setLowStockOnly(!lowStockOnly)}
                 className={cn(
                   "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-app-subtle shrink-0",
-                  lowStockOnly 
-                    ? "bg-destructive text-destructive-foreground border-destructive/50 shadow-destructive/20" 
+                  lowStockOnly
+                    ? "bg-destructive text-destructive-foreground border-destructive/50 shadow-destructive/20"
                     : "bg-card border-border text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -242,7 +244,7 @@ export const ProductsPage = () => {
               </button>
 
               <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
-                <button 
+                <button
                   onClick={() => setViewMode('grid')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
@@ -251,7 +253,7 @@ export const ProductsPage = () => {
                 >
                   <LayoutGridIcon className="w-5 h-5" />
                 </button>
-                <button 
+                <button
                   onClick={() => setViewMode('list')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
@@ -265,88 +267,59 @@ export const ProductsPage = () => {
           </div>
 
           {loading ? (
-             <div className="p-32 text-center flex flex-col items-center gap-6">
-                <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
-                <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Decoding SKU Registry...</p>
-             </div>
+            <div className="p-32 text-center flex flex-col items-center gap-6">
+              <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Decoding SKU Registry...</p>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="py-32 text-center space-y-6 bg-muted/5 rounded-[3rem] border border-dashed border-border/60">
-                <PackageIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
-                <div className="space-y-2">
-                  <p className="text-xl font-bold text-foreground">No protocols found</p>
-                  <p className="text-sm text-foreground/70 uppercase tracking-wider font-medium">Adjust query parameters or register new asset.</p>
-                </div>
+              <PackageIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
+              <div className="space-y-2">
+                <p className="text-xl font-bold text-foreground">No protocols found</p>
+                <p className="text-sm text-foreground/70 uppercase tracking-wider font-medium">Adjust query parameters or register new asset.</p>
+              </div>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map((product) => (
-                <div 
-                  key={product.productId} 
-                  className="group relative flex flex-col p-8 bg-card border border-border hover:border-primary/40 rounded-[2.5rem] transition-all duration-500 text-left shadow-app-card hover:shadow-app-hover hover:-translate-y-2 cursor-pointer overflow-hidden"
+                <div
+                  key={product.productId}
                   onClick={() => navigate(getProductPath(product.productId))}
+                  className="group relative aspect-[4/5] flex flex-col p-8 bg-card border border-border/60 hover:border-primary/40 rounded-[3rem] transition-all duration-700 text-left shadow-app-card hover:shadow-app-hover hover:-translate-y-2 overflow-hidden cursor-pointer"
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[60px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
-                  
-                  <div className="flex items-start justify-between mb-10 relative">
-                    <div className="w-16 h-16 rounded-3xl bg-primary/5 text-primary flex items-center justify-center border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
-                      <PackageIcon className="w-8 h-8" />
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
+
+                  <div className="flex items-start justify-between mb-auto relative">
+                    <div className="w-14 h-14 rounded-3xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                      <PackageIcon className="w-7 h-7" />
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="text-[10px] font-black px-4 py-1.5 bg-muted text-foreground/70 uppercase tracking-wider rounded-full border border-border">
-                        {product.category}
+                    {product.currentQuantity <= product.reorderLevel && (
+                      <span className="text-[8px] font-black px-3 py-1 bg-rose-400/10 text-rose-500 uppercase tracking-widest rounded-full border border-rose-400/20 animate-pulse">
+                        CRITICAL
                       </span>
-                      {product.currentQuantity <= product.reorderLevel && (
-                        <span className="text-[10px] font-black px-4 py-1.5 bg-destructive/10 text-destructive uppercase tracking-wider rounded-full border border-destructive/20 animate-pulse">
-                          CRITICAL
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
 
-                  <div className="space-y-4 mb-10 relative">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-wider opacity-60">{product.sku}</p>
-                    <h3 className="font-bold text-2xl leading-tight tracking-tight group-hover:text-primary transition-colors min-h-[4rem]">{product.name}</h3>
+                  <div className="space-y-2 mb-6 relative">
+                    <p className="text-[9px] font-black text-primary/40 uppercase tracking-widest leading-none">{product.sku}</p>
+                    <h3 className="font-black text-xl leading-tight tracking-tighter group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
                   </div>
 
-                  <div className="mt-auto space-y-6 relative">
-                    <div className="flex items-center justify-between">
+                  <div className="space-y-4 relative">
+                    <div className="flex items-end justify-between">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-black text-foreground/70 uppercase tracking-wider">Density</p>
+                        <p className="text-[9px] font-black text-foreground/40 uppercase tracking-widest leading-none">Density</p>
                         <p className={cn(
-                          "text-xl font-black tabular-nums tracking-tighter",
-                          product.currentQuantity <= product.reorderLevel ? "text-destructive" : "text-foreground"
+                          "text-2xl font-black tabular-nums tracking-tighter leading-none pt-1",
+                          product.currentQuantity <= product.reorderLevel ? "text-rose-400" : "text-foreground"
                         )}>
-                          {product.currentQuantity} <span className="text-[10px] uppercase opacity-40 ml-1">{product.unitOfMeasure}</span>
+                          {product.currentQuantity} <span className="text-[9px] font-bold opacity-30 ml-0.5 uppercase">{product.unitOfMeasure}</span>
                         </p>
                       </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-[10px] font-black text-foreground/70 uppercase tracking-wider">Valuation</p>
-                        <p className="text-xl font-black tabular-nums tracking-tighter">
-                          {formatCurrency(product.sellingPrice)}
-                        </p>
+                      <div className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500">
+                        <ArrowRight01Icon className="w-5 h-5" />
                       </div>
                     </div>
-                    
-                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full transition-all duration-1000 ease-out",
-                          product.currentQuantity <= product.reorderLevel ? "bg-destructive shadow-[0_0_10px_rgba(var(--destructive),0.5)]" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
-                        )}
-                        style={{ width: `${Math.min(100, (product.currentQuantity / (product.maxStockLevel || 100)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-8 flex items-center justify-between pt-6 border-t border-border/10">
-                      <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                        {isManagerOrAdmin && (
-                          <button onClick={() => edit(product)} className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
-                            <Edit02Icon className="w-5 h-5" />
-                          </button>
-                        )}
-                      </div>
-                     <ArrowRight01Icon className="w-6 h-6 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-2 transition-all duration-500" />
                   </div>
                 </div>
               ))}
@@ -355,7 +328,7 @@ export const ProductsPage = () => {
             <div className="bg-card border border-border rounded-[2.5rem] shadow-app-card overflow-hidden backdrop-blur-sm bg-opacity-50">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-b border-border/60 h-20">
+                  <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
                     <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Protocol Asset</TableHead>
                     <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Classification</TableHead>
                     <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Density Status</TableHead>
@@ -365,15 +338,15 @@ export const ProductsPage = () => {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((product) => (
-                    <TableRow 
-                      key={product.productId} 
-                      className="group hover:bg-primary/[0.02] transition-all cursor-pointer border-b border-border/10 h-28"
+                    <TableRow
+                      key={product.productId}
+                      className="group hover:bg-primary/[0.02] transition-all cursor-pointer border-b border-border/10 h-20"
                       onClick={() => navigate(getProductPath(product.productId))}
                     >
                       <TableCell className="px-10">
                         <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 rounded-3xl bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
-                            <PackageIcon className="w-8 h-8" />
+                          <div className="w-12 h-12 rounded-2xl bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
+                            <PackageIcon className="w-6 h-6" />
                           </div>
                           <div className="text-left">
                             <span className="text-[10px] font-black text-primary uppercase tracking-wider opacity-60 block mb-1">{product.sku}</span>
@@ -389,8 +362,8 @@ export const ProductsPage = () => {
                       <TableCell className="px-10 text-left">
                         <div className={cn(
                           "inline-flex items-center gap-3 px-6 py-2.5 rounded-full border text-[11px] font-black uppercase tracking-widest",
-                          product.currentQuantity <= product.reorderLevel 
-                            ? "bg-destructive/10 text-destructive border-destructive/20" 
+                          product.currentQuantity <= product.reorderLevel
+                            ? "bg-destructive/10 text-destructive border-destructive/20"
                             : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                         )}>
                           <div className={cn("w-2 h-2 rounded-full", product.currentQuantity <= product.reorderLevel ? "bg-destructive animate-pulse" : "bg-emerald-500")} />
@@ -398,9 +371,9 @@ export const ProductsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell className="px-10">
-                         <span className="text-xl font-black tabular-nums tracking-tighter">
-                            {formatCurrency(product.sellingPrice)}
-                         </span>
+                        <span className="text-xl font-black tabular-nums tracking-tighter">
+                          {formatCurrency(product.sellingPrice)}
+                        </span>
                       </TableCell>
                       <TableCell className="px-10 text-right" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-4">
@@ -615,20 +588,20 @@ export const ProductsPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT SPECIFICATIONS' : 'AUTHORIZE INITIALIZATION'}
-                </button>
-                <button 
-                  type="button" 
+              <div className="flex items-center justify-end gap-4 pt-8">
+                <button
+                  type="button"
                   onClick={reset}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
                   ABORT
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT SPECIFICATIONS' : 'AUTHORIZE INITIALIZATION'}
                 </button>
               </div>
             </form>

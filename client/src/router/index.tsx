@@ -21,6 +21,7 @@ import { TransferPage } from '@/features/movements/pages/TransferPage';
 import { AlertsPage } from '@/features/alerts/pages/AlertsPage';
 import { ReportsPage } from '@/features/reports/pages/ReportsPage';
 import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
+import { UserDetailPage } from '@/features/admin/pages/UserDetailPage';
 import { ProfilePage } from '@/features/profile/pages/ProfilePage';
 
 const DashboardHome = ({ role }: { role: Role }) => <DashboardPage role={role} />;
@@ -52,6 +53,14 @@ export const AppRoutes = () => (
         element={
           <ProtectedRoute roles={[Role.ADMIN]}>
             <AdminUsersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users/:id"
+        element={
+          <ProtectedRoute roles={[Role.ADMIN]}>
+            <UserDetailPage />
           </ProtectedRoute>
         }
       />

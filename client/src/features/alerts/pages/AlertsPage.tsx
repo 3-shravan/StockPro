@@ -330,7 +330,7 @@ export const AlertsPage = () => {
                               </p>
 
                               {isExpanded && (
-                                <div className="pt-6 mt-6 border-t border-border/40 grid grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-500">
+                                <div className="pt-6 mt-6 grid grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-500">
                                    {alert.relatedProductId && (
                                      <div className="space-y-1.5">
                                         <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest">Product Reference</p>
@@ -483,17 +483,17 @@ export const AlertsPage = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-6 pt-12 border-t border-border/40">
-                <button type="submit" disabled={isSubmitting} className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 shadow-2xl flex items-center justify-center gap-3">
-                  <SentIcon className="w-5 h-5" />
-                  {isSubmitting ? 'Processing Dispatch...' : 'Execute Broadcast'}
-                </button>
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-6 pt-12">
                 <button 
                   type="button" 
                   onClick={() => setActiveTab('inbox')}
                   className="px-10 h-14 rounded-full border border-border/40 bg-muted/30 hover:bg-muted/40 text-foreground font-black text-[10px] uppercase tracking-widest transition-all shadow-xl"
                 >
                   Discard
+                </button>
+                <button type="submit" disabled={isSubmitting} className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 shadow-2xl flex items-center justify-center gap-3">
+                  <SentIcon className="w-5 h-5" />
+                  {isSubmitting ? 'Processing Dispatch...' : 'Execute Broadcast'}
                 </button>
               </div>
             </form>
@@ -506,32 +506,39 @@ export const AlertsPage = () => {
 
 const StatCard = ({ label, value, icon, trend, variant = 'default' }: { label: string; value: number; icon: React.ReactNode; trend: string; variant?: string }) => (
   <Card className={cn(
-    "group rounded-[2.5rem] border-none transition-all duration-300 overflow-hidden",
-    "bg-zinc-900/50 border border-white/[0.08] hover:bg-zinc-900/80 hover:border-white/[0.15] shadow-2xl"
+    "group rounded-[2.5rem] border-border/40 transition-all duration-500 overflow-hidden relative",
+    "bg-card/60 backdrop-blur-3xl hover:border-primary/20 hover:shadow-2xl hover:-translate-y-1 shadow-app-card"
   )}>
-    <CardContent className="p-10">
+    {/* Background Accent Glow */}
+    <div className={cn(
+      "absolute top-0 right-0 w-32 h-32 blur-[60px] -mr-16 -mt-16 rounded-full transition-opacity duration-500 opacity-20 group-hover:opacity-40",
+      variant === 'destructive' ? "bg-rose-400" :
+      variant === 'primary' ? "bg-primary" :
+      "bg-foreground/20"
+    )} />
+
+    <CardContent className="p-10 relative">
       <div className="flex items-center justify-between">
         <div className={cn(
-          "w-16 h-16 flex items-center justify-center transition-all duration-500",
-          variant === 'destructive' ? "text-rose-400/80" :
-          variant === 'primary' ? "text-primary/80" :
-          "text-white/40"
+          "w-16 h-16 flex items-center justify-center transition-all duration-500 group-hover:scale-110",
+          variant === 'destructive' ? "text-rose-400" :
+          variant === 'primary' ? "text-primary" :
+          "text-foreground/40"
         )}>
-          {/* Ensure the icon passed inherits the color */}
           {icon}
         </div>
         <div className={cn(
           "px-5 py-2 rounded-full border transition-all",
-          variant === 'destructive' ? "bg-rose-400/[0.03] border-rose-400/10 text-rose-400/60" :
-          variant === 'primary' ? "bg-primary/[0.03] border-primary/10 text-primary/60" :
-          "bg-white/[0.03] border-white/10 text-white/30"
+          variant === 'destructive' ? "bg-rose-400/10 border-rose-400/20 text-rose-400" :
+          variant === 'primary' ? "bg-primary/10 border-primary/20 text-primary" :
+          "bg-foreground/[0.03] border-border/20 text-foreground/40"
         )}>
            <span className="text-[10px] font-black uppercase tracking-[0.15em]">{trend}</span>
         </div>
       </div>
-      <div className="mt-8">
-        <p className="text-5xl font-black tracking-tighter text-foreground">{value.toLocaleString()}</p>
-        <p className="text-[11px] font-black text-foreground/60 mt-2 uppercase tracking-widest">{label}</p>
+      <div className="mt-10">
+        <p className="text-5xl font-black tracking-tighter text-foreground tabular-nums leading-none">{value.toLocaleString()}</p>
+        <p className="text-[11px] font-black text-foreground/40 mt-4 uppercase tracking-[0.2em]">{label}</p>
       </div>
     </CardContent>
   </Card>

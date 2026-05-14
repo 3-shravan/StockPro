@@ -74,8 +74,8 @@ export const ApprovalQueuePreview = ({ orders, userRole }: ApprovalQueuePreviewP
                       <p className="text-[9px] font-black text-foreground/70 uppercase tracking-wider mt-1.5 opacity-60 truncate">Cycle: {formatDate(o.orderDate)}</p>
                     </TableCell>
                     <TableCell className="px-4 md:px-6 py-3 text-right">
-                       <p className="font-black text-base md:text-lg tabular-nums tracking-tighter leading-none">{formatCurrency(o.totalAmount)}</p>
-                       <p className="text-[9px] font-black text-foreground/70 uppercase tracking-wider mt-1.5 opacity-30">Total</p>
+                      <p className="font-black text-base md:text-lg tabular-nums tracking-tighter leading-none">{formatCurrency(o.totalAmount)}</p>
+                      <p className="text-[9px] font-black text-foreground/70 uppercase tracking-wider mt-1.5 opacity-30">Total</p>
                     </TableCell>
                   </TableRow>
                 ))

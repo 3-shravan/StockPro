@@ -109,11 +109,11 @@ export const TransferPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4 pt-6 border-t border-border/40">
+            <div className="flex items-center justify-end pt-8">
               <button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="flex-1 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                className="px-10 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-amber-500/20 disabled:opacity-50"
               >
                 {isSubmitting ? 'SYNCHRONIZING...' : 'AUTHORIZE TRANSFER'}
               </button>

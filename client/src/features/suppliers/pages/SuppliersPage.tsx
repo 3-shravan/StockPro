@@ -1,10 +1,10 @@
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { suppliersApi } from '@/features/suppliers/api';
 import type { Supplier, SupplierRequest } from '@/features/suppliers/types';
@@ -54,9 +54,9 @@ export const SuppliersPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isOfficerOrAdmin = user?.role === Role.OFFICER || user?.role === Role.ADMIN;
-  
+
   const [activeTab, setActiveTab] = useState<TabType>('directory');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [query, setQuery] = useState('');
   const [form, setForm] = useState<SupplierRequest>(emptySupplier);
@@ -71,9 +71,9 @@ export const SuppliersPage = () => {
       const matchesSearch = !q || [s.name, s.city, s.country, s.contactPerson, s.email]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q));
-      
+
       const matchesStatus = showInactive || s.active;
-      
+
       return matchesSearch && matchesStatus;
     });
   }, [query, suppliers, showInactive]);
@@ -224,12 +224,12 @@ export const SuppliersPage = () => {
                 />
               </div>
 
-              <button 
+              <button
                 onClick={() => setShowInactive(!showInactive)}
                 className={cn(
                   "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-app-subtle shrink-0",
-                  showInactive 
-                    ? "bg-primary text-primary-foreground border-primary" 
+                  showInactive
+                    ? "bg-primary text-primary-foreground border-primary"
                     : "bg-card border border-border text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -238,7 +238,7 @@ export const SuppliersPage = () => {
               </button>
 
               <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
-                <button 
+                <button
                   onClick={() => setViewMode('grid')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
@@ -247,7 +247,7 @@ export const SuppliersPage = () => {
                 >
                   <LayoutGridIcon className="w-5 h-5" />
                 </button>
-                <button 
+                <button
                   onClick={() => setViewMode('list')}
                   className={cn(
                     "p-3 rounded-xl transition-all duration-300",
@@ -261,96 +261,70 @@ export const SuppliersPage = () => {
           </div>
 
           {isLoading ? (
-             <div className="p-24 text-center flex flex-col items-center gap-4">
-                <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
-                <p className="text-muted-foreground text-sm">Loading suppliers...</p>
-             </div>
+            <div className="p-24 text-center flex flex-col items-center gap-4">
+              <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
+              <p className="text-muted-foreground text-sm">Loading suppliers...</p>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="py-24 text-center space-y-4 bg-muted/10 rounded-3xl border border-dashed border-border">
-                <UserGroupIcon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
-                <div className="space-y-1">
-                  <p className="text-lg font-semibold text-foreground">No suppliers found</p>
-                  <p className="text-sm text-muted-foreground">Adjust your filters or register a new partner.</p>
-                </div>
+              <UserGroupIcon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-foreground">No suppliers found</p>
+                <p className="text-sm text-muted-foreground">Adjust your filters or register a new partner.</p>
+              </div>
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map((s) => (
-                <div 
-                  key={s.supplierId} 
+                <div
+                  key={s.supplierId}
+                  onClick={() => navigate(`/purchase/suppliers/${s.supplierId}`)}
                   className={cn(
-                    "group relative flex flex-col p-6 bg-card border border-border hover:border-primary/40 rounded-3xl transition-all duration-300 text-left shadow-app-card hover:shadow-app-hover hover:-translate-y-1 overflow-hidden cursor-pointer",
+                    "group relative aspect-[4/5] flex flex-col p-8 bg-card border border-border/60 hover:border-primary/40 rounded-[3rem] transition-all duration-700 text-left shadow-app-card hover:shadow-app-hover hover:-translate-y-2 overflow-hidden cursor-pointer",
                     !s.active && "opacity-60 grayscale-[0.5] border-dashed"
                   )}
-                  onClick={() => navigate(`/purchase/suppliers/${s.supplierId}`)}
                 >
-                  <div className="flex items-start justify-between mb-8">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform border border-primary/20">
-                        <UserGroupIcon className="w-6 h-6 text-primary" />
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-primary/10 transition-colors" />
+
+                  <div className="flex items-start justify-between mb-auto relative">
+                    <div className="w-14 h-14 rounded-3xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                      <UserGroupIcon className="w-7 h-7 text-primary" />
+                    </div>
+                    <div className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500/10 text-amber-500 rounded-full border border-amber-500/20">
+                      <StarIcon className="w-3.5 h-3.5 fill-current" />
+                      <span className="font-black text-[10px] tracking-widest">{s.rating?.toFixed(1) || '0.0'}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-6 relative">
+                    <h3 className="font-black text-xl leading-tight truncate tracking-tighter group-hover:text-primary transition-colors">{s.name}</h3>
+                    <p className="text-[9px] font-black text-foreground/40 uppercase tracking-widest leading-none truncate">
+                      {s.city}, {s.country}
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 relative border-t border-border/5 pt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2.5 text-[9px] font-black text-foreground/40 uppercase tracking-widest leading-none">
+                          <Mail01Icon className="w-3.5 h-3.5 text-primary/40" />
+                          <span className="truncate max-w-[120px]">{s.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 text-[9px] font-black text-foreground/40 uppercase tracking-widest leading-none">
+                          <CallIcon className="w-3.5 h-3.5 text-primary/40" />
+                          <span>{s.phone}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full border border-amber-500/20">
-                        <StarIcon className="w-3.5 h-3.5 fill-current" />
-                        <span className="font-bold text-[10px] tracking-wider">{s.rating?.toFixed(1) || '0.0'}</span>
+                      <div className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500">
+                        <ArrowRight01Icon className="w-5 h-5" />
                       </div>
                     </div>
-                    
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      {isOfficerOrAdmin && (
-                        <button onClick={() => edit(s)} className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
-                          <Edit02Icon className="w-5 h-5" />
-                        </button>
-                      )}
-                      {isOfficerOrAdmin && (
-                        s.active ? (
-                          <button onClick={() => deactivate(s)} className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300">
-                            <Delete02Icon className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <>
-                            <button onClick={() => activate(s)} className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300">
-                              <PlusSignIcon className="w-5 h-5" />
-                            </button>
-                            <button onClick={() => remove(s)} className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300">
-                              <Delete02Icon className="w-5 h-5" />
-                            </button>
-                          </>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 mb-8">
-                    <h3 className="font-bold text-2xl leading-tight truncate tracking-tight group-hover:text-primary transition-colors">{s.name}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-[10px] font-bold px-3 py-1 bg-muted text-foreground/70 uppercase tracking-wider rounded-full border border-border">
-                        {s.city}, {s.country}
-                      </span>
-                      <span className="text-[10px] font-bold px-3 py-1 bg-primary/10 text-primary uppercase tracking-wider rounded-full border border-primary/20">
-                        {s.paymentTerms}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6 border-t border-border/10 space-y-3">
-                    <div className="flex items-center gap-3 text-[10px] font-bold text-foreground/70 uppercase tracking-wider">
-                      <Mail01Icon className="w-4 h-4" />
-                      <span className="truncate">{s.email}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-[10px] font-bold text-foreground/70 uppercase tracking-wider">
-                      <CallIcon className="w-4 h-4" />
-                      <span>{s.phone}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-1 group-hover:translate-x-0">
-                     <ArrowRight01Icon className="w-5 h-5 text-primary" />
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="rounded-3xl border border-border bg-card overflow-hidden shadow-app-card">
+            <div className="bg-card border border-border/40 rounded-[2rem] shadow-app-card overflow-hidden backdrop-blur-sm bg-opacity-50">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
@@ -362,10 +336,10 @@ export const SuppliersPage = () => {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((s) => (
-                    <TableRow 
-                      key={s.supplierId} 
+                    <TableRow
+                      key={s.supplierId}
                       className={cn(
-                        "group hover:bg-muted/30 transition-all cursor-pointer border-b border-border/10 h-24",
+                        "group hover:bg-muted/30 transition-all cursor-pointer border-b border-border/10 h-20",
                         !s.active && "opacity-50 grayscale"
                       )}
                       onClick={() => navigate(`/purchase/suppliers/${s.supplierId}`)}
@@ -397,28 +371,28 @@ export const SuppliersPage = () => {
                         </div>
                       </TableCell>
                       <TableCell className="px-6">
-                         <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <StarIcon className="w-4 h-4 text-amber-500 fill-current" />
-                              <span className="font-bold text-base">{s.rating?.toFixed(1) || '0.0'}</span>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{s.leadTimeDays}d lead time</span>
-                         </div>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <StarIcon className="w-4 h-4 text-amber-500 fill-current" />
+                            <span className="font-bold text-base">{s.rating?.toFixed(1) || '0.0'}</span>
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{s.leadTimeDays}d lead time</span>
+                        </div>
                       </TableCell>
                       <TableCell className="px-6 text-right" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {isOfficerOrAdmin && (
                             <>
-                              <button 
-                                onClick={() => edit(s)} 
+                              <button
+                                onClick={() => edit(s)}
                                 className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300"
                                 title="Edit"
                               >
                                 <Edit02Icon className="w-5 h-5" />
                               </button>
                               {s.active ? (
-                                <button 
-                                  onClick={() => deactivate(s)} 
+                                <button
+                                  onClick={() => deactivate(s)}
                                   className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
                                   title="Deactivate"
                                 >
@@ -426,15 +400,15 @@ export const SuppliersPage = () => {
                                 </button>
                               ) : (
                                 <>
-                                  <button 
-                                    onClick={() => activate(s)} 
+                                  <button
+                                    onClick={() => activate(s)}
                                     className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300"
                                     title="Activate"
                                   >
                                     <PlusSignIcon className="w-5 h-5" />
                                   </button>
-                                  <button 
-                                    onClick={() => remove(s)} 
+                                  <button
+                                    onClick={() => remove(s)}
                                     className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
                                     title="Delete"
                                   >
@@ -610,20 +584,20 @@ export const SuppliersPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-6 border-t border-border/40">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting} 
-                  className="flex-1 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
-                >
-                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE REGISTRATION'}
-                </button>
-                <button 
-                  type="button" 
+              <div className="flex items-center justify-end gap-4 pt-8">
+                <button
+                  type="button"
                   onClick={reset}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
                   ABORT
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
+                >
+                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE REGISTRATION'}
                 </button>
               </div>
             </form>

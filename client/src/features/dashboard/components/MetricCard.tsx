@@ -6,13 +6,13 @@ import { Link } from "react-router-dom";
 export const TrendIndicator = ({ value, label }: { value: string, label: string }) => {
   const isPositive = value.startsWith('+');
   const isNegative = value.startsWith('-');
-  
+
   return (
     <div className="flex items-center gap-1.5 mt-3">
       <div className={cn(
         "flex items-center gap-0.5 px-2 py-0.5 rounded-full border",
-        isPositive ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : 
-        isNegative ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-muted/10 text-muted-foreground border-border"
+        isPositive ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+          isNegative ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-muted/10 text-muted-foreground border-border"
       )}>
         <Chart01Icon className="w-3 h-3" />
         <span className="text-[10px] font-black tabular-nums">{value}</span>
@@ -49,7 +49,7 @@ export const MetricCard = ({ label, value, hint, icon: Icon, color = 'primary', 
       to && "hover:-translate-y-2 cursor-pointer"
     )}>
       <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-[40px] -mr-12 -mt-12 rounded-full group-hover:bg-primary/10 transition-colors" />
-      
+
       <CardContent className="p-6 md:p-7 relative z-10">
         <div className="flex items-start justify-between mb-6">
           <div className="space-y-1">
@@ -66,9 +66,9 @@ export const MetricCard = ({ label, value, hint, icon: Icon, color = 'primary', 
           )}>{value}</p>
           {trend && <TrendIndicator value={trend.value} label={trend.label} />}
           <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider mt-4 truncate">
-{hint}</p>
+            {hint}</p>
         </div>
-        
+
       </CardContent>
     </Card>
   );

@@ -60,8 +60,8 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
           {role === Role.MANAGER && managedWarehouse
             ? `${managedWarehouse.name} · Operational Hub`
             : role === Role.STAFF && managedWarehouse
-            ? `${managedWarehouse.name} · Staff Console`
-            : 'Operational Command'}
+              ? `${managedWarehouse.name} · Staff Console`
+              : 'Operational Command'}
         </p>
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
           {role === Role.ADMIN ? 'Administrator Console' :
