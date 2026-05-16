@@ -1,8 +1,28 @@
 package com.stockpro.warehouse.service.impl;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
+import com.stockpro.warehouse.common.response.ApiResponse;
+
+import com.stockpro.warehouse.dto.request.StockUpdateRequest;
 import com.stockpro.warehouse.dto.request.WarehouseRequest;
 import com.stockpro.warehouse.dto.response.StockLevelResponse;
 import com.stockpro.warehouse.dto.response.WarehouseResponse;
+import com.stockpro.warehouse.dto.response.WarehouseStatsResponse;
+import com.stockpro.warehouse.dto.response.WarehouseStatsResponse.ProductStockStat;
 import com.stockpro.warehouse.entity.StockLevel;
 import com.stockpro.warehouse.entity.Warehouse;
 import com.stockpro.warehouse.exception.CustomException;
@@ -11,18 +31,9 @@ import com.stockpro.warehouse.mapper.WarehouseMapper;
 import com.stockpro.warehouse.repository.StockLevelRepository;
 import com.stockpro.warehouse.repository.WarehouseRepository;
 import com.stockpro.warehouse.service.WarehouseService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -44,28 +55,68 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Value("${stock.alert.overstock-threshold:200}")
     private int overstockThreshold;
 
+    @Value("${services.product.url}")
+    private String productServiceUrl;
+
+    @Value("${services.movement.url}")
+    private String movementServiceUrl;
+
+
     @Override
     @Transactional
     public WarehouseResponse createWarehouse(WarehouseRequest request) {
         log.info("Creating new warehouse: {}", request.getName());
+        
+        // Ensure manager is not already assigned to another active warehouse
+        if (request.getManagerId() != null && request.getManagerId() > 0) {
+            List<Warehouse> existing = warehouseRepository.findByManagerId(request.getManagerId());
+            boolean alreadyManaging = existing.stream().anyMatch(Warehouse::isActive);
+            if (alreadyManaging) {
+                throw new CustomException("Manager ID " + request.getManagerId() + " is already assigned to another active hub.", HttpStatus.CONFLICT);
+            }
+        }
+
         Warehouse warehouse = warehouseMapper.toEntity(request);
         Warehouse saved = warehouseRepository.save(warehouse);
         return warehouseMapper.toResponse(saved);
     }
 
     @Override
-    public Optional<WarehouseResponse> getById(int warehouseId) {
-        log.debug("Service: Fetching warehouse by ID: {}", warehouseId);
-        return warehouseRepository.findByWarehouseId(warehouseId)
-                .map(warehouseMapper::toResponse);
+    public List<WarehouseResponse> getAllWarehouses(boolean includeInactive) {
+        log.debug("Service: Fetching all warehouses (includeInactive={})", includeInactive);
+        List<Warehouse> warehouses;
+        if (includeInactive) {
+            warehouses = warehouseRepository.findAll();
+        } else {
+            warehouses = warehouseRepository.findByActive(true);
+        }
+
+        // Real-time capacity synchronization
+        Map<Integer, Integer> capacityMap = stockLevelRepository.sumQuantitiesByWarehouse().stream()
+                .collect(Collectors.toMap(
+                    row -> (Integer) row[0],
+                    row -> row[1] != null ? ((Number) row[1]).intValue() : 0,
+                    (v1, v2) -> v1
+                ));
+
+        return warehouses.stream()
+                .map(warehouse -> {
+                    int realCapacity = capacityMap.getOrDefault(warehouse.getWarehouseId(), 0);
+                    // Update entity if mismatch found (auto-heal)
+                    if (warehouse.getUsedCapacity() != realCapacity) {
+                        warehouse.setUsedCapacity(realCapacity);
+                        warehouseRepository.save(warehouse);
+                    }
+                    return warehouseMapper.toResponse(warehouse);
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<WarehouseResponse> getAllWarehouses() {
-        log.debug("Service: Fetching all active warehouses");
-        return warehouseRepository.findAll().stream()
-                .map(warehouseMapper::toResponse)
-                .collect(Collectors.toList());
+    public Optional<WarehouseResponse> getWarehouseById(int id) {
+        log.debug("Service: Fetching warehouse ID: {}", id);
+        return warehouseRepository.findByWarehouseId(id)
+                .map(warehouseMapper::toResponse);
     }
 
     @Override
@@ -74,6 +125,34 @@ public class WarehouseServiceImpl implements WarehouseService {
         log.info("Updating warehouse ID: {}", warehouseId);
         Warehouse warehouse = warehouseRepository.findByWarehouseId(warehouseId)
                 .orElseThrow(() -> new CustomException("Warehouse not found", HttpStatus.NOT_FOUND));
+
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        Integer currentUserId = 0;
+        if (auth.getDetails() instanceof java.util.Map) {
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> details = (java.util.Map<String, Object>) auth.getDetails();
+            Object userIdObj = details.get("userId");
+            if (userIdObj instanceof Integer) {
+                currentUserId = (Integer) userIdObj;
+            }
+        }
+
+        if (!isAdmin && (warehouse.getManagerId() == null || !warehouse.getManagerId().equals(currentUserId))) {
+            throw new CustomException("Access Denied: You are not the assigned manager for this warehouse.", HttpStatus.FORBIDDEN);
+        }
+
+        // Ensure manager is not already assigned elsewhere (if changing manager)
+        if (request.getManagerId() != null && request.getManagerId() > 0 && !request.getManagerId().equals(warehouse.getManagerId())) {
+            List<Warehouse> existing = warehouseRepository.findByManagerId(request.getManagerId());
+            boolean alreadyManaging = existing.stream().anyMatch(Warehouse::isActive);
+            if (alreadyManaging) {
+                throw new CustomException("Manager ID " + request.getManagerId() + " is already assigned to another active hub.", HttpStatus.CONFLICT);
+            }
+        }
 
         warehouseMapper.updateEntity(request, warehouse);
         Warehouse updated = warehouseRepository.save(warehouse);
@@ -96,42 +175,141 @@ public class WarehouseServiceImpl implements WarehouseService {
     }
 
     @Override
+    @Transactional
+    public void activateWarehouse(int warehouseId) {
+        log.info("Activating warehouse ID: {}", warehouseId);
+        Warehouse warehouse = warehouseRepository.findByWarehouseId(warehouseId)
+                .orElseThrow(() -> new CustomException("Warehouse not found", HttpStatus.NOT_FOUND));
+
+        if (warehouse.isActive()) {
+            throw new CustomException("Warehouse is already active", HttpStatus.BAD_REQUEST);
+        }
+
+        warehouse.setActive(true);
+        warehouseRepository.save(warehouse);
+    }
+
+    @Override
+    @Transactional
+    public void deleteWarehouse(int warehouseId) {
+        log.info("Hard deleting warehouse ID: {}", warehouseId);
+        Warehouse warehouse = warehouseRepository.findByWarehouseId(warehouseId)
+                .orElseThrow(() -> new CustomException("Warehouse not found", HttpStatus.NOT_FOUND));
+
+        stockLevelRepository.deleteByWarehouseId(warehouseId);
+        warehouseRepository.delete(warehouse);
+    }
+
+    @Override
+    public List<WarehouseResponse> getWarehousesByManager(int managerId, boolean includeInactive) {
+        log.debug("Service: Fetching warehouses for manager ID: {} (includeInactive={})", managerId, includeInactive);
+        List<Warehouse> warehouses = warehouseRepository.findByManagerId(managerId);
+        
+        if (!includeInactive) {
+            warehouses = warehouses.stream()
+                    .filter(Warehouse::isActive)
+                    .collect(Collectors.toList());
+        }
+
+        return warehouses.stream()
+                .map(warehouseMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    // --- Stock Methods ---
+
+    @Override
     public Optional<StockLevelResponse> getStockLevel(int warehouseId, int productId) {
-        log.debug("Service: Fetching stock level for warehouse {} and product {}", warehouseId, productId);
+        log.debug("Service: Fetching stock level for warehouse {} product {}", warehouseId, productId);
         return stockLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)
                 .map(stockMapper::toResponse);
     }
 
     @Override
+    public List<StockLevelResponse> getAllStockByWarehouse(int warehouseId) {
+        log.debug("Service: Fetching all stock levels for warehouse {}", warehouseId);
+        return stockLevelRepository.findByWarehouseId(warehouseId).stream()
+                .map(stockMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<StockLevelResponse> getStockLevelsByProductId(int productId) {
+        log.debug("Service: Fetching all stock levels for product {}", productId);
+        return stockLevelRepository.findByProductId(productId).stream()
+                .map(stockMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public void updateStock(int warehouseId, int productId, int quantity) {
-        log.info("Updating stock for warehouse {} product {}: new quantity {}", warehouseId, productId, quantity);
-        StockLevel stockLevel = getOrCreateStockLevel(warehouseId, productId);
-        stockLevel.setQuantity(quantity);
+        updateStock(StockUpdateRequest.builder()
+                .warehouseId(warehouseId)
+                .productId(productId)
+                .quantity(quantity)
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public void updateStock(com.stockpro.warehouse.dto.request.StockUpdateRequest request) {
+        log.info("Service: Updating stock for warehouse {} product {} to {}", 
+                request.getWarehouseId(), request.getProductId(), request.getQuantity());
+        StockLevel stockLevel = getOrCreateStockLevel(request.getWarehouseId(), request.getProductId());
+        int oldQty = stockLevel.getQuantity();
+        stockLevel.setQuantity(request.getQuantity());
         stockLevel.setLastUpdated(LocalDateTime.now());
         StockLevel saved = stockLevelRepository.save(stockLevel);
-        evaluateAndDispatchStockAlerts(saved);
+        
+        updateWarehouseUsedCapacity(request.getWarehouseId());
+        Map<String, Object> productMetadata = recordMovement(request.getWarehouseId(), request.getProductId(), request.getQuantity() - oldQty, 
+                "ADJUSTMENT", saved.getQuantity(), request);
+        evaluateAndDispatchStockAlerts(saved, productMetadata);
     }
 
     @Override
     @Transactional
     public void adjustStock(int warehouseId, int productId, int delta) {
-        log.info("Adjusting stock for warehouse {} product {}: delta {}", warehouseId, productId, delta);
-        StockLevel stockLevel = getOrCreateStockLevel(warehouseId, productId);
-        stockLevel.setQuantity(stockLevel.getQuantity() + delta);
+        adjustStock(StockUpdateRequest.builder()
+                .warehouseId(warehouseId)
+                .productId(productId)
+                .quantity(delta)
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public void adjustStock(com.stockpro.warehouse.dto.request.StockUpdateRequest request) {
+        log.info("Service: Adjusting stock for warehouse {} product {} by {}", 
+                request.getWarehouseId(), request.getProductId(), request.getQuantity());
+        StockLevel stockLevel = getOrCreateStockLevel(request.getWarehouseId(), request.getProductId());
+        stockLevel.setQuantity(stockLevel.getQuantity() + request.getQuantity());
         stockLevel.setLastUpdated(LocalDateTime.now());
         StockLevel saved = stockLevelRepository.save(stockLevel);
-        evaluateAndDispatchStockAlerts(saved);
+        
+        updateWarehouseUsedCapacity(request.getWarehouseId());
+        Map<String, Object> productMetadata = recordMovement(request.getWarehouseId(), request.getProductId(), request.getQuantity(), 
+                request.getQuantity() > 0 ? "STOCK_IN" : "STOCK_OUT", saved.getQuantity(), request);
+        evaluateAndDispatchStockAlerts(saved, productMetadata);
     }
 
     private StockLevel getOrCreateStockLevel(int warehouseId, int productId) {
+        // Why: Ensure the warehouse actually exists to prevent database FK constraint violations.
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new CustomException("Cannot adjust stock: Warehouse ID " + warehouseId + " does not exist.", HttpStatus.NOT_FOUND);
+        }
+
         return stockLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)
-                .orElse(StockLevel.builder()
-                        .warehouseId(warehouseId)
-                        .productId(productId)
-                        .quantity(0)
-                        .reservedQuantity(0)
-                        .build());
+                .orElseGet(() -> {
+                    StockLevel s = new StockLevel();
+                    s.setWarehouseId(warehouseId);
+                    s.setProductId(productId);
+                    s.setQuantity(0);
+                    s.setReservedQuantity(0);
+                    s.setLastUpdated(LocalDateTime.now());
+                    return s;
+                });
     }
 
     @Override
@@ -147,57 +325,47 @@ public class WarehouseServiceImpl implements WarehouseService {
         }
 
         stockLevel.setReservedQuantity(stockLevel.getReservedQuantity() + quantity);
-        stockLevel.setLastUpdated(LocalDateTime.now());
-        StockLevel saved = stockLevelRepository.save(stockLevel);
-        evaluateAndDispatchStockAlerts(saved);
+        stockLevelRepository.save(stockLevel);
     }
 
     @Override
     @Transactional
-    public void releaseReservation(int warehouseId, int productId, int quantity) {
+    public void releaseStock(int warehouseId, int productId, int quantity) {
         log.info("Releasing {} units for warehouse {} product {}", quantity, warehouseId, productId);
         StockLevel stockLevel = stockLevelRepository.findByWarehouseIdAndProductId(warehouseId, productId)
-                .orElseThrow(() -> new CustomException("Stock level not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("Stock level not found for product in this warehouse",
+                        HttpStatus.NOT_FOUND));
 
-        if (stockLevel.getReservedQuantity() < quantity) {
-            throw new CustomException("Cannot release more than reserved quantity", HttpStatus.BAD_REQUEST);
-        }
-
-        stockLevel.setReservedQuantity(stockLevel.getReservedQuantity() - quantity);
-        stockLevel.setLastUpdated(LocalDateTime.now());
-        StockLevel saved = stockLevelRepository.save(stockLevel);
-        evaluateAndDispatchStockAlerts(saved);
+        int newReserved = Math.max(0, stockLevel.getReservedQuantity() - quantity);
+        stockLevel.setReservedQuantity(newReserved);
+        stockLevelRepository.save(stockLevel);
     }
 
     @Override
     @Transactional
-    public void transferStock(int fromWarehouseId, int toWarehouseId, int productId, int quantity, int managerId) {
-        log.info("Transferring {} units of product {} from warehouse {} to {}", quantity, productId, fromWarehouseId,
-                toWarehouseId);
+    public void transferStock(int fromWarehouseId, int toWarehouseId, int productId, int quantity) {
+        log.info("Transferring {} units from {} to {} for product {}", quantity, fromWarehouseId, toWarehouseId, productId);
 
-        if (fromWarehouseId == toWarehouseId) {
-            throw new CustomException("Source and destination warehouses must be different", HttpStatus.BAD_REQUEST);
-        }
-
-        // Debit source
         StockLevel sourceStock = stockLevelRepository.findByWarehouseIdAndProductId(fromWarehouseId, productId)
-                .orElseThrow(() -> new CustomException("Source stock not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("Source stock level not found", HttpStatus.NOT_FOUND));
 
-        if (sourceStock.getAvailableQuantity() < quantity) {
+        if (sourceStock.getQuantity() < quantity) {
             throw new CustomException("Insufficient stock in source warehouse", HttpStatus.BAD_REQUEST);
         }
 
         sourceStock.setQuantity(sourceStock.getQuantity() - quantity);
         sourceStock.setLastUpdated(LocalDateTime.now());
 
-        // Credit destination
         StockLevel destStock = stockLevelRepository.findByWarehouseIdAndProductId(toWarehouseId, productId)
-                .orElse(StockLevel.builder()
-                        .warehouseId(toWarehouseId)
-                        .productId(productId)
-                        .quantity(0)
-                        .reservedQuantity(0)
-                        .build());
+                .orElseGet(() -> {
+                    StockLevel s = new StockLevel();
+                    s.setWarehouseId(toWarehouseId);
+                    s.setProductId(productId);
+                    s.setQuantity(0);
+                    s.setReservedQuantity(0);
+                    s.setLastUpdated(LocalDateTime.now());
+                    return s;
+                });
 
         destStock.setQuantity(destStock.getQuantity() + quantity);
         destStock.setLastUpdated(LocalDateTime.now());
@@ -205,49 +373,186 @@ public class WarehouseServiceImpl implements WarehouseService {
         StockLevel savedSource = stockLevelRepository.save(sourceStock);
         StockLevel savedDestination = stockLevelRepository.save(destStock);
 
-        evaluateAndDispatchStockAlerts(savedSource);
-        evaluateAndDispatchStockAlerts(savedDestination);
+        updateWarehouseUsedCapacity(fromWarehouseId);
+        updateWarehouseUsedCapacity(toWarehouseId);
+
+        Map<String, Object> sourceMetadata = recordMovement(fromWarehouseId, productId, -quantity, "TRANSFER_OUT", savedSource.getQuantity(), null);
+        Map<String, Object> destMetadata = recordMovement(toWarehouseId, productId, quantity, "TRANSFER_IN", savedDestination.getQuantity(), null);
+
+        evaluateAndDispatchStockAlerts(savedSource, sourceMetadata);
+        evaluateAndDispatchStockAlerts(savedDestination, destMetadata);
     }
 
     @Override
     public List<StockLevelResponse> getLowStockItems(int warehouseId) {
         log.debug("Service: Fetching low stock items for warehouse ID: {}", warehouseId);
-        return warehouseRepository.findLowStockItems(warehouseId).stream()
+        return stockLevelRepository.findLowStockByWarehouse(warehouseId, lowStockThreshold).stream()
                 .map(stockMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
-    private void evaluateAndDispatchStockAlerts(StockLevel stockLevel) {
+    private void evaluateAndDispatchStockAlerts(StockLevel stockLevel, Map<String, Object> metadata) {
         int availableQty = stockLevel.getAvailableQuantity();
-
-        if (availableQty < lowStockThreshold) {
-            dispatchLowStockAlert(stockLevel.getProductId(), stockLevel.getWarehouseId(), availableQty);
+        
+        // Use reorderLevel from product metadata if available, otherwise fallback to global threshold
+        int lowThreshold = lowStockThreshold;
+        if (metadata != null && metadata.get("reorderLevel") instanceof Number) {
+            lowThreshold = ((Number) metadata.get("reorderLevel")).intValue();
         }
 
-        if (availableQty > overstockThreshold) {
+        // Use maxStockLevel from product metadata if available, otherwise fallback to global threshold
+        int highThreshold = overstockThreshold;
+        if (metadata != null && metadata.get("maxStockLevel") instanceof Number) {
+            highThreshold = ((Number) metadata.get("maxStockLevel")).intValue();
+        }
+
+        if (availableQty < lowThreshold) {
+            dispatchLowStockAlert(stockLevel.getProductId(), stockLevel.getWarehouseId(), availableQty);
+        } else if (availableQty > highThreshold) {
             dispatchOverstockAlert(stockLevel.getProductId(), stockLevel.getWarehouseId(), availableQty);
         }
     }
 
     private void dispatchLowStockAlert(int productId, int warehouseId, int currentQty) {
-        String url = alertServiceUrl + "/alerts/low-stock?productId=" + productId
-                + "&warehouseId=" + warehouseId + "&currentQty=" + currentQty;
         try {
+            String url = alertServiceUrl + "/alerts/low-stock?productId=" + productId
+                    + "&warehouseId=" + warehouseId + "&currentQty=" + currentQty;
             restTemplate.postForEntity(url, null, Void.class);
-        } catch (Exception ex) {
-            log.warn("Low-stock alert dispatch failed for product {} warehouse {}: {}",
-                    productId, warehouseId, ex.getMessage());
+        } catch (org.springframework.web.client.HttpClientErrorException.Unauthorized e) {
+            log.error("Failed to dispatch low stock alert: warehouse-service rejected by alert-service (401). Check gateway secret.");
+        } catch (Exception e) {
+            log.error("Failed to dispatch low stock alert: {}", e.getMessage());
         }
     }
 
     private void dispatchOverstockAlert(int productId, int warehouseId, int currentQty) {
-        String url = alertServiceUrl + "/alerts/overstock?productId=" + productId
-                + "&warehouseId=" + warehouseId + "&currentQty=" + currentQty;
         try {
+            String url = alertServiceUrl + "/alerts/overstock?productId=" + productId
+                    + "&warehouseId=" + warehouseId + "&currentQty=" + currentQty;
+            log.info("Dispatching overstock alert: {}", url);
             restTemplate.postForEntity(url, null, Void.class);
-        } catch (Exception ex) {
-            log.warn("Overstock alert dispatch failed for product {} warehouse {}: {}",
-                    productId, warehouseId, ex.getMessage());
+            log.info("Overstock alert dispatched successfully");
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("Failed to dispatch overstock alert: HTTP {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("Failed to dispatch overstock alert: {}", e.getMessage());
         }
+    }
+
+    @Override
+    public WarehouseStatsResponse getWarehouseStats(int warehouseId) {
+        log.info("Generating statistics for warehouse ID: {}", warehouseId);
+        Warehouse warehouse = warehouseRepository.findByWarehouseId(warehouseId)
+                .orElseThrow(() -> new CustomException("Warehouse not found", HttpStatus.NOT_FOUND));
+
+        int totalItems = stockLevelRepository.sumQuantityByWarehouseId(warehouseId);
+        int uniqueProducts = stockLevelRepository.countUniqueProductsByWarehouseId(warehouseId);
+        List<StockLevel> topStock = stockLevelRepository.findTopProductsByWarehouseId(warehouseId, 5);
+        List<StockLevel> lowStock = stockLevelRepository.findLowStockByWarehouse(warehouseId, lowStockThreshold);
+
+        List<ProductStockStat> topProducts = topStock.stream()
+                .map(s -> ProductStockStat.builder()
+                        .productId(s.getProductId())
+                        .productName(getProductName(s.getProductId()))
+                        .quantity(s.getQuantity())
+                        .build())
+                .collect(Collectors.toList());
+
+        double utilizedPercentage = warehouse.getCapacity() > 0 
+                ? (double) totalItems / warehouse.getCapacity() * 100 
+                : 0;
+
+        return WarehouseStatsResponse.builder()
+                .warehouseId(warehouseId)
+                .warehouseName(warehouse.getName())
+                .totalItems(totalItems)
+                .uniqueProducts(uniqueProducts)
+                .capacity(warehouse.getCapacity())
+                .usedCapacity(totalItems) // Use real-time totalItems instead of cached field
+                .utilizedPercentage(Math.round(utilizedPercentage * 100.0) / 100.0)
+                .lowStockItems(lowStock.size())
+                .topProducts(topProducts)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void reconcileWarehouseCapacity(int warehouseId) {
+        log.info("Reconciling capacity for warehouse ID: {}", warehouseId);
+        updateWarehouseUsedCapacity(warehouseId);
+    }
+
+    private String getProductName(int productId) {
+        try {
+            String url = productServiceUrl + "/products/" + productId;
+            // Using a simple Map response to avoid creating another DTO for product
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            
+            if (response != null && response.get("data") instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) response.get("data");
+                return (String) data.get("name");
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch product name for ID {}: {}", productId, e.getMessage());
+        }
+        return "Unknown Product (#" + productId + ")";
+    }
+
+    private void updateWarehouseUsedCapacity(int warehouseId) {
+        int totalQuantity = stockLevelRepository.sumQuantityByWarehouseId(warehouseId);
+        Warehouse warehouse = warehouseRepository.findByWarehouseId(warehouseId)
+                .orElseThrow(() -> new CustomException("Warehouse not found", HttpStatus.NOT_FOUND));
+        warehouse.setUsedCapacity(totalQuantity);
+        warehouseRepository.save(warehouse);
+    }
+
+    private Map<String, Object> recordMovement(int warehouseId, int productId, int quantity, String type, int balanceAfter, StockUpdateRequest context) {
+        try {
+            Map<String, Object> request = new HashMap<>();
+            request.put("productId", productId);
+            request.put("warehouseId", warehouseId);
+            request.put("movementType", type);
+            request.put("quantity", Math.abs(quantity));
+            
+            // Prioritize context metadata if available
+            int refId = (context != null && context.getReferenceId() != null) ? context.getReferenceId() : 0;
+            String refType = (context != null && context.getReferenceType() != null) ? context.getReferenceType() : "SYSTEM";
+            String notes = (context != null && context.getNotes() != null) ? context.getNotes() : "Automated stock adjustment";
+
+            request.put("referenceId", refId);
+            request.put("referenceType", refType);
+            request.put("unitCost", 0.0);
+            request.put("performedBy", 1); // System
+            request.put("balanceAfter", balanceAfter);
+            request.put("notes", notes);
+
+            restTemplate.postForEntity(movementServiceUrl + "/movements", request, Void.class);
+
+            // Synchronize global inventory in Product Service (Centralized Orchestration)
+            return syncProductGlobalStock(productId, quantity);
+
+        } catch (Exception e) {
+            log.error("Failed to record movement or sync product stock: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private Map<String, Object> syncProductGlobalStock(int productId, int delta) {
+        try {
+            String url = productServiceUrl + "/products/" + productId + "/stock?quantity=" + delta;
+            
+            ResponseEntity<ApiResponse> response = 
+                restTemplate.exchange(url, HttpMethod.PUT, null, 
+                ApiResponse.class);
+            
+            if (response.getBody() != null && response.getBody().getData() instanceof Map) {
+                log.info("Synchronized global product {} stock by delta {}", productId, delta);
+                return (Map<String, Object>) response.getBody().getData();
+            }
+        } catch (Exception e) {
+            log.error("Failed to sync global stock for product {}: {}", productId, e.getMessage());
+        }
+        return null;
     }
 }

@@ -29,6 +29,9 @@ public class RestTemplateInterceptor implements ClientHttpRequestInterceptor {
     private static final String USER_ROLES_HEADER     = "X-User-Roles";
     private static final String USER_ID_HEADER        = "X-User-Id";
 
+    @org.springframework.beans.factory.annotation.Value("${stockpro.security.internal-secret}")
+    private String gatewaySecret;
+
     @Override
     public ClientHttpResponse intercept(HttpRequest outbound,
                                         byte[] body,
@@ -43,7 +46,23 @@ public class RestTemplateInterceptor implements ClientHttpRequestInterceptor {
             propagateHeader(inbound, outbound, USER_NAME_HEADER);
             propagateHeader(inbound, outbound, USER_ROLES_HEADER);
             propagateHeader(inbound, outbound, USER_ID_HEADER);
+            propagateHeader(inbound, outbound, "X-User-Department");
             propagateHeader(inbound, outbound, "Authorization");
+        }
+
+        // Ensure Gateway Secret is ALWAYS present for internal calls, even if background/async
+        if (!outbound.getHeaders().containsKey(GATEWAY_SECRET_HEADER)) {
+            outbound.getHeaders().add(GATEWAY_SECRET_HEADER, gatewaySecret);
+        }
+
+        // Background/Scheduled tasks (no attributes) need a system context to pass filters
+        if (attributes == null) {
+            if (!outbound.getHeaders().containsKey(USER_NAME_HEADER)) {
+                outbound.getHeaders().add(USER_NAME_HEADER, "system");
+            }
+            if (!outbound.getHeaders().containsKey(USER_ROLES_HEADER)) {
+                outbound.getHeaders().add(USER_ROLES_HEADER, "ADMIN");
+            }
         }
 
         return execution.execute(outbound, body);

@@ -13,9 +13,30 @@ import java.util.Optional;
 public interface StockLevelRepository extends JpaRepository<StockLevel, Integer> {
     Optional<StockLevel> findByWarehouseIdAndProductId(int warehouseId, int productId);
 
+    List<StockLevel> findByWarehouseId(int warehouseId);
+
     @Query("SELECT s FROM StockLevel s WHERE (s.quantity - s.reservedQuantity) < :threshold")
     List<StockLevel> findAllBelowAvailableThreshold(@Param("threshold") int threshold);
 
     @Query("SELECT s FROM StockLevel s WHERE (s.quantity - s.reservedQuantity) > :threshold")
     List<StockLevel> findAllAboveAvailableThreshold(@Param("threshold") int threshold);
+
+    @Query("SELECT s FROM StockLevel s WHERE s.warehouseId = :warehouseId AND (s.quantity - s.reservedQuantity) < :threshold")
+    List<StockLevel> findLowStockByWarehouse(@Param("warehouseId") int warehouseId, @Param("threshold") int threshold);
+
+    @Query("SELECT COALESCE(SUM(s.quantity), 0) FROM StockLevel s WHERE s.warehouseId = :warehouseId")
+    int sumQuantityByWarehouseId(@Param("warehouseId") int warehouseId);
+
+    @Query("SELECT COUNT(DISTINCT s.productId) FROM StockLevel s WHERE s.warehouseId = :warehouseId")
+    int countUniqueProductsByWarehouseId(@Param("warehouseId") int warehouseId);
+
+    @Query(value = "SELECT * FROM stock_levels WHERE warehouse_id = :warehouseId ORDER BY quantity DESC LIMIT :limit", nativeQuery = true)
+    List<StockLevel> findTopProductsByWarehouseId(@Param("warehouseId") int warehouseId, @Param("limit") int limit);
+
+    @Query("SELECT s.warehouseId, COALESCE(SUM(s.quantity), 0) FROM StockLevel s GROUP BY s.warehouseId")
+    List<Object[]> sumQuantitiesByWarehouse();
+
+    List<StockLevel> findByProductId(int productId);
+
+    void deleteByWarehouseId(int warehouseId);
 }

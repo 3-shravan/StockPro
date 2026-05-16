@@ -20,11 +20,15 @@ public interface AlertService {
 
   void markAllRead(int recipientId);
 
-  void acknowledge(int alertId);
+  void acknowledge(int alertId, int userId);
 
   List<AlertResponse> getByRecipient(int recipientId);
 
+  List<AlertResponse> getByContext(int userId, String role, Integer warehouseId);
+
   int getUnreadCount(int recipientId);
+
+  int getUnreadCountByContext(int userId, String role, Integer warehouseId);
 
   List<AlertResponse> getUnacknowledged();
 
@@ -35,6 +39,8 @@ public interface AlertService {
   void sendOverduePoAlert(int poId, int supplierId, String referenceNumber);
   
   void sendTestEmail();
+
+  void clearAlertsByTypeAndWarehouse(String type, int warehouseId);
 
   List<AlertResponse> getAll();
 }

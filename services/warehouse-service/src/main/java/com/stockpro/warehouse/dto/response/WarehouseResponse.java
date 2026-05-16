@@ -16,7 +16,7 @@ public class WarehouseResponse {
     private String name;
     private String location;
     private String address;
-    private int managerId;
+    private Integer managerId;
     private int capacity;
     private int usedCapacity;
     private boolean active;

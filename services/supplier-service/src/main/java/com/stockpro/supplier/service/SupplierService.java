@@ -11,14 +11,14 @@ public interface SupplierService {
 
     SupplierResponse getById(int supplierId);
 
-    List<SupplierResponse> getAllSuppliers();
+    List<SupplierResponse> getAllSuppliers(boolean includeInactive);
 
     List<SupplierResponse> searchSuppliers(String query);
 
     SupplierResponse updateSupplier(int supplierId, SupplierRequest request);
 
     void deactivateSupplier(int supplierId);
-
+    void reactivateSupplier(int supplierId);
     void deleteSupplier(int supplierId);
 
     List<SupplierResponse> getByCity(String city);

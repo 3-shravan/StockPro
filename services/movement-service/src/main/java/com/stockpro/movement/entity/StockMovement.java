@@ -63,6 +63,12 @@ public class StockMovement {
   @Column(nullable = false, updatable = false)
   private LocalDateTime movementDate;
 
+  @Column(name = "product_name")
+  private String productName;
+
+  @Column(name = "warehouse_name")
+  private String warehouseName;
+
   @NotNull(message = "balanceAfter is required")
   @Column(nullable = false)
   private Integer balanceAfter;

@@ -12,9 +12,7 @@ import java.util.List;
 @Table(name = "purchase_orders")
 @Getter
 @Setter
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class PurchaseOrder {
 
     @Id
@@ -59,7 +57,6 @@ public class PurchaseOrder {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<POLineItem> lineItems = new ArrayList<>();
 
     @PrePersist

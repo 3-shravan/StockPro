@@ -18,6 +18,8 @@ public class AlertResponse {
 
   private Integer alertId;
   private Integer recipientId;
+  private String targetRole;
+  private Integer targetWarehouseId;
   private AlertType type;
   private AlertSeverity severity;
   private String title;
@@ -27,5 +29,8 @@ public class AlertResponse {
   private AlertChannel channel;
   private boolean read;
   private boolean acknowledged;
+  private Integer acknowledgedBy;
+  private String acknowledgedByName;
+  private LocalDateTime acknowledgedAt;
   private LocalDateTime createdAt;
 }

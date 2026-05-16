@@ -13,7 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -41,7 +40,8 @@ import java.util.stream.Collectors;
 public class InternalSecurityFilter extends OncePerRequestFilter {
 
     private static final String GATEWAY_SECRET_HEADER = "X-Internal-Gateway-Secret";
-    private static final String EXPECTED_SECRET = "StockProGateway2024";
+    @org.springframework.beans.factory.annotation.Value("${stockpro.security.internal-secret}")
+    private String expectedSecret;
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -61,7 +61,7 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
 
         String gatewaySecret = request.getHeader(GATEWAY_SECRET_HEADER);
 
-        if (!EXPECTED_SECRET.equals(gatewaySecret)) {
+        if (!expectedSecret.equals(gatewaySecret)) {
             log.warn("Rejected request to {} — missing or invalid gateway secret", path);
             writeErrorResponse(response, HttpStatus.UNAUTHORIZED,
                     "Unauthorized: request must pass through the API Gateway.");
@@ -71,6 +71,7 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
         // Secret validated — reconstruct Security Context from gateway headers
         String username = request.getHeader("X-User-Name");
         String roles    = request.getHeader("X-User-Roles");
+        String userId   = request.getHeader("X-User-Id");
 
         if (username != null && roles != null && !username.isBlank() && !roles.isBlank()) {
             List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
@@ -81,9 +82,19 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(username, null, authorities);
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            
+            // Inject userId into details map
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("remoteAddress", request.getRemoteAddr());
+            if (userId != null && !userId.isBlank()) {
+                try {
+                    details.put("userId", Integer.parseInt(userId));
+                } catch (NumberFormatException ignored) {}
+            }
+            authentication.setDetails(details);
+            
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("Authenticated user={} roles={} for path={}", username, roles, path);
+            log.debug("Authenticated user={} id={} roles={} for path={}", username, userId, roles, path);
         } else {
             log.warn("Gateway secret present but user headers missing for path={}", path);
             writeErrorResponse(response, HttpStatus.UNAUTHORIZED,

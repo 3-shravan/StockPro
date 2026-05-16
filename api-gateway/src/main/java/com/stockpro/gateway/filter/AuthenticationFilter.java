@@ -48,7 +48,9 @@ import java.util.Map;
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
-    private static final String GATEWAY_SECRET = "StockProGateway2024";
+    @org.springframework.beans.factory.annotation.Value("${stockpro.security.internal-secret}")
+    private String gatewaySecret;
+
     private static final String GATEWAY_SECRET_HEADER = "X-Internal-Gateway-Secret";
     private static final String USER_NAME_HEADER = "X-User-Name";
     private static final String USER_ROLES_HEADER = "X-User-Roles";
@@ -105,17 +107,19 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             Claims claims = jwtUtil.extractAllClaims(token);
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
+            String department = claims.get("department", String.class);
             Object userIdObj = claims.get("userId");
             String userId = userIdObj != null ? userIdObj.toString() : "";
 
-            log.debug("Authenticated user={} role={} for path={}", username, role,
-                    sanitizedRequest.getPath());
+            log.debug("Authenticated user={} role={} department={} for path={}", 
+                    username, role, department, sanitizedRequest.getPath());
 
             ServerHttpRequest enrichedRequest = sanitizedRequest.mutate()
                     .header(USER_NAME_HEADER, username)
                     .header(USER_ROLES_HEADER, role != null ? role : "")
                     .header(USER_ID_HEADER, userId)
-                    .header(GATEWAY_SECRET_HEADER, GATEWAY_SECRET)
+                    .header("X-User-Department", department != null ? department : "")
+                    .header(GATEWAY_SECRET_HEADER, gatewaySecret)
                     .build();
 
             return chain.filter(exchange.mutate().request(enrichedRequest).build());

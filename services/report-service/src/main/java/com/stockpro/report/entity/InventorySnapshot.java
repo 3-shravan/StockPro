@@ -35,6 +35,9 @@ public class InventorySnapshot {
     @Column(nullable = false)
     private LocalDate snapshotDate;
 
+    @Transient
+    private String productName;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

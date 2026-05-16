@@ -39,6 +39,12 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.CONFLICT, "Data conflict occurred.");
   }
 
+  @ExceptionHandler(org.springframework.dao.InvalidDataAccessResourceUsageException.class)
+  public ResponseEntity<ApiResponse<Void>> handleDatabaseSchemaError(org.springframework.dao.InvalidDataAccessResourceUsageException ex) {
+    log.error("CRITICAL: Database schema mismatch detected (likely missing column): ", ex);
+    return build(HttpStatus.INTERNAL_SERVER_ERROR, "Database schema mismatch. Please check migrations.");
+  }
+
   @ExceptionHandler(NoHandlerFoundException.class)
   public ResponseEntity<ApiResponse<Void>> handleNoHandlerFound(NoHandlerFoundException ex) {
     log.warn("No mapping for {} {}", ex.getHttpMethod(), ex.getRequestURL());

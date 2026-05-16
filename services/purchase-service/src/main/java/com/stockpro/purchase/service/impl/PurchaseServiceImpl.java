@@ -1,5 +1,19 @@
 package com.stockpro.purchase.service.impl;
 
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
 import com.stockpro.purchase.entity.POLineItem;
 import com.stockpro.purchase.entity.PurchaseOrder;
 import com.stockpro.purchase.entity.PurchaseOrderStatus;
@@ -7,23 +21,9 @@ import com.stockpro.purchase.exception.CustomException;
 import com.stockpro.purchase.exception.ResourceNotFoundException;
 import com.stockpro.purchase.repository.PurchaseRepository;
 import com.stockpro.purchase.service.PurchaseService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import com.stockpro.purchase.common.response.ApiResponse;
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * PurchaseServiceImpl implements the business logic for the procurement
@@ -52,6 +52,11 @@ public class PurchaseServiceImpl implements PurchaseService {
     @Value("${services.movement.url}")
     private String movementServiceUrl;
 
+    @Value("${services.product.url}")
+    private String productServiceUrl;
+
+
+
     /**
      * Initializes a new Purchase Order in the database.
      * What: Sets baseline status and calculates monetary totals for the entire
@@ -63,8 +68,8 @@ public class PurchaseServiceImpl implements PurchaseService {
         log.info("Creating new Purchase Order for supplier {} and warehouse {}", order.getSupplierId(),
                 order.getWarehouseId());
 
-        // Why: Every new order must be a Draft until reviewed by a manager.
-        order.setStatus(PurchaseOrderStatus.DRAFT);
+        // Why: Every new order is automatically submitted for approval upon creation.
+        order.setStatus(PurchaseOrderStatus.PENDING_APPROVAL);
 
         // What: Iterates through line items to set relationships and calculate
         // individual costs.
@@ -108,6 +113,20 @@ public class PurchaseServiceImpl implements PurchaseService {
     public List<PurchaseOrder> getPOsByStatus(PurchaseOrderStatus status) {
         return purchaseRepository.findByStatus(status);
     }
+    @Override
+    @Transactional
+    public void submitForApproval(int poId) {
+        log.info("Submitting PO ID: {} for approval", poId);
+        PurchaseOrder order = purchaseRepository.findById(poId)
+                .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Purchase Order not found with ID: " + poId));
+
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT) {
+            throw new CustomException(HttpStatus.BAD_REQUEST, "Only DRAFT orders can be submitted for approval");
+        }
+
+        order.setStatus(PurchaseOrderStatus.PENDING_APPROVAL);
+        purchaseRepository.save(order);
+    }
 
     /**
      * Transitions a PO to APPROVED status.
@@ -135,7 +154,35 @@ public class PurchaseServiceImpl implements PurchaseService {
         order.setStatus(PurchaseOrderStatus.APPROVED);
         purchaseRepository.save(order);
 
-        sendPoPendingAlert(order);
+        clearPoAlerts(order.getWarehouseId(), "PO_PENDING");
+        sendPoStatusAlert(order, "APPROVED", "PO Approved");
+    }
+
+    private void sendPoStatusAlert(PurchaseOrder order, String status, String title) {
+        try {
+            String url = alertServiceUrl + "/alerts";
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("recipientId", 1);
+            payload.put("type", "PO_PENDING");
+            payload.put("severity", "INFO");
+            payload.put("title", title);
+            payload.put("message", "PO " + order.getPoId() + " has been " + status.toLowerCase() + ".");
+            payload.put("relatedWarehouseId", order.getWarehouseId());
+            payload.put("channel", "IN_APP");
+            
+            restTemplate.postForEntity(url, payload, Object.class);
+        } catch (Exception ex) {
+            log.warn("PO status alert dispatch failed for PO {}: {}", order.getPoId(), ex.getMessage());
+        }
+    }
+
+    private void clearPoAlerts(int warehouseId, String type) {
+        try {
+            String url = alertServiceUrl + "/alerts/clear-type?type=" + type + "&warehouseId=" + warehouseId;
+            restTemplate.exchange(url, HttpMethod.DELETE, org.springframework.http.HttpEntity.EMPTY, Void.class);
+        } catch (Exception ex) {
+            log.warn("Failed to clear alerts of type {} for warehouse {}: {}", type, warehouseId, ex.getMessage());
+        }
     }
 
     /**
@@ -184,10 +231,10 @@ public class PurchaseServiceImpl implements PurchaseService {
             // Integration: Call the Warehouse Service to increment the actual stock level.
             // Why: Inventory balance is owned by the warehouse-service, not the
             // purchase-service.
-            int finalQty = adjustWarehouseStock(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity());
+            adjustWarehouseStock(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity(), order.getPoId());
 
-            // Integration: Record the movement in the Movement Service.
-            recordStockMovement(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity(), order.getPoId(), finalQty, existingItem.getUnitCost());
+            // Movement and Global stock are now automatically recorded by warehouse-service 
+            // using the PO context provided in adjustWarehouseStock.
         }
 
         // Status Logic: Check if the entire order is now complete.
@@ -198,6 +245,8 @@ public class PurchaseServiceImpl implements PurchaseService {
             // Why: Order is closed and ready for financial processing.
             order.setStatus(PurchaseOrderStatus.FULLY_RECEIVED);
             order.setReceivedDate(LocalDate.now());
+            clearPoAlerts(order.getWarehouseId(), "OVERDUE_RECEIPT");
+            clearPoAlerts(order.getWarehouseId(), "PO_PENDING");
         } else {
             // Why: Tells the system that more shipments are expected.
             order.setStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED);
@@ -212,65 +261,45 @@ public class PurchaseServiceImpl implements PurchaseService {
      * Why: This ensures that our procurement data and the warehouse's inventory
      * data stay in sync.
      */
-    private int adjustWarehouseStock(int warehouseId, int productId, int quantity) {
+    private void adjustWarehouseStock(int warehouseId, int productId, int quantity, int poId) {
         log.info("Adjusting stock in warehouse {} for product {}: +{}", warehouseId, productId, quantity);
         String url = warehouseServiceUrl + "/warehouses/stock/adjust";
-        String getUrl = warehouseServiceUrl + "/warehouses/" + warehouseId + "/stock/" + productId;
-
         // Build the payload for the external API.
         Map<String, Object> request = new HashMap<>();
         request.put("warehouseId", warehouseId);
         request.put("productId", productId);
         request.put("quantity", quantity);
-
-        try {
-            // Logic: Perform the update.
-            restTemplate.put(url, request);
-
-            // Fetch final quantity for movement record
-            ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
-                getUrl,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
-            );
-            
-            if (response.getBody() != null && response.getBody().getData() != null) {
-                return (Integer) response.getBody().getData().get("quantity");
-            }
-            return 0;
-        } catch (Exception e) {
-            log.error("Failed to adjust stock in warehouse-service: {}", e.getMessage());
-            // Why: We throw a CustomException here so the @Transactional receiver
-            // (receiveGoods)
-            // can catch it and trigger a database rollback.
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Failed to update stock level in warehouse-service");
-        }
-    }
-
-    private void recordStockMovement(int warehouseId, int productId, int quantity, int poId, int balanceAfter, double unitCost) {
-        log.info("Recording stock movement for PO {}: product {}, qty {}", poId, productId, quantity);
-        String url = movementServiceUrl + "/movements";
-
-        Map<String, Object> request = new HashMap<>();
-        request.put("productId", productId);
-        request.put("warehouseId", warehouseId);
-        request.put("quantity", quantity);
-        request.put("movementType", "STOCK_IN");
         request.put("referenceId", poId);
         request.put("referenceType", "PURCHASE_ORDER");
-        request.put("unitCost", unitCost);
-        request.put("performedBy", 1); // System/Default user
-        request.put("balanceAfter", balanceAfter);
         request.put("notes", "Received from PO #" + poId);
 
         try {
-            restTemplate.postForEntity(url, request, Object.class);
+            restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(request), Void.class);
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("Downstream error from warehouse-service: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            // Propagate the specific status and message from the warehouse-service
+            throw new CustomException((HttpStatus) e.getStatusCode(), "Warehouse Service Error: " + e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.warn("Failed to record stock movement: {}", e.getMessage());
-            // We don't fail the whole transaction for a movement log failure, 
-            // but in a production system we might want to ensure consistency.
+            log.error("Failed to adjust stock in warehouse-service: {}", e.getMessage());
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to update stock level in warehouse-service: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Internal helper to synchronize global stock levels with the Product Service.
+     */
+    private void adjustProductGlobalStock(int productId, int quantity) {
+        log.info("Adjusting global stock for product {}: +{}", productId, quantity);
+        String url = productServiceUrl + "/products/" + productId + "/stock?quantity=" + quantity;
+
+        try {
+            restTemplate.exchange(url, HttpMethod.PUT, org.springframework.http.HttpEntity.EMPTY, Void.class);
+        } catch (Exception e) {
+            log.error("Failed to update global product stock: {}", e.getMessage());
+            // We don't necessarily want to fail the whole receipt if just the catalogue cache update fails,
+            // but in this system we treat it as required for UI consistency.
+            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "External Product Service Error: " + e.getMessage());
         }
     }
 
@@ -400,6 +429,7 @@ public class PurchaseServiceImpl implements PurchaseService {
                     "PO " + order.getPoId() + " is overdue. Expected date was " + order.getExpectedDate() + ".");
             payload.put("relatedWarehouseId", order.getWarehouseId());
             payload.put("channel", "BOTH");
+            
             restTemplate.postForEntity(url, payload, Object.class);
         } catch (Exception ex) {
             log.warn("Overdue receipt alert dispatch failed for PO {}: {}", order.getPoId(), ex.getMessage());

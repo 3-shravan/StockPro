@@ -198,6 +198,13 @@ cmd_status() {
 
 # --- 6. Database Management -----------------------------------
 
+cmd_db_list_all() {
+    get_db_creds
+    log_header
+    log_step "Database: All StockPro Databases"
+    mysql -u"$DB_USER" -p"$DB_PASS" -t -e "SHOW DATABASES LIKE 'stockpro_%';"
+}
+
 cmd_db_users() {
     get_db_creds
     log_header
@@ -245,23 +252,96 @@ cmd_db_clear_users() {
     fi
 }
 
+cmd_db_tables() {
+    get_db_creds
+    local svc=$1
+    if [ -z "$svc" ]; then log_error "Usage: ./stockpro.sh db tables <service>"; return; fi
+    log_header
+    log_step "Database: Tables in stockpro_$svc"
+    mysql -u"$DB_USER" -p"$DB_PASS" -t -e "SHOW TABLES FROM stockpro_$svc;"
+}
+
+cmd_db_view() {
+    get_db_creds
+    local svc=$1
+    local table=$2
+    if [ -z "$svc" ]; then log_error "Usage: ./stockpro.sh db view <service> [table]"; return; fi
+    
+    # Auto-detect main table if not specified
+    if [ -z "$table" ]; then
+        case "$svc" in
+            auth) table="users" ;;
+            product) table="products" ;;
+            warehouse) table="warehouses" ;;
+            purchase) table="purchase_orders" ;;
+            supplier) table="suppliers" ;;
+            movement) table="stock_movements" ;;
+            alert) table="alerts" ;;
+            report) table="reports" ;;
+            *) log_error "Unknown service. Please specify table: ./stockpro.sh db view $svc <table_name>"; return ;;
+        esac
+    fi
+
+    log_header
+    log_step "Database: Viewing $table in stockpro_$svc (Top 15)"
+    mysql -u"$DB_USER" -p"$DB_PASS" -t -e "SELECT * FROM stockpro_$svc.$table LIMIT 15;"
+}
+
+cmd_db_truncate() {
+    get_db_creds
+    local svc=$1
+    local table=$2
+    if [ -z "$svc" ] || [ -z "$table" ]; then log_error "Usage: ./stockpro.sh db truncate <service> <table_name>"; return; fi
+    
+    log_header
+    log_step "Database: TRUNCATE $table"
+    log_warn "This will delete ALL data from $svc.$table."
+    read -p "  Confirm? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        mysql -u"$DB_USER" -p"$DB_PASS" -e "SET FOREIGN_KEY_CHECKS=0; TRUNCATE TABLE stockpro_$svc.$table; SET FOREIGN_KEY_CHECKS=1;"
+        log_success "Table $table truncated."
+    fi
+}
+
 cmd_db_wipe() {
     get_db_creds
+    local target_service=$1
     log_header
-    log_step "Database: WIPE ALL DATA"
-    log_warn "‼️  CRITICAL: This will drop and recreate ALL StockPro databases."
-    echo -e "  Affected: ${GRAY}auth, product, warehouse, purchase, supplier, movement, alert, report${RESET}"
-    read -p "  Type 'RESET' to confirm: " confirm
-    if [ "$confirm" == "RESET" ]; then
-        local dbs=("stockpro_auth" "stockpro_product" "stockpro_warehouse" "stockpro_purchase" "stockpro_supplier" "stockpro_movement" "stockpro_alert" "stockpro_report")
-        for db in "${dbs[@]}"; do
+    
+    if [ ! -z "$target_service" ]; then
+        log_step "Database: WIPE SERVICE [$target_service]"
+        log_warn "This will drop and recreate the database for: $target_service"
+        read -p "  Confirm? (y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            local db="stockpro_$target_service"
             echo -ne "  ${ICON_DB}  Wiping ${BOLD}$db${RESET}... \r"
-            mysql -u"$DB_USER" -p"$DB_PASS" -e "DROP DATABASE IF EXISTS $db; CREATE DATABASE $db;"
-            echo -e "  ${ICON_DB}  Wiping ${BOLD}$db${RESET}... ${GREEN}DONE${RESET}"
-        done
-        log_success "All databases wiped and recreated."
+            mysql -u"$DB_USER" -p"$DB_PASS" -e "DROP DATABASE IF EXISTS $db; CREATE DATABASE $db;" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo -e "  ${ICON_DB}  Wiping ${BOLD}$db${RESET}... ${GREEN}DONE${RESET}"
+                log_success "$target_service database wiped."
+            else
+                echo -e "  ${ICON_DB}  Wiping ${BOLD}$db${RESET}... ${RED}FAILED${RESET}"
+                log_error "Could not wipe $db. Ensure MySQL is running."
+            fi
+        fi
     else
-        log_info "Operation cancelled."
+        log_step "Database: WIPE ALL DATA"
+        log_warn "‼️  CRITICAL: This will drop and recreate ALL StockPro databases."
+        echo -e "  Affected: ${GRAY}auth, product, warehouse, purchase, supplier, movement, alert, report${RESET}"
+        read -p "  Type 'RESET' to confirm: " confirm
+        if [ "$confirm" == "RESET" ]; then
+            local dbs=("stockpro_auth" "stockpro_product" "stockpro_warehouse" "stockpro_purchase" "stockpro_supplier" "stockpro_movement" "stockpro_alert" "stockpro_report")
+            for db in "${dbs[@]}"; do
+                echo -ne "  ${ICON_DB}  Wiping ${BOLD}$db${RESET}... \r"
+                mysql -u"$DB_USER" -p"$DB_PASS" -e "DROP DATABASE IF EXISTS $db; CREATE DATABASE $db;" 2>/dev/null
+                echo -e "  ${ICON_DB}  Wiping ${BOLD}$db${RESET}... ${GREEN}DONE${RESET}"
+            done
+            log_success "All databases wiped and recreated."
+        else
+            log_info "Operation cancelled."
+        fi
     fi
 }
 
@@ -275,11 +355,15 @@ case "$1" in
     status) cmd_status ;;
     db)
         case "$2" in
+            list-dbs|dbs)           cmd_db_list_all ;;
             users|list)             cmd_db_users ;;
             counts|stats)           cmd_db_counts ;;
             clear-users|rm-users)   cmd_db_clear_users ;;
-            wipe|reset)             cmd_db_wipe ;;
-            *)                      echo "Usage: ./stockpro.sh db [users|counts|rm-users|wipe]" ;;
+            tables)                 cmd_db_tables "$3" ;;
+            view)                   cmd_db_view "$3" "$4" ;;
+            truncate)               cmd_db_truncate "$3" "$4" ;;
+            wipe|reset)             cmd_db_wipe "$3" ;;
+            *)                      echo "Usage: ./stockpro.sh db [list-dbs|tables <svc>|view <svc> [tbl]|truncate <svc> <tbl>|wipe [svc]]" ;;
         esac
         ;;
     *)
@@ -294,10 +378,13 @@ case "$1" in
         echo -e "  ${CYAN}status${RESET}     View service status dashboard"
         echo
         echo -e "${BOLD}Database Commands:${RESET}"
-        echo -e "  ${CYAN}db users${RESET}   List all registered users"
-        echo -e "  ${CYAN}db counts${RESET}  Show record counts for all tables"
-        echo -e "  ${CYAN}db rm-users${RESET} Clear all user accounts"
-        echo -e "  ${CYAN}db wipe${RESET}    Wipe and recreate all databases"
+        echo -e "  ${CYAN}db list-dbs${RESET}     List all StockPro databases"
+        echo -e "  ${CYAN}db tables [svc]${RESET} List all tables in a service database"
+        echo -e "  ${CYAN}db view [svc] [tbl]${RESET} View top records from a table"
+        echo -e "  ${CYAN}db truncate [svc] [tbl]${RESET} Delete all data from a specific table"
+        echo -e "  ${CYAN}db wipe [svc]${RESET}   Wipe and recreate databases (all or specific service)"
+        echo -e "  ${CYAN}db users${RESET}        List all registered users (Auth Service)"
+        echo -e "  ${CYAN}db counts${RESET}       Show record counts for all major tables"
         echo
         exit 1
         ;;

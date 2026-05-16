@@ -22,9 +22,14 @@ public class Alert {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer alertId;
 
-  @NotNull(message = "recipientId is required")
-  @Column(nullable = false)
+  @Column
   private Integer recipientId;
+
+  @Column(length = 20)
+  private String targetRole;
+
+  @Column
+  private Integer targetWarehouseId;
 
   @NotNull(message = "type is required")
   @Enumerated(EnumType.STRING)
@@ -60,6 +65,10 @@ public class Alert {
   @Builder.Default
   @Column(name = "is_acknowledged", nullable = false)
   private boolean acknowledged = false;
+
+  private Integer acknowledgedBy;
+
+  private LocalDateTime acknowledgedAt;
 
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;

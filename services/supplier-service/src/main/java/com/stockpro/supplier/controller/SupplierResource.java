@@ -23,7 +23,7 @@ public class SupplierResource {
     private final SupplierService supplierService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<SupplierResponse>> createSupplier(@Valid @RequestBody SupplierRequest request) {
         log.info("API: Creating supplier name={}, taxId={}", request.getName(), request.getTaxId());
         SupplierResponse response = supplierService.createSupplier(request);
@@ -38,10 +38,10 @@ public class SupplierResource {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<SupplierResponse>>> getAllSuppliers() {
-        log.info("API: Getting all active suppliers");
+    public ResponseEntity<ApiResponse<List<SupplierResponse>>> getAllSuppliers(@RequestParam(required = false, defaultValue = "false") boolean includeInactive) {
+        log.info("API: Getting suppliers (includeInactive={})", includeInactive);
         return ResponseEntity
-                .ok(ApiResponse.success("Suppliers retrieved successfully", supplierService.getAllSuppliers()));
+                .ok(ApiResponse.success("Suppliers retrieved successfully", supplierService.getAllSuppliers(includeInactive)));
     }
 
     @GetMapping("/search")
@@ -65,7 +65,7 @@ public class SupplierResource {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<SupplierResponse>> updateSupplier(@PathVariable int id,
             @Valid @RequestBody SupplierRequest request) {
         log.info("API: Updating supplier ID={}, taxId={}", id, request.getTaxId());
@@ -74,15 +74,23 @@ public class SupplierResource {
     }
 
     @PutMapping("/{id}/deactivate")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deactivateSupplier(@PathVariable int id) {
         log.info("API: Deactivating supplier ID={}", id);
         supplierService.deactivateSupplier(id);
         return ResponseEntity.ok(ApiResponse.success("Supplier deactivated successfully", null));
     }
 
+    @PutMapping("/{id}/reactivate")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> reactivateSupplier(@PathVariable int id) {
+        log.info("API: Reactivating supplier ID={}", id);
+        supplierService.reactivateSupplier(id);
+        return ResponseEntity.ok(ApiResponse.success("Supplier reactivated successfully", null));
+    }
+
     @PutMapping("/{id}/rating")
-    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('OFFICER', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> updateRating(@PathVariable int id, @RequestParam double rating) {
         log.info("API: Updating supplier rating ID={}, rating={}", id, rating);
         supplierService.updateRating(id, rating);

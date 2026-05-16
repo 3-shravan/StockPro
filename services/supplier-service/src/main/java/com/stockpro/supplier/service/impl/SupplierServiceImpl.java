@@ -2,7 +2,7 @@ package com.stockpro.supplier.service.impl;
 
 import com.stockpro.supplier.dto.request.SupplierRequest;
 import com.stockpro.supplier.dto.response.SupplierResponse;
-import com.stockpro.supplier.entity.Supplier;
+import com.stockpro.supplier.entity.SupplierEntity;
 import com.stockpro.supplier.exception.CustomException;
 import com.stockpro.supplier.mapper.SupplierMapper;
 import com.stockpro.supplier.repository.SupplierRepository;
@@ -30,8 +30,8 @@ public class SupplierServiceImpl implements SupplierService {
     public SupplierResponse createSupplier(SupplierRequest request) {
         log.info("Creating new supplier: {}", request.getName());
         validateUniqueTaxId(request.getTaxId(), null);
-        Supplier supplier = supplierMapper.toEntity(request);
-        Supplier savedSupplier = supplierRepository.save(supplier);
+        SupplierEntity supplier = supplierMapper.toEntity(request);
+        SupplierEntity savedSupplier = supplierRepository.save(supplier);
         return supplierMapper.toResponse(savedSupplier);
     }
 
@@ -44,9 +44,10 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     @Override
-    public List<SupplierResponse> getAllSuppliers() {
-        log.info("Fetching all active suppliers");
-        return supplierRepository.findByActive(true).stream()
+    public List<SupplierResponse> getAllSuppliers(boolean includeInactive) {
+        log.info("Fetching suppliers (includeInactive={})", includeInactive);
+        List<SupplierEntity> suppliers = includeInactive ? supplierRepository.findAll() : supplierRepository.findByActive(true);
+        return suppliers.stream()
                 .map(supplierMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -63,12 +64,12 @@ public class SupplierServiceImpl implements SupplierService {
     @Transactional
     public SupplierResponse updateSupplier(int supplierId, SupplierRequest request) {
         log.info("Updating supplier with ID: {}", supplierId);
-        Supplier supplier = supplierRepository.findBySupplierId(supplierId)
+        SupplierEntity supplier = supplierRepository.findBySupplierId(supplierId)
             .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Supplier not found with ID: " + supplierId));
 
         validateUniqueTaxId(request.getTaxId(), supplierId);
         supplierMapper.updateEntityFromRequest(request, supplier);
-        Supplier updatedSupplier = supplierRepository.save(supplier);
+        SupplierEntity updatedSupplier = supplierRepository.save(supplier);
         return supplierMapper.toResponse(updatedSupplier);
     }
 
@@ -76,10 +77,21 @@ public class SupplierServiceImpl implements SupplierService {
     @Transactional
     public void deactivateSupplier(int supplierId) {
         log.info("Deactivating supplier with ID: {}", supplierId);
-        Supplier supplier = supplierRepository.findBySupplierId(supplierId)
+        SupplierEntity supplier = supplierRepository.findBySupplierId(supplierId)
             .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Supplier not found with ID: " + supplierId));
 
         supplier.setActive(false);
+        supplierRepository.save(supplier);
+    }
+
+    @Override
+    @Transactional
+    public void reactivateSupplier(int supplierId) {
+        log.info("Reactivating supplier with ID: {}", supplierId);
+        SupplierEntity supplier = supplierRepository.findBySupplierId(supplierId)
+            .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Supplier not found with ID: " + supplierId));
+
+        supplier.setActive(true);
         supplierRepository.save(supplier);
     }
 
@@ -113,7 +125,7 @@ public class SupplierServiceImpl implements SupplierService {
     @Transactional
     public void updateRating(int supplierId, double newRating) {
         log.info("Updating rating for supplier ID: {} to {}", supplierId, newRating);
-        Supplier supplier = supplierRepository.findBySupplierId(supplierId)
+        SupplierEntity supplier = supplierRepository.findBySupplierId(supplierId)
             .orElseThrow(() -> new CustomException(HttpStatus.NOT_FOUND, "Supplier not found with ID: " + supplierId));
 
         // Rating logic: recalculate rolling average (simplified here as overwrite or

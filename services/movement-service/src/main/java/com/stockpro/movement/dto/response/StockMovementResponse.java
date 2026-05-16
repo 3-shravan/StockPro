@@ -16,7 +16,9 @@ public class StockMovementResponse {
 
   private Integer movementId;
   private Integer productId;
+  private String productName;
   private Integer warehouseId;
+  private String warehouseName;
   private MovementType movementType;
   private Integer quantity;
   private Integer referenceId;

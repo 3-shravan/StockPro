@@ -30,14 +30,14 @@ public class ReportScheduler {
         log.info("Starting scheduled daily inventory snapshots...");
         try {
             // Get all active warehouses
-            String warehousesUrl = warehouseServiceUrl + "/api/v1/warehouses";
+            String warehousesUrl = warehouseServiceUrl + "/warehouses";
             Map<String, Object> warehousesResponse = restTemplate.getForObject(warehousesUrl, Map.class);
             
             if (warehousesResponse != null && warehousesResponse.get("data") != null) {
                 List<Map<String, Object>> warehouses = (List<Map<String, Object>>) warehousesResponse.get("data");
                 
                 // Get all active products
-                String productsUrl = productServiceUrl + "/api/v1/products";
+                String productsUrl = productServiceUrl + "/products";
                 Map<String, Object> productsResponse = restTemplate.getForObject(productsUrl, Map.class);
                 
                 if (productsResponse != null && productsResponse.get("data") != null) {

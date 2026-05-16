@@ -22,6 +22,9 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
+    @Autowired
+    private InternalSecurityFilter internalSecurityFilter;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -35,6 +38,7 @@ public class SecurityConfig {
                     .requestMatchers("/auth/register").hasRole("ADMIN")
                     .anyRequest().authenticated()
             )
+            .addFilterBefore(internalSecurityFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

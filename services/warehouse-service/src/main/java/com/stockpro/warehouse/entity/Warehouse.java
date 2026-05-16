@@ -31,7 +31,7 @@ public class Warehouse {
     private String address;
 
     @Column(name = "manager_id")
-    private int managerId;
+    private Integer managerId;
 
     @Column(nullable = false)
     private int capacity;

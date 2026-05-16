@@ -124,10 +124,16 @@ public class AuthController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
         log.info("GET /auth/users");
         return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", authService.getAllUsers()));
+    }
+
+    @GetMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<User>> getUserById(@PathVariable int id) {
+        log.info("GET /auth/users/{}", id);
+        return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", authService.getUserById(id)));
     }
 
     @PutMapping("/users/{id}")

@@ -1,5 +1,7 @@
 package com.stockpro.alert.service.impl;
 
+import java.time.LocalDateTime;
+
 import com.stockpro.alert.dto.request.AlertRequest;
 import com.stockpro.alert.dto.request.BulkAlertRequest;
 import com.stockpro.alert.dto.response.AlertResponse;
@@ -79,30 +81,51 @@ public class AlertServiceImpl implements AlertService {
     AlertSeverity severity = currentQty <= 5 ? AlertSeverity.CRITICAL : AlertSeverity.WARNING;
     AlertChannel channel = severity == AlertSeverity.CRITICAL ? AlertChannel.BOTH : AlertChannel.IN_APP;
 
-    List<Integer> recipients = getAdminAndManagerIds();
-    if (recipients.isEmpty()) {
-      recipients = List.of(1); // Fallback to system admin
+    // Use Broadcasting instead of individual alerts
+    Alert alert = Alert.builder()
+        .targetRole("MANAGER")
+        .targetWarehouseId(warehouseId)
+        .type(AlertType.LOW_STOCK)
+        .severity(severity)
+        .title("Low Stock: " + productName)
+        .message(String.format("Product '%s' in warehouse '%s' has low stock. Current quantity: %d",
+            productName, warehouseName, currentQty))
+        .relatedProductId(productId)
+        .relatedWarehouseId(warehouseId)
+        .channel(channel)
+        .build();
+
+    try {
+      alertRepository.save(alert);
+    } catch (Exception e) {
+      log.error("Failed to save MANAGER low-stock alert: {}", e.getMessage());
+      throw e;
     }
 
-    for (Integer recipientId : recipients) {
-      Alert alert = Alert.builder()
-          .recipientId(recipientId)
-          .type(AlertType.LOW_STOCK)
-          .severity(severity)
-          .title("Low Stock: " + productName)
-          .message(String.format("Product '%s' in warehouse '%s' has low stock. Current quantity: %d",
-              productName, warehouseName, currentQty))
-          .relatedProductId(productId)
-          .relatedWarehouseId(warehouseId)
-          .channel(channel)
-          .build();
-
-      alertRepository.save(alert);
+    // Also notify Admin globally
+    Alert adminAlert = Alert.builder()
+        .targetRole("ADMIN")
+        .type(AlertType.LOW_STOCK)
+        .severity(severity)
+        .title("Network Low Stock: " + productName)
+        .message(String.format("Low stock event at %s for %s. Density: %d", warehouseName, productName, currentQty))
+        .relatedProductId(productId)
+        .relatedWarehouseId(warehouseId)
+        .channel(channel)
+        .build();
+    
+    try {
+      alertRepository.save(adminAlert);
+    } catch (Exception e) {
+      log.error("Failed to save ADMIN low-stock alert: {}", e.getMessage());
+      throw e;
     }
 
     if (severity == AlertSeverity.CRITICAL) {
-      sendEmail(defaultEmailTo, "CRITICAL LOW STOCK: " + productName,
+      sendEmailToRole("MANAGER", warehouseId, "CRITICAL LOW STOCK: " + productName,
           String.format("Low stock warning for %s in %s. Only %d units left.", productName, warehouseName, currentQty));
+      sendEmailToRole("ADMIN", null, "CRITICAL LOW STOCK: " + productName,
+          String.format("Network-wide low stock event: %s in %s. Only %d units left.", productName, warehouseName, currentQty));
     }
   }
 
@@ -112,25 +135,44 @@ public class AlertServiceImpl implements AlertService {
     String productName = getProductName(productId);
     String warehouseName = getWarehouseName(warehouseId);
 
-    List<Integer> recipients = getAdminAndManagerIds();
-    if (recipients.isEmpty()) {
-      recipients = List.of(1);
+    Alert alert = Alert.builder()
+        .targetRole("MANAGER")
+        .targetWarehouseId(warehouseId)
+        .type(AlertType.OVERSTOCK)
+        .severity(AlertSeverity.WARNING)
+        .title("Overstock: " + productName)
+        .message(String.format("Product '%s' in warehouse '%s' is overstocked. Current quantity: %d",
+            productName, warehouseName, currentQty))
+        .relatedProductId(productId)
+        .relatedWarehouseId(warehouseId)
+        .channel(AlertChannel.IN_APP)
+        .build();
+
+    try {
+      alertRepository.save(alert);
+    } catch (Exception e) {
+      log.error("Failed to save MANAGER overstock alert: {}", e.getMessage());
+      throw e;
     }
 
-    for (Integer recipientId : recipients) {
-      Alert alert = Alert.builder()
-          .recipientId(recipientId)
-          .type(AlertType.OVERSTOCK)
-          .severity(AlertSeverity.WARNING)
-          .title("Overstock: " + productName)
-          .message(String.format("Product '%s' in warehouse '%s' is overstocked. Current quantity: %d",
-              productName, warehouseName, currentQty))
-          .relatedProductId(productId)
-          .relatedWarehouseId(warehouseId)
-          .channel(AlertChannel.IN_APP)
-          .build();
-
-      alertRepository.save(alert);
+    // Also notify Admin globally
+    Alert adminAlert = Alert.builder()
+        .targetRole("ADMIN")
+        .type(AlertType.OVERSTOCK)
+        .severity(AlertSeverity.WARNING)
+        .title("Network Overstock: " + productName)
+        .message(String.format("Overstock event at %s for %s. Density: %d", warehouseName, productName, currentQty))
+        .relatedProductId(productId)
+        .relatedWarehouseId(warehouseId)
+        .channel(AlertChannel.IN_APP)
+        .build();
+    
+    try {
+      alertRepository.save(adminAlert);
+      log.info("Overstock alerts broadcasted to MANAGER and ADMIN for product {}", productId);
+    } catch (Exception e) {
+      log.error("Failed to save ADMIN overstock alert: {}", e.getMessage());
+      throw e;
     }
   }
 
@@ -139,26 +181,59 @@ public class AlertServiceImpl implements AlertService {
   public void sendOverduePoAlert(int poId, int supplierId, String referenceNumber) {
     String supplierName = getSupplierName(supplierId);
 
-    List<Integer> recipients = getAdminAndManagerIds();
-    if (recipients.isEmpty()) {
-      recipients = List.of(1);
-    }
+    // Broadcast to Admins and Managers
+    Alert managerAlert = Alert.builder()
+        .targetRole("MANAGER")
+        .type(AlertType.OVERDUE_RECEIPT)
+        .severity(AlertSeverity.CRITICAL)
+        .title("Overdue PO: " + referenceNumber)
+        .message(String.format("Purchase Order %s from supplier '%s' is overdue.", referenceNumber, supplierName))
+        .channel(AlertChannel.BOTH)
+        .build();
+    alertRepository.save(managerAlert);
 
-    for (Integer recipientId : recipients) {
-      Alert alert = Alert.builder()
-          .recipientId(recipientId)
-          .type(AlertType.OVERDUE_RECEIPT)
-          .severity(AlertSeverity.CRITICAL)
-          .title("Overdue PO: " + referenceNumber)
-          .message(String.format("Purchase Order %s from supplier '%s' is overdue.", referenceNumber, supplierName))
-          .channel(AlertChannel.BOTH)
-          .build();
+    Alert adminAlert = Alert.builder()
+        .targetRole("ADMIN")
+        .type(AlertType.OVERDUE_RECEIPT)
+        .severity(AlertSeverity.CRITICAL)
+        .title("Network Alert: Overdue PO " + referenceNumber)
+        .message(String.format("PO %s from %s is past its expected delivery date.", referenceNumber, supplierName))
+        .channel(AlertChannel.BOTH)
+        .build();
+    alertRepository.save(adminAlert);
 
-      alertRepository.save(alert);
-    }
-
-    sendEmail(defaultEmailTo, "CRITICAL OVERDUE PO: " + referenceNumber,
+    sendEmailToRole("MANAGER", null, "CRITICAL OVERDUE PO: " + referenceNumber,
         String.format("PO %s from %s is past its expected delivery date.", referenceNumber, supplierName));
+    sendEmailToRole("ADMIN", null, "CRITICAL OVERDUE PO: " + referenceNumber,
+        String.format("Network-wide PO delay: %s from %s.", referenceNumber, supplierName));
+  }
+
+  private void sendEmailToRole(String role, Integer warehouseId, String subject, String body) {
+    try {
+      String url = authServiceUrl + "/auth/users";
+      
+      // Add internal security headers
+      org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+      headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+      headers.set("X-User-Roles", "ADMIN"); // Act as admin for user lookup
+      org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
+
+      ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> response = restTemplate.exchange(
+          url, HttpMethod.GET, entity, new ParameterizedTypeReference<ApiResponse<List<java.util.Map<String, Object>>>>() {}
+      );
+
+      if (response.getBody() != null && response.getBody().getData() != null) {
+        List<java.util.Map<String, Object>> users = response.getBody().getData();
+        users.stream()
+            .filter(u -> role.equals(u.get("role")))
+            .filter(u -> warehouseId == null || warehouseId.equals(u.get("warehouseId")))
+            .map(u -> (String) u.get("email"))
+            .filter(email -> email != null && !email.isBlank())
+            .forEach(email -> sendEmail(email, subject, body));
+      }
+    } catch (Exception e) {
+      log.warn("Failed to dispatch role-based emails for {}: {}", role, e.getMessage());
+    }
   }
 
   @Override
@@ -206,9 +281,11 @@ public class AlertServiceImpl implements AlertService {
 
   @Override
   @Transactional
-  public void acknowledge(int alertId) {
+  public void acknowledge(int alertId, int userId) {
     Alert alert = findByIdOrThrow(alertId);
     alert.setAcknowledged(true);
+    alert.setAcknowledgedBy(userId);
+    alert.setAcknowledgedAt(LocalDateTime.now());
     alertRepository.save(alert);
   }
 
@@ -216,6 +293,15 @@ public class AlertServiceImpl implements AlertService {
   public List<AlertResponse> getByRecipient(int recipientId) {
     return alertRepository.findByRecipientId(recipientId).stream()
         .map(alertMapper::toResponse)
+        .map(this::enrich)
+        .toList();
+  }
+
+  @Override
+  public List<AlertResponse> getByContext(int userId, String role, Integer warehouseId) {
+    return alertRepository.findByTargetContext(userId, role, warehouseId).stream()
+        .map(alertMapper::toResponse)
+        .map(this::enrich)
         .toList();
   }
 
@@ -225,9 +311,15 @@ public class AlertServiceImpl implements AlertService {
   }
 
   @Override
+  public int getUnreadCountByContext(int userId, String role, Integer warehouseId) {
+    return alertRepository.countUnreadByTargetContext(userId, role, warehouseId);
+  }
+
+  @Override
   public List<AlertResponse> getUnacknowledged() {
     return alertRepository.findUnacknowledged().stream()
         .map(alertMapper::toResponse)
+        .map(this::enrich)
         .toList();
   }
 
@@ -238,6 +330,13 @@ public class AlertServiceImpl implements AlertService {
       throw new CustomException("Alert not found with ID: " + alertId, HttpStatus.NOT_FOUND);
     }
     alertRepository.deleteByAlertId(alertId);
+  }
+
+  @Override
+  @Transactional
+  public void clearAlertsByTypeAndWarehouse(String type, int warehouseId) {
+    log.info("Clearing alerts of type {} for warehouse {}", type, warehouseId);
+    alertRepository.deleteByTypeAndRelatedWarehouseId(parseType(type), warehouseId);
   }
 
   @Override
@@ -265,7 +364,35 @@ public class AlertServiceImpl implements AlertService {
   public List<AlertResponse> getAll() {
     return alertRepository.findAll().stream()
         .map(alertMapper::toResponse)
+        .map(this::enrich)
         .toList();
+  }
+
+  private AlertResponse enrich(AlertResponse response) {
+    if (response.isAcknowledged() && response.getAcknowledgedBy() != null) {
+      response.setAcknowledgedByName(getUserName(response.getAcknowledgedBy()));
+    }
+    return response;
+  }
+
+  private String getUserName(int userId) {
+    try {
+      String url = authServiceUrl + "/auth/users/" + userId;
+      ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
+          url,
+          HttpMethod.GET,
+          null,
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
+      );
+      ApiResponse<Map<String, Object>> apiResponse = response.getBody();
+      if (apiResponse != null && apiResponse.getData() != null) {
+        Map<String, Object> data = apiResponse.getData();
+        return (String) data.get("fullName");
+      }
+    } catch (Exception e) {
+      log.warn("Failed to fetch user name for ID {}: {}", userId, e.getMessage());
+    }
+    return "User #" + userId;
   }
 
   private String getProductName(int productId) {
@@ -328,31 +455,6 @@ public class AlertServiceImpl implements AlertService {
       log.warn("Failed to fetch supplier name for ID {}: {}", supplierId, e.getMessage());
     }
     return "Supplier #" + supplierId;
-  }
-
-  private List<Integer> getAdminAndManagerIds() {
-    try {
-      String url = authServiceUrl + "/auth/users";
-      
-      ResponseEntity<ApiResponse<List<Map<String, Object>>>> response = restTemplate.exchange(
-          url,
-          HttpMethod.GET,
-          null,
-          new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
-      );
-
-      ApiResponse<List<Map<String, Object>>> apiResponse = response.getBody();
-      if (apiResponse != null && apiResponse.getData() != null) {
-        List<Map<String, Object>> users = apiResponse.getData();
-        return users.stream()
-            .filter(u -> "ADMIN".equals(u.get("role")) || "MANAGER".equals(u.get("role")))
-            .map(u -> (Integer) u.get("userId"))
-            .toList();
-      }
-    } catch (Exception e) {
-      log.warn("Failed to fetch admin/manager IDs: {}", e.getMessage());
-    }
-    return List.of();
   }
 
   private Alert findByIdOrThrow(int alertId) {
