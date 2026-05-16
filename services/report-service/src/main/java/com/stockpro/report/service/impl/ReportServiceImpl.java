@@ -6,11 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.stockpro.report.entity.InventorySnapshot;
@@ -37,15 +34,6 @@ public class ReportServiceImpl implements ReportService {
     @Value("${services.movement.url}")
     private String movementServiceUrl;
 
-    private static final String GATEWAY_SECRET = "StockProGateway2024";
-
-    private HttpHeaders getInternalHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Internal-Gateway-Secret", GATEWAY_SECRET);
-        headers.set("X-User-Name", "system");
-        headers.set("X-User-Roles", "ADMIN");
-        return headers;
-    }
 
     @Value("${services.purchase.url}")
     private String purchaseServiceUrl;
@@ -120,9 +108,7 @@ public class ReportServiceImpl implements ReportService {
         log.info("Fetching real-time detailed valuation report");
         try {
             String url = productServiceUrl + "/products";
-            HttpEntity<Void> entity = new HttpEntity<>(getInternalHeaders());
-            ResponseEntity<Map> responseEntity = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
-            Map<String, Object> response = responseEntity.getBody();
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             if (response != null && response.get("data") != null) {
                 List<Map<String, Object>> products = (List<Map<String, Object>>) response.get("data");
                 return products.stream()
@@ -145,7 +131,104 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    public List<InventorySnapshot> getValuationDetailsByWarehouse(int warehouseId) {
+        log.info("Fetching real-time detailed valuation for warehouse: {}", warehouseId);
+        try {
+            // 1. Fetch all stock for this warehouse
+            String stockUrl = warehouseServiceUrl + "/warehouses/" + warehouseId + "/stock";
+            Map<String, Object> stockResponse = restTemplate.getForObject(stockUrl, Map.class);
+            
+            if (stockResponse != null && stockResponse.get("data") != null) {
+                List<Map<String, Object>> stockItems = (List<Map<String, Object>>) stockResponse.get("data");
+                if (stockItems.isEmpty()) return List.of();
+
+                // 2. Fetch all products to get names and prices
+                String productUrl = productServiceUrl + "/products";
+                Map<String, Object> productResponse = restTemplate.getForObject(productUrl, Map.class);
+                
+                if (productResponse != null && productResponse.get("data") != null) {
+                    List<Map<String, Object>> allProducts = (List<Map<String, Object>>) productResponse.get("data");
+                    Map<Integer, Map<String, Object>> productMap = allProducts.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                            p -> ((Number) p.get("productId")).intValue(),
+                            p -> p
+                        ));
+
+                    // 3. Construct snapshots
+                    return stockItems.stream()
+                        .map(item -> {
+                            int productId = ((Number) item.get("productId")).intValue();
+                            int qty = ((Number) item.get("quantity")).intValue();
+                            Map<String, Object> pInfo = productMap.get(productId);
+                            
+                            double price = 0.0;
+                            String name = "Undefined Item";
+                            if (pInfo != null) {
+                                price = ((Number) pInfo.get("costPrice")).doubleValue();
+                                name = (String) pInfo.get("name");
+                            }
+                            
+                            return InventorySnapshot.builder()
+                                .productId(productId)
+                                .productName(name)
+                                .warehouseId(warehouseId)
+                                .quantity(qty)
+                                .stockValue(qty * price)
+                                .snapshotDate(LocalDate.now())
+                                .build();
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error fetching detailed warehouse valuation for {}: {}", warehouseId, e.getMessage());
+        }
+
+        return reportRepository.findAll().stream()
+                .filter(s -> s.getWarehouseId() == warehouseId && s.getSnapshotDate().equals(LocalDate.now()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
     public Double getStockValueByWarehouse(int warehouseId) {
+        log.info("Calculating real-time stock value for warehouse: {}", warehouseId);
+        try {
+            // 1. Fetch all stock for this warehouse
+            String stockUrl = warehouseServiceUrl + "/warehouses/" + warehouseId + "/stock";
+            Map<String, Object> stockResponse = restTemplate.getForObject(stockUrl, Map.class);
+            
+            if (stockResponse != null && stockResponse.get("data") != null) {
+                List<Map<String, Object>> stockItems = (List<Map<String, Object>>) stockResponse.get("data");
+                if (stockItems.isEmpty()) return 0.0;
+
+                // 2. Fetch all products to get cost prices
+                String productUrl = productServiceUrl + "/products";
+                Map<String, Object> productResponse = restTemplate.getForObject(productUrl, Map.class);
+                
+                if (productResponse != null && productResponse.get("data") != null) {
+                    List<Map<String, Object>> allProducts = (List<Map<String, Object>>) productResponse.get("data");
+                    Map<Integer, Double> priceMap = allProducts.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                            p -> ((Number) p.get("productId")).intValue(),
+                            p -> ((Number) p.get("costPrice")).doubleValue()
+                        ));
+
+                    // 3. Calculate sum
+                    return stockItems.stream()
+                        .mapToDouble(item -> {
+                            int productId = ((Number) item.get("productId")).intValue();
+                            int qty = ((Number) item.get("quantity")).intValue();
+                            double price = priceMap.getOrDefault(productId, 0.0);
+                            return qty * price;
+                        })
+                        .sum();
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error calculating real-time warehouse valuation for {}: {}", warehouseId, e.getMessage());
+        }
+
+        // Fallback to latest snapshot
         Double value = reportRepository.sumStockValueByWarehouse(warehouseId);
         return value != null ? value : 0.0;
     }
@@ -159,29 +242,76 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<InventorySnapshot> getLowStockReport() {
-        log.info("Fetching real-time low stock report");
+        log.info("Fetching real-time low stock report using product-specific thresholds");
+        java.util.ArrayList<InventorySnapshot> allLowStock = new java.util.ArrayList<>();
         try {
-            String url = productServiceUrl + "/products/low-stock";
-            HttpEntity<Void> entity = new HttpEntity<>(getInternalHeaders());
-            ResponseEntity<Map> responseEntity = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
-            Map<String, Object> response = responseEntity.getBody();
-            if (response != null && response.get("data") != null) {
-                List<Map<String, Object>> lowStockProducts = (List<Map<String, Object>>) response.get("data");
-                return lowStockProducts.stream()
-                        .map(p -> InventorySnapshot.builder()
-                                .productId(((Number) p.get("productId")).intValue())
-                                .productName((String) p.get("name"))
-                                .quantity(((Number) p.get("currentQuantity")).intValue())
-                                .stockValue(((Number) p.get("currentQuantity")).doubleValue() * ((Number) p.get("costPrice")).doubleValue())
-                                .snapshotDate(LocalDate.now())
-                                .warehouseId(0) // Global
-                                .build())
-                        .collect(java.util.stream.Collectors.toList());
+            // 1. Fetch all warehouses to iterate
+            String whUrl = warehouseServiceUrl + "/warehouses";
+            Map<String, Object> whRes = restTemplate.getForObject(whUrl, Map.class);
+            List<Map<String, Object>> warehouses = (List<Map<String, Object>>) whRes.get("data");
+
+            if (warehouses == null || warehouses.isEmpty()) {
+                log.warn("No warehouses found during low stock report generation");
+                return List.of();
+            }
+
+            // 2. Fetch all products to get names/prices AND REORDER LEVELS
+            String prodUrl = productServiceUrl + "/products";
+            Map<String, Object> prodRes = restTemplate.getForObject(prodUrl, Map.class);
+            List<Map<String, Object>> allProducts = (List<Map<String, Object>>) prodRes.get("data");
+            
+            if (allProducts == null || allProducts.isEmpty()) {
+                log.warn("No products found during low stock report generation");
+                return List.of();
+            }
+
+            Map<Integer, Map<String, Object>> productMap = allProducts.stream()
+                .collect(java.util.stream.Collectors.toMap(p -> ((Number) p.get("productId")).intValue(), p -> p));
+
+            for (Map<String, Object> wh : warehouses) {
+                int whId = ((Number) wh.get("warehouseId")).intValue();
+                
+                // Fetch ALL stock for this warehouse
+                String stockUrl = warehouseServiceUrl + "/warehouses/" + whId + "/stock";
+                Map<String, Object> stockRes = restTemplate.getForObject(stockUrl, Map.class);
+                
+                if (stockRes != null && stockRes.get("data") instanceof List) {
+                    List<Map<String, Object>> stockItems = (List<Map<String, Object>>) stockRes.get("data");
+                    
+                    if (stockItems.isEmpty()) {
+                        log.debug("No stock found for warehouse ID: {}", whId);
+                        continue;
+                    }
+
+                    for (Map<String, Object> item : stockItems) {
+                        int pId = ((Number) item.get("productId")).intValue();
+                        Map<String, Object> pInfo = productMap.get(pId);
+                        
+                        if (pInfo != null) {
+                            int currentQty = ((Number) item.get("quantity")).intValue();
+                            int reorderLevel = ((Number) pInfo.get("reorderLevel")).intValue();
+                            
+                            // Real-time comparison using product-specific safety threshold
+                            if (currentQty <= reorderLevel) {
+                                allLowStock.add(InventorySnapshot.builder()
+                                    .productId(pId)
+                                    .productName((String) pInfo.get("name"))
+                                    .quantity(currentQty)
+                                    .stockValue(currentQty * ((Number) pInfo.get("costPrice")).doubleValue())
+                                    .snapshotDate(LocalDate.now())
+                                    .warehouseId(whId)
+                                    .build());
+                            }
+                        } else {
+                            log.warn("Product ID {} found in stock for hub {} but missing from product catalog", pId, whId);
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
-            log.error("Error fetching real-time low stock: {}", e.getMessage());
+            log.error("Error generating granular low stock report: {}", e.getMessage(), e);
         }
-        return reportRepository.findLowStockSnapshot(10); // Fallback
+        return allLowStock;
     }
 
     @Override
@@ -259,9 +389,7 @@ public class ReportServiceImpl implements ReportService {
         try {
             String url = String.format("%s/purchase-orders/date-range?start=%s&end=%s", 
                     purchaseServiceUrl, start, end);
-            HttpEntity<Void> entity = new HttpEntity<>(getInternalHeaders());
-            ResponseEntity<Map> responseEntity = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
-            Map<String, Object> response = responseEntity.getBody();
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             if (response != null && response.get("data") != null) {
                 List<Map<String, Object>> pos = (List<Map<String, Object>>) response.get("data");
                 
@@ -306,33 +434,46 @@ public class ReportServiceImpl implements ReportService {
         return List.of();
     }
     @Override
+    @Transactional
     public void runSync() {
-        log.info("Starting manual inventory synchronization...");
+        log.info("Starting Global Inventory Reconciliation...");
         try {
-            String warehousesUrl = warehouseServiceUrl + "/warehouses";
-            Map<String, Object> warehousesResponse = restTemplate.getForObject(warehousesUrl, Map.class);
+            // 1. Fetch all products from product-service
+            String productsUrl = productServiceUrl + "/products";
+            Map<String, Object> productsBody = restTemplate.getForObject(productsUrl, Map.class);
             
-            if (warehousesResponse != null && warehousesResponse.get("data") != null) {
-                List<Map<String, Object>> warehouses = (List<Map<String, Object>>) warehousesResponse.get("data");
+            if (productsBody == null || productsBody.get("data") == null) return;
+            List<Map<String, Object>> products = (List<Map<String, Object>>) productsBody.get("data");
+
+            for (Map<String, Object> product : products) {
+                int productId = ((Number) product.get("productId")).intValue();
+                int currentGlobalQty = ((Number) product.get("currentQuantity")).intValue();
                 
-                String productsUrl = productServiceUrl + "/products";
-                Map<String, Object> productsResponse = restTemplate.getForObject(productsUrl, Map.class);
+                // 2. Fetch all stock levels for this product from warehouse-service
+                String stockUrl = warehouseServiceUrl + "/warehouses/stock/product/" + productId;
+                Map<String, Object> stockBody = restTemplate.getForObject(stockUrl, Map.class);
                 
-                if (productsResponse != null && productsResponse.get("data") != null) {
-                    List<Map<String, Object>> products = (List<Map<String, Object>>) productsResponse.get("data");
+                int actualTotalQty = 0;
+                if (stockBody != null && stockBody.get("data") != null) {
+                    List<Map<String, Object>> stockLevels = (List<Map<String, Object>>) stockBody.get("data");
+                    actualTotalQty = stockLevels.stream()
+                            .mapToInt(s -> ((Number) s.get("quantity")).intValue())
+                            .sum();
+                }
+
+                // 3. If there's a discrepancy, update the product-service
+                if (actualTotalQty != currentGlobalQty) {
+                    log.info("Discrepancy found for product {}: Global={}, Physical={}. Reconciling...", 
+                            productId, currentGlobalQty, actualTotalQty);
                     
-                    for (Map<String, Object> warehouse : warehouses) {
-                        int warehouseId = (int) warehouse.get("warehouseId");
-                        for (Map<String, Object> product : products) {
-                            int productId = (int) product.get("productId");
-                            takeSnapshot(warehouseId, productId);
-                        }
-                    }
+                    String updateUrl = productServiceUrl + "/products/" + productId + "/stock?quantity=" + (actualTotalQty - currentGlobalQty);
+                    restTemplate.put(updateUrl, null);
                 }
             }
-            log.info("Manual synchronization completed.");
+            log.info("Global Inventory Reconciliation completed successfully.");
         } catch (Exception e) {
-            log.error("Error during manual synchronization: {}", e.getMessage());
+            log.error("Error during Global Inventory Reconciliation: {}", e.getMessage());
+            throw new RuntimeException("Reconciliation failed: " + e.getMessage());
         }
     }
 }

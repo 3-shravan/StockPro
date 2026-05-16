@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,16 +40,6 @@ public class ReportResource {
     @Value("${services.warehouse.url}")
     private String warehouseServiceUrl;
 
-    private static final String GATEWAY_SECRET = "StockProGateway2024";
-
-    private HttpHeaders getInternalHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Internal-Gateway-Secret", GATEWAY_SECRET);
-        headers.set("X-User-Name", "system");
-        headers.set("X-User-Roles", "ADMIN");
-        return headers;
-    }
-
     @GetMapping("/total-value")
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER', 'STAFF')")
     public ResponseEntity<ApiResponse<Double>> getTotalStockValue() {
@@ -62,6 +51,18 @@ public class ReportResource {
             return ResponseEntity.ok(ApiResponse.success("Global total stock value retrieved", reportService.getTotalStockValue()));
         } else {
             String department = getCurrentUserDepartment();
+            int userId = getCurrentUserId();
+            
+            // For managers, we sum up values from all their hubs
+            if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"))) {
+                List<Map<String, Object>> managedHubs = getManagedWarehouses(userId);
+                double total = managedHubs.stream()
+                        .mapToDouble(w -> reportService.getStockValueByWarehouse((Integer) w.get("warehouseId")))
+                        .sum();
+                return ResponseEntity.ok(ApiResponse.success("Aggregated warehouse stock value retrieved", total));
+            }
+
+            // For staff, we use department as before
             if (department != null && !department.isBlank() && !department.equalsIgnoreCase("GLOBAL HUB (UNASSIGNED)")) {
                 Integer warehouseId = resolveWarehouseIdByName(department);
                 if (warehouseId != null) {
@@ -81,17 +82,25 @@ public class ReportResource {
 
         if (isAdmin || isOfficer) {
             return ResponseEntity.ok(ApiResponse.success("Detailed valuation retrieved", reportService.getValuationDetails()));
-        } else {
-            String department = getCurrentUserDepartment();
-            if (department != null && !department.isBlank() && !department.equalsIgnoreCase("GLOBAL HUB (UNASSIGNED)")) {
-                Integer warehouseId = resolveWarehouseIdByName(department);
-                if (warehouseId != null) {
-                    List<InventorySnapshot> allDetails = reportService.getValuationDetails();
-                    return ResponseEntity.ok(ApiResponse.success("Warehouse detailed valuation retrieved", allDetails));
-                }
-            }
-            return ResponseEntity.ok(ApiResponse.success("Detailed valuation retrieved", List.of()));
         }
+
+        int userId = getCurrentUserId();
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"))) {
+            List<Map<String, Object>> managedHubs = getManagedWarehouses(userId);
+            List<InventorySnapshot> snapshots = managedHubs.stream()
+                    .flatMap(w -> reportService.getValuationDetailsByWarehouse((Integer) w.get("warehouseId")).stream())
+                    .toList();
+            return ResponseEntity.ok(ApiResponse.success("Aggregated detailed valuation retrieved", snapshots));
+        }
+
+        String department = getCurrentUserDepartment();
+        Integer warehouseId = resolveWarehouseIdByName(department);
+        if (warehouseId != null) {
+            List<InventorySnapshot> snapshots = reportService.getValuationDetailsByWarehouse(warehouseId);
+            return ResponseEntity.ok(ApiResponse.success("Warehouse detailed valuation retrieved", snapshots));
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success("Detailed valuation retrieved", List.of()));
     }
 
     @GetMapping("/value/warehouse/{id}")
@@ -111,7 +120,40 @@ public class ReportResource {
     @GetMapping("/low-stock")
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<InventorySnapshot>>> getLowStockReport() {
-        return ResponseEntity.ok(ApiResponse.success("Low stock report retrieved", reportService.getLowStockReport()));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        List<InventorySnapshot> allLowStock = reportService.getLowStockReport();
+        
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OFFICER"))) {
+            return ResponseEntity.ok(ApiResponse.success("Low stock report retrieved", allLowStock));
+        }
+
+        int userId = getCurrentUserId();
+        log.info("Generating low stock report for user: {}, role: {}", userId, auth.getAuthorities());
+        
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"))) {
+            List<Map<String, Object>> managedHubs = getManagedWarehouses(userId);
+            List<Integer> hubIds = managedHubs.stream()
+                .map(w -> ((Number) w.get("warehouseId")).intValue())
+                .toList();
+            
+            log.info("Manager {} managing {} hubs: {}", userId, hubIds.size(), hubIds);
+            
+            List<InventorySnapshot> filtered = allLowStock.stream()
+                .filter(s -> hubIds.contains(s.getWarehouseId()))
+                .toList();
+            
+            log.info("Found {} low stock items after filtering for manager hubs", filtered.size());
+            return ResponseEntity.ok(ApiResponse.success("Aggregated low stock report retrieved", filtered));
+        }
+
+        String department = getCurrentUserDepartment();
+        Integer warehouseId = resolveWarehouseIdByName(department);
+        if (warehouseId != null) {
+            return ResponseEntity.ok(ApiResponse.success("Warehouse low stock report retrieved", 
+                allLowStock.stream().filter(s -> s.getWarehouseId() == warehouseId).toList()));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success("Low stock report retrieved", List.of()));
     }
 
     @GetMapping("/top-moving")
@@ -136,7 +178,36 @@ public class ReportResource {
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER', 'STAFF')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPOSummary(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
                                                                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        return ResponseEntity.ok(ApiResponse.success("PO summary retrieved", reportService.getPOSummary(start, end)));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Map<String, Object> summary = reportService.getPOSummary(start, end);
+        
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_OFFICER"))) {
+            return ResponseEntity.ok(ApiResponse.success("PO summary retrieved", summary));
+        }
+
+        // Filter POs in the summary for Managers/Staff
+        List<Map<String, Object>> pos = (List<Map<String, Object>>) summary.get("orders");
+        if (pos == null) return ResponseEntity.ok(ApiResponse.success("PO summary retrieved", summary));
+
+        List<Integer> authorizedHubs;
+        if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"))) {
+            authorizedHubs = getManagedWarehouses(getCurrentUserId()).stream()
+                .map(w -> (Integer) w.get("warehouseId")).toList();
+        } else {
+            Integer whId = resolveWarehouseIdByName(getCurrentUserDepartment());
+            authorizedHubs = whId != null ? List.of(whId) : List.of();
+        }
+
+        List<Map<String, Object>> filteredPOs = pos.stream()
+            .filter(po -> authorizedHubs.contains(po.get("warehouseId")))
+            .toList();
+        
+        summary.put("orders", filteredPOs);
+        summary.put("totalOrders", filteredPOs.size());
+        summary.put("totalAmount", filteredPOs.stream()
+            .mapToDouble(po -> ((Number) po.get("totalAmount")).doubleValue()).sum());
+
+        return ResponseEntity.ok(ApiResponse.success("Aggregated PO summary retrieved", summary));
     }
 
     @PostMapping("/snapshot/{warehouseId}")
@@ -156,13 +227,12 @@ public class ReportResource {
      * Helper to resolve a Warehouse Name (Department) to its ID.
      */
     private Integer resolveWarehouseIdByName(String name) {
+        if (name == null || name.isBlank()) return null;
         try {
             String url = warehouseServiceUrl + "/warehouses";
-            HttpHeaders headers = getInternalHeaders();
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
             
             ResponseEntity<ApiResponse<List<Map<String, Object>>>> res = restTemplate.exchange(
-                url, HttpMethod.GET, entity, new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
+                url, HttpMethod.GET, HttpEntity.EMPTY, new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
             );
             
             if (res.getBody() != null && res.getBody().getData() != null) {
@@ -192,5 +262,46 @@ public class ReportResource {
             }
         }
         return null;
+    }
+
+    private int getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> details = (Map<String, Object>) auth.getDetails();
+            Object userIdObj = details.get("userId");
+            if (userIdObj instanceof Integer) {
+                return (Integer) userIdObj;
+            } else if (userIdObj instanceof String) {
+                try {
+                    return Integer.parseInt((String) userIdObj);
+                } catch (NumberFormatException e) {
+                    log.error("Failed to parse userId string from details: {}", userIdObj);
+                }
+            }
+        }
+        return 0;
+    }
+
+    private List<Map<String, Object>> getManagedWarehouses(int managerId) {
+        try {
+            String url = warehouseServiceUrl + "/warehouses";
+            
+            ResponseEntity<ApiResponse<List<Map<String, Object>>>> res = restTemplate.exchange(
+                url, HttpMethod.GET, HttpEntity.EMPTY, new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {}
+            );
+            
+            if (res.getBody() != null && res.getBody().getData() != null) {
+                return res.getBody().getData().stream()
+                    .filter(w -> {
+                        Object mId = w.get("managerId");
+                        return mId instanceof Number && ((Number) mId).intValue() == managerId;
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch managed warehouses for manager {}: {}", managerId, e.getMessage());
+        }
+        return List.of();
     }
 }

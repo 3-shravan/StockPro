@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { EmptyState } from "@/components/common/EmptyState";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeftRightIcon,
   Building05Icon,
@@ -16,6 +17,7 @@ import {
   TableIcon,
   ArrowRight01Icon,
   Search01Icon,
+  Database01Icon,
 } from "hugeicons-react";
 import {
   Table,
@@ -29,6 +31,7 @@ import { showToast } from "@/lib/toast";
 import { useAuthStore } from "@/stores/auth.store";
 import { authApi } from "@/features/auth/api/auth.api";
 import { warehousesApi } from "@/features/warehouses/api";
+import { reportsApi } from "@/features/reports/api/reports.api";
 import type { Warehouse, WarehouseRequest } from "@/features/warehouses/types";
 import { cn } from "@/lib/utils";
 import { UserSelect } from "@/components/common/UserSelect";
@@ -66,7 +69,21 @@ export const WarehousesPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const location = useLocation();
+  const editWarehouseIdFromState = location?.state?.editWarehouseId;
+
+  useEffect(() => {
+    if (editWarehouseIdFromState && warehouses.length > 0) {
+      const warehouseToEdit = warehouses.find(w => w.warehouseId === editWarehouseIdFromState);
+      if (warehouseToEdit) {
+        edit(warehouseToEdit);
+        // Clear state to prevent re-triggering
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [editWarehouseIdFromState, warehouses]);
   const [showInactive, setShowInactive] = useState(false);
+  const [isReconciling, setIsReconciling] = useState(false);
 
   const load = async (includeInactive = showInactive) => {
     setLoading(true);
@@ -125,7 +142,7 @@ export const WarehousesPage = () => {
     if (!window.confirm(`Are you sure you want to deactivate "${name}"?`)) return;
     try {
       await warehousesApi.deactivate(id);
-      showToast.success("Warehouse deactivated.");
+      showToast.success("Location deactivated.");
       await load();
     } catch (error: any) {
       showToast.error(error.response?.data?.message || "Failed to deactivate.");
@@ -139,6 +156,21 @@ export const WarehousesPage = () => {
       await load();
     } catch (error: any) {
       showToast.error(error.response?.data?.message || "Failed to activate.");
+    }
+  };
+
+  const handleReconcile = async () => {
+    if (!window.confirm("Perform global inventory update? This will align all product totals with physical location counts.")) return;
+
+    setIsReconciling(true);
+    try {
+      await reportsApi.sync();
+      showToast.success("Global inventory successfully updated.");
+      await load();
+    } catch (error: any) {
+      showToast.error(error.response?.data?.message || "Reconciliation failed.");
+    } finally {
+      setIsReconciling(false);
     }
   };
 
@@ -159,10 +191,10 @@ export const WarehousesPage = () => {
     try {
       if (editingId) {
         await warehousesApi.update(editingId, form);
-        showToast.success("Warehouse updated.");
+        showToast.success("Location updated.");
       } else {
         await warehousesApi.create(form);
-        showToast.success("Warehouse created.");
+        showToast.success("Location created.");
       }
       reset();
       await load();
@@ -186,7 +218,7 @@ export const WarehousesPage = () => {
         ...transfer,
         managerId: user?.userId ?? 0,
       });
-      showToast.success("Transfer authorized.");
+      showToast.success("Transfer completed.");
       setTransfer({
         fromWarehouseId: 0,
         toWarehouseId: 0,
@@ -214,9 +246,9 @@ export const WarehousesPage = () => {
     <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Distribution Grid</p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-            Logistics Hubs
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Locations</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
+            All Locations
           </h1>
         </div>
 
@@ -240,7 +272,7 @@ export const WarehousesPage = () => {
               )}
             >
               <PlusSignIcon className="w-5 h-5" />
-              Provision
+              Add New
             </button>
           )}
           {isManagerOrAdmin && (
@@ -259,14 +291,14 @@ export const WarehousesPage = () => {
       </div>
 
       {activeTab === 'directory' && (
-        <div className="space-y-8 px-2">
-          <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+        <div className="space-y-12 px-2">
+          <div className="flex flex-col items-center justify-center gap-10 w-full py-4">
             <div className="flex items-center gap-4 w-full max-w-4xl">
               <div className="relative group flex-1">
                 <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input
                   className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
-                  placeholder="Search facilities..."
+                  placeholder="Search locations..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -282,8 +314,23 @@ export const WarehousesPage = () => {
                 )}
               >
                 {showInactive ? <ViewIcon className="w-5 h-5" /> : <ViewOffIcon className="w-5 h-5" />}
-                {showInactive ? "All Nodes" : "Active Nodes"}
+                {showInactive ? "All Locations" : "Active Locations"}
               </button>
+
+              {isAdmin && (
+                <button
+                  onClick={handleReconcile}
+                  disabled={isReconciling}
+                  className="flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all border border-border bg-card text-primary hover:bg-primary/5 shadow-app-subtle shrink-0 disabled:opacity-50"
+                >
+                  {isReconciling ? (
+                    <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                  ) : (
+                    <Database01Icon className="w-5 h-5" />
+                  )}
+                  {isReconciling ? "UPDATING..." : "UPDATE INVENTORY"}
+                </button>
+              )}
 
               <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
                 <button
@@ -311,18 +358,16 @@ export const WarehousesPage = () => {
           {loading ? (
             <div className="p-24 text-center flex flex-col items-center gap-4">
               <div className="w-10 h-10 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
-              <p className="text-muted-foreground text-sm">Synchronizing facilities...</p>
+              <p className="text-muted-foreground text-sm">Loading locations...</p>
             </div>
           ) : filteredWarehouses.length === 0 ? (
-            <div className="py-24 text-center space-y-4 bg-muted/10 rounded-3xl border border-dashed border-border">
-              <Building05Icon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-foreground">No facilities located</p>
-                <p className="text-sm text-muted-foreground">Adjust parameters or provision a new hub.</p>
-              </div>
-            </div>
+            <EmptyState
+              icon={Building05Icon}
+              title="No Locations Found"
+              description="No locations match your current search filters."
+            />
           ) : viewMode === 'grid' ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
               {filteredWarehouses.map((warehouse) => {
                 const usedPercent = warehouse.capacity
                   ? Math.min(100, Math.round((warehouse.usedCapacity / warehouse.capacity) * 100))
@@ -342,39 +387,17 @@ export const WarehousesPage = () => {
                   >
                     {!warehouse.active && (
                       <div className="absolute top-0 right-0 px-4 py-2 bg-muted text-[10px] font-bold text-muted-foreground rounded-bl-3xl border-l border-b border-border/20 uppercase tracking-wider">
-                        Decommissioned
+                        Inactive
                       </div>
                     )}
                     <div className="flex items-start justify-between mb-8">
                       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform">
                         <Building05Icon className="w-7 h-7 text-primary" />
                       </div>
-                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                        {warehouse.active && isAdmin && (
-                          <button
-                            onClick={() => edit(warehouse)}
-                            className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300"
-                          >
-                            <Edit02Icon className="w-6 h-6" />
-                          </button>
-                        )}
-                        {isAdmin && (
-                          warehouse.active ? (
-                            <button
-                              onClick={() => remove(warehouse.warehouseId, warehouse.name)}
-                              className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
-                            >
-                              <Delete02Icon className="w-6 h-6" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => activate(warehouse.warehouseId, warehouse.name)}
-                              className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300"
-                            >
-                              <Tick01Icon className="w-6 h-6" />
-                            </button>
-                          )
-                        )}
+                      <div className="flex gap-2">
+                        <div className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500">
+                          <ArrowRight01Icon className="w-5 h-5" />
+                        </div>
                       </div>
                     </div>
 
@@ -394,14 +417,14 @@ export const WarehousesPage = () => {
                         </div>
                         <span className={cn(
                           "px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider border",
-                          usedPercent > 90 ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : "bg-primary/10 text-primary border-primary/20"
+                          usedPercent > 90 ? "bg-status-error/10 text-status-error border-status-error/20" : "bg-primary/10 text-primary border-primary/20"
                         )}>{usedPercent}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            usedPercent > 90 ? "bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : usedPercent > 70 ? "bg-amber-500" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                            usedPercent > 90 ? "bg-status-error shadow-[0_0_10px_rgba(var(--status-error),0.5)]" : usedPercent > 70 ? "bg-status-warning" : "bg-primary shadow-[0_0_10px_rgba(var(--primary),0.5)]"
                           )}
                           style={{ width: `${usedPercent}%` }}
                         />
@@ -414,26 +437,25 @@ export const WarehousesPage = () => {
                           {users[warehouse.managerId]?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Leadership</p>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Manager</p>
                           <p className="text-sm font-bold truncate tracking-tight">{users[warehouse.managerId] || `User #${warehouse.managerId}`}</p>
                         </div>
                       </div>
-                      <ArrowRight01Icon className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-hidden px-2 backdrop-blur-sm bg-opacity-50">
-              <Table>
+            <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-x-auto no-scrollbar px-2 backdrop-blur-sm bg-opacity-50">
+              <Table className="min-w-[1000px] w-full">
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
-                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Facility Detail</TableHead>
-                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Geographic Node</TableHead>
-                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Capacity Utilization</TableHead>
-                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider">Leadership</TableHead>
-                    <TableHead className="px-8 font-bold text-[10px] text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent border-b border-border/40 h-14">
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Location Detail</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Region</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest w-[200px]">Capacity Utilization</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest w-[200px]">Manager</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-right w-[150px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -446,7 +468,7 @@ export const WarehousesPage = () => {
                       <TableRow
                         key={warehouse.warehouseId}
                         className={cn(
-                          "group hover:bg-muted/30 transition-all cursor-pointer border-b border-border/10 h-20",
+                          "group hover:bg-muted/20 border-b border-border/40 transition-all cursor-pointer h-20",
                           !warehouse.active && "opacity-60 grayscale"
                         )}
                         onClick={() => {
@@ -456,73 +478,85 @@ export const WarehousesPage = () => {
                       >
                         <TableCell className="px-8">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
-                              <Building05Icon className="w-6 h-6" />
+                            <div className="w-10 h-10 rounded-xl bg-muted/50 text-primary flex items-center justify-center shrink-0 border border-border/40 group-hover:border-primary/20 transition-all shadow-app-subtle">
+                              <Building05Icon className="w-5 h-5" />
                             </div>
-                            <div className="text-left">
-                              <span className="font-bold text-lg block leading-tight tracking-tight">{warehouse.name}</span>
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1 block">{warehouse.active ? 'Operational' : 'Decommissioned'}</span>
+                            <div className="text-left min-w-0">
+                              <span className="font-bold text-sm block leading-tight tracking-tight group-hover:text-primary transition-colors truncate">{warehouse.name}</span>
+                              <span className="text-[11px] font-bold text-foreground/50 mt-1 block uppercase tracking-wider truncate">{warehouse.active ? 'Active Location' : 'Inactive'}</span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="px-8">
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-foreground/70 uppercase tracking-wider">
+                        <TableCell className="px-6">
+                          <div className="flex items-center gap-3 text-[11px] font-bold text-foreground/50 uppercase tracking-wider whitespace-nowrap">
                             <Location01Icon className="w-4 h-4 text-primary/40" />
                             {warehouse.location}
                           </div>
                         </TableCell>
-                        <TableCell className="px-8 text-left">
-                          <div className="flex flex-col gap-2 w-48">
-                            <div className="flex justify-between text-[10px] font-bold">
-                              <span className="text-foreground/70 uppercase tracking-wider tabular-nums">{warehouse.usedCapacity.toLocaleString()} Units</span>
+                        <TableCell className="px-6 text-left">
+                          <div className="flex flex-col gap-2 w-40">
+                            <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
+                              <span className="text-foreground/50 tabular-nums">{warehouse.usedCapacity.toLocaleString()} Units</span>
                               <span className={cn(
-                                "px-2 py-0.5 rounded-full border",
-                                usedPercent > 90 ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : "bg-primary/10 text-primary border-primary/20"
+                                "px-3 py-1 rounded-full border shadow-app-subtle",
+                                usedPercent > 90 ? "bg-status-error/10 text-status-error border-status-error/20" : "bg-primary/10 text-primary border-primary/20"
                               )}>{usedPercent}%</span>
                             </div>
                             <div className="h-2 rounded-full bg-muted overflow-hidden">
                               <div
                                 className={cn(
                                   "h-full rounded-full transition-all duration-500",
-                                  usedPercent > 90 ? "bg-rose-400" : usedPercent > 70 ? "bg-amber-500" : "bg-primary"
+                                  usedPercent > 90 ? "bg-status-error" : usedPercent > 70 ? "bg-status-warning" : "bg-primary shadow-[0_0_8px_rgba(var(--primary),0.3)]"
                                 )}
                                 style={{ width: `${usedPercent}%` }}
                               />
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="px-8">
+                        <TableCell className="px-6">
                           <div className="flex items-center gap-4 text-left">
-                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold text-xs text-muted-foreground border border-border">
+                            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center font-bold text-[10px] text-foreground/40 border border-border/60 shadow-app-subtle">
                               {users[warehouse.managerId]?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Leadership</p>
-                              <p className="text-sm font-bold truncate tracking-tight">{users[warehouse.managerId] || `User #${warehouse.managerId}`}</p>
+                              <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider leading-none mb-1">Manager</p>
+                              <p className="text-sm font-bold truncate tracking-tight text-foreground/80">{users[warehouse.managerId] || `User #${warehouse.managerId}`}</p>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="px-8 text-right" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-3">
+                        <TableCell className="px-8 text-right">
+                          <div className="flex items-center justify-end gap-2">
                             {isAdmin && (
                               <>
-                                <button onClick={() => edit(warehouse)} className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300">
-                                  <Edit02Icon className="w-5 h-5" />
-                                </button>
+                                {warehouse.active && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); edit(warehouse); }}
+                                    className="w-9 h-9 flex items-center justify-center text-primary/60 hover:text-primary hover:bg-primary/10 rounded-xl transition-all duration-300"
+                                    title="Edit Location"
+                                  >
+                                    <Edit02Icon className="w-4.5 h-4.5" />
+                                  </button>
+                                )}
                                 {warehouse.active ? (
-                                  <button onClick={() => remove(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300">
-                                    <Delete02Icon className="w-5 h-5" />
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); remove(warehouse.warehouseId, warehouse.name); }}
+                                    className="w-9 h-9 flex items-center justify-center text-status-error/60 hover:text-status-error hover:bg-status-error/10 rounded-xl transition-all duration-300"
+                                    title="Deactivate"
+                                  >
+                                    <Delete02Icon className="w-4.5 h-4.5" />
                                   </button>
                                 ) : (
-                                  <button onClick={() => activate(warehouse.warehouseId, warehouse.name)} className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300">
-                                    <Tick01Icon className="w-5 h-5" />
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); activate(warehouse.warehouseId, warehouse.name); }}
+                                    className="w-9 h-9 flex items-center justify-center text-primary/60 hover:text-primary hover:bg-primary/10 rounded-xl transition-all duration-300"
+                                    title="Reactivate"
+                                  >
+                                    <Tick01Icon className="w-4.5 h-4.5" />
                                   </button>
                                 )}
                               </>
                             )}
-                            <div className="w-10 h-10 rounded-xl text-muted-foreground/30 group-hover:text-primary transition-colors flex items-center justify-center">
-                              <ArrowRight01Icon className="w-5 h-5" />
-                            </div>
+                            <ArrowRight01Icon className="w-5 h-5 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500" />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -542,9 +576,9 @@ export const WarehousesPage = () => {
               {editingId ? <Edit02Icon className="w-6 h-6" /> : <PlusSignIcon className="w-6 h-6" />}
             </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">{editingId ? 'Modify Hub' : 'Establish Node'}</h2>
-              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
-                {editingId ? `RECONFIGURING ASSET FOR ${form.name}` : 'PROVISIONING NEW LOGISTICS INTERFACE'}
+              <h2 className="text-2xl font-bold tracking-tight">{editingId ? 'Edit Location' : 'Add Location'}</h2>
+              <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                {editingId ? `EDITING DETAILS FOR ${form.name}` : 'ADDING NEW LOCATION'}
               </p>
             </div>
           </div>
@@ -556,7 +590,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Facility Identifier <span className="text-rose-400">*</span>
+                      Location Name <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <Building05Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -565,7 +599,7 @@ export const WarehousesPage = () => {
                           "h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/20",
                           !isAdmin && editingId && "opacity-50 cursor-not-allowed"
                         )}
-                        placeholder="WAREHOUSE NAME"
+                        placeholder="LOCATION NAME"
                         value={form.name}
                         onChange={(e) => update("name", e.target.value)}
                         disabled={!isAdmin && !!editingId}
@@ -576,7 +610,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Geographic Hub <span className="text-rose-400">*</span>
+                      Region <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <MapsIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -596,7 +630,7 @@ export const WarehousesPage = () => {
                   <div className="sm:col-span-2 space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Physical Coordinates
+                      Full Address
                     </label>
                     <div className="relative group">
                       <Location01Icon className="absolute left-6 top-6 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -612,7 +646,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Operational Command <span className="text-rose-400">*</span>
+                      Assigned Manager <span className="text-status-error">*</span>
                     </label>
                     <UserSelect
                       value={form.managerId}
@@ -625,7 +659,7 @@ export const WarehousesPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Unit Capacity <span className="text-rose-400">*</span>
+                      Storage Capacity <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -647,14 +681,14 @@ export const WarehousesPage = () => {
                   onClick={reset}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
-                  ABORT
+                  CANCEL
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
                 >
-                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT CHANGES' : 'AUTHORIZE DEPLOYMENT'}
+                  {isSubmitting ? 'SAVING...' : editingId ? 'SAVE CHANGES' : 'ADD LOCATION'}
                 </button>
               </div>
             </form>
@@ -665,13 +699,13 @@ export const WarehousesPage = () => {
       {activeTab === 'transfer' && (
         <div className="max-w-4xl space-y-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center gap-4 px-2">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20">
+            <div className="w-14 h-14 rounded-2xl bg-status-warning/10 text-status-warning flex items-center justify-center border border-status-warning/20">
               <ArrowLeftRightIcon className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Internal Transfer</h2>
-              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
-                REBALANCING GLOBAL INVENTORY CLUSTER
+              <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                MOVE STOCK BETWEEN LOCATIONS
               </p>
             </div>
           </div>
@@ -682,50 +716,50 @@ export const WarehousesPage = () => {
                 <div className="grid gap-8 sm:grid-cols-2">
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Source Node <span className="text-rose-400">*</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                      From Location <span className="text-status-error">*</span>
                     </label>
                     <WarehouseSelect
                       value={transfer.fromWarehouseId}
                       onChange={(id) => setTransfer(v => ({ ...v, fromWarehouseId: id }))}
-                      placeholder="ORIGIN HUB"
+                      placeholder="ORIGIN LOCATION"
                     />
                   </div>
 
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Target Node <span className="text-rose-400">*</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                      To Location <span className="text-status-error">*</span>
                     </label>
                     <WarehouseSelect
                       value={transfer.toWarehouseId}
                       onChange={(id) => setTransfer(v => ({ ...v, toWarehouseId: id }))}
-                      placeholder="DESTINATION HUB"
+                      placeholder="DESTINATION LOCATION"
                     />
                   </div>
 
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Asset Designation <span className="text-rose-400">*</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                      Product <span className="text-status-error">*</span>
                     </label>
                     <ProductSelect
                       value={transfer.productId}
                       onChange={(id) => setTransfer(v => ({ ...v, productId: id }))}
-                      placeholder="SELECT SKU"
+                      placeholder="SELECT PRODUCT"
                     />
                   </div>
 
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2 text-left">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Quantity <span className="text-rose-400">*</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                      Quantity <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
-                      <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-amber-500 transition-colors" />
+                      <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-status-warning transition-colors" />
                       <input
                         type="number"
-                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-amber-500/10 outline-none transition-all placeholder:text-muted-foreground/20"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-status-warning/10 outline-none transition-all placeholder:text-muted-foreground/20"
                         placeholder="0"
                         value={transfer.quantity || ''}
                         onChange={(e) => setTransfer(v => ({ ...v, quantity: Number(e.target.value) }))}
@@ -741,14 +775,14 @@ export const WarehousesPage = () => {
                   onClick={() => setActiveTab('directory')}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
-                  ABORT
+                  CANCEL
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-10 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-amber-500/20 disabled:opacity-50"
+                  className="px-10 h-14 rounded-full bg-status-warning text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-status-warning/20 disabled:opacity-50"
                 >
-                  {isSubmitting ? 'PROCESSING...' : 'AUTHORIZE TRANSFER'}
+                  {isSubmitting ? 'PROCESSING...' : 'TRANSFER STOCK'}
                 </button>
               </div>
             </form>

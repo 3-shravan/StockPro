@@ -11,8 +11,8 @@ export const TrendIndicator = ({ value, label }: { value: string, label: string 
     <div className="flex items-center gap-1.5 mt-3">
       <div className={cn(
         "flex items-center gap-0.5 px-2 py-0.5 rounded-full border",
-        isPositive ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-          isNegative ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-muted/10 text-muted-foreground border-border"
+        isPositive ? "bg-primary/10 text-primary border-primary/20" :
+          isNegative ? "bg-status-error/10 text-status-error border-status-error/20" : "bg-muted/10 text-muted-foreground border-border"
       )}>
         <Chart01Icon className="w-3 h-3" />
         <span className="text-[10px] font-black tabular-nums">{value}</span>
@@ -39,18 +39,17 @@ interface MetricCardProps {
 export const MetricCard = ({ label, value, hint, icon: Icon, color = 'primary', to, state, trend }: MetricCardProps) => {
   const colors = {
     primary: 'bg-primary/10 text-primary border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground',
-    destructive: 'bg-destructive/10 text-destructive border-destructive/20 group-hover:bg-destructive group-hover:text-destructive-foreground',
-    warning: 'bg-amber-500/10 text-amber-600 border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white',
+    destructive: 'bg-status-error/10 text-status-error border-status-error/20 group-hover:bg-status-error group-hover:text-white',
+    warning: 'bg-status-warning/10 text-status-warning border-status-warning/20 group-hover:bg-status-warning group-hover:text-white',
   };
 
   const content = (
     <Card className={cn(
-      "rounded-[2.5rem] border-none bg-white/[0.05] backdrop-blur-xl shadow-app-card hover:shadow-app-hover transition-all duration-500 group relative overflow-hidden",
-      to && "hover:-translate-y-2 cursor-pointer"
+      "rounded-3xl border border-border/40 bg-card/40 backdrop-blur-xl shadow-sm hover:border-border/60 transition-all duration-300 group relative overflow-hidden",
+      to && "cursor-pointer"
     )}>
-      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 blur-[40px] -mr-12 -mt-12 rounded-full group-hover:bg-primary/10 transition-colors" />
 
-      <CardContent className="p-6 md:p-7 relative z-10">
+      <CardContent className="p-5 md:p-6 relative z-10">
         <div className="flex items-start justify-between mb-6">
           <div className="space-y-1">
             <p className="text-[11px] font-bold text-foreground/80 uppercase tracking-wider">{label}</p>
@@ -61,11 +60,11 @@ export const MetricCard = ({ label, value, hint, icon: Icon, color = 'primary', 
         </div>
         <div className="space-y-4">
           <p className={cn(
-            "font-black tracking-tighter tabular-nums leading-none",
-            value.length > 10 ? "text-2xl md:text-3xl" : "text-4xl md:text-5xl"
+            "font-bold tracking-tight tabular-nums leading-none whitespace-nowrap",
+            "text-2xl md:text-3xl"
           )}>{value}</p>
           {trend && <TrendIndicator value={trend.value} label={trend.label} />}
-          <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider mt-4 truncate">
+          <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-wider mt-4 truncate">
             {hint}</p>
         </div>
 

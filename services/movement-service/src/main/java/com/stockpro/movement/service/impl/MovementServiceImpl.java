@@ -59,6 +59,7 @@ public class MovementServiceImpl implements MovementService {
     entity.setWarehouseName(getWarehouseName(movementRequest.getWarehouseId()));
 
     StockMovement saved = movementRepository.save(entity);
+    
     return movementMapper.toResponse(saved);
   }
 
@@ -126,23 +127,14 @@ public class MovementServiceImpl implements MovementService {
         .toList();
   }
 
-  // Internal Headers for Service-to-Service communication
-  private org.springframework.http.HttpHeaders getInternalHeaders() {
-    org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-    headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
-    headers.set("X-User-Name", "system");
-    headers.set("X-User-Roles", "ADMIN");
-    return headers;
-  }
 
   private String getProductName(int productId) {
     try {
       String url = productServiceUrl + "/products/" + productId;
-      org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(getInternalHeaders());
       ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
           url,
           HttpMethod.GET,
-          entity,
+          org.springframework.http.HttpEntity.EMPTY,
           new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
       );
       ApiResponse<Map<String, Object>> apiResponse = response.getBody();
@@ -158,11 +150,10 @@ public class MovementServiceImpl implements MovementService {
   private String getWarehouseName(int warehouseId) {
     try {
       String url = warehouseServiceUrl + "/warehouses/" + warehouseId;
-      org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(getInternalHeaders());
       ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
           url,
           HttpMethod.GET,
-          entity,
+          org.springframework.http.HttpEntity.EMPTY,
           new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
       );
       ApiResponse<Map<String, Object>> apiResponse = response.getBody();

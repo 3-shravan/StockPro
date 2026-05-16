@@ -1,34 +1,35 @@
 package com.stockpro.alert.mapper;
  
-import com.stockpro.alert.dto.request.AlertRequest;
 import com.stockpro.alert.dto.response.AlertResponse;
-import com.stockpro.alert.entity.Alert;
-import com.stockpro.alert.entity.AlertChannel;
-import com.stockpro.alert.entity.AlertSeverity;
-import com.stockpro.alert.entity.AlertType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
  
 @Mapper(componentModel = "spring")
 public interface AlertMapper {
 
-  default Alert toEntity(AlertRequest request) {
-    if (request == null) return null;
-
-    return Alert.builder()
-        .recipientId(request.getRecipientId())
-        .type(AlertType.valueOf(request.getType().trim().toUpperCase()))
-        .severity(AlertSeverity.valueOf(request.getSeverity().trim().toUpperCase()))
-        .title(request.getTitle())
-        .message(request.getMessage())
-        .relatedProductId(request.getRelatedProductId())
-        .relatedWarehouseId(request.getRelatedWarehouseId())
-        .channel(AlertChannel.valueOf(request.getChannel().trim().toUpperCase()))
-        .read(false)
-        .acknowledged(false)
-        .build();
-  }
+  @Mapping(target = "alertId", ignore = true)
+  @Mapping(target = "read", constant = "false")
+  @Mapping(target = "acknowledged", constant = "false")
+  @Mapping(target = "acknowledgedBy", ignore = true)
+  @Mapping(target = "acknowledgedAt", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  com.stockpro.alert.entity.Alert toEntity(com.stockpro.alert.dto.request.AlertRequest request);
 
   @Mapping(target = "acknowledgedByName", ignore = true)
-  AlertResponse toResponse(Alert alert);
+  AlertResponse toResponse(com.stockpro.alert.entity.Alert alert);
+
+  default com.stockpro.alert.entity.AlertType mapType(String type) {
+    if (type == null) return null;
+    return com.stockpro.alert.entity.AlertType.valueOf(type.trim().toUpperCase());
+  }
+
+  default com.stockpro.alert.entity.AlertSeverity mapSeverity(String severity) {
+    if (severity == null) return null;
+    return com.stockpro.alert.entity.AlertSeverity.valueOf(severity.trim().toUpperCase());
+  }
+
+  default com.stockpro.alert.entity.AlertChannel mapChannel(String channel) {
+    if (channel == null) return null;
+    return com.stockpro.alert.entity.AlertChannel.valueOf(channel.trim().toUpperCase());
+  }
 }

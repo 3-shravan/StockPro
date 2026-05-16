@@ -52,27 +52,51 @@ export const useReportsData = (filterWarehouseId?: number | null) => {
       let activeWarehouseId: number | null = filterWarehouseId ?? null;
       
       if (!filterWarehouseId) {
-        if (user.role === Role.MANAGER) {
-          activeWarehouseId = whs.find(w => w.managerId === user.userId)?.warehouseId ?? null;
-        } else if (user.role === Role.STAFF) {
+        if (user.role === Role.STAFF) {
           activeWarehouseId = whs.find(w => w.name === user.department)?.warehouseId ?? null;
         }
       }
 
       // ─── Phase 3: Apply Scoping & Active-only Filtering ───────────────────
-      // We keep inactive entities in 'warehouses'/'products' lists for historical reference
-      // but we filter them for current operational metrics like 'Low Stock'.
-
+      const activeProductIds = new Set(prods.filter(p => p.active).map(p => p.productId));
+      
       if (activeWarehouseId) {
         // Hub-Specific View
         const hubValuation = await reportsApi.getWarehouseValue(activeWarehouseId).catch(() => 0);
         setTotalValue(hubValuation);
         
-        // Only show low stock for active products in this hub
-        const activeProductIds = new Set(prods.filter(p => p.active).map(p => p.productId));
-        setLowStock(low.filter(l => l.warehouseId === activeWarehouseId && activeProductIds.has(l.productId)));
+        // --- REAL-TIME FALLBACK: If backend report is empty, compute locally ---
+        let currentLowStock = low.filter(l => l.warehouseId === activeWarehouseId && activeProductIds.has(l.productId));
+        
+        if (currentLowStock.length === 0) {
+          // Fetch real-time stock for this hub to verify
+          const hubStock = await warehousesApi.getAllStockByWarehouse(activeWarehouseId, true).catch(() => []);
+          const hubStockMap = new Map(hubStock.map(s => [s.productId, s.quantity - (s.reservedQuantity || 0)]));
+          
+          currentLowStock = prods
+            .filter(p => p.active && hubStockMap.has(p.productId))
+            .map(p => {
+              const qty = hubStockMap.get(p.productId) || 0;
+              if (qty <= p.reorderLevel) {
+                return {
+                  snapshotId: -(p.productId), // Client-side dummy ID
+                  productId: p.productId,
+                  productName: p.name,
+                  warehouseId: activeWarehouseId!,
+                  quantity: qty,
+                  stockValue: qty * p.costPrice,
+                  snapshotDate: new Date().toISOString().slice(0, 10),
+                  createdAt: new Date().toISOString()
+                } as InventorySnapshot;
+              }
+              return null;
+            })
+            .filter((x): x is InventorySnapshot => x !== null);
+        }
+        
+        setLowStock(currentLowStock);
         setValuationDetails(valDet.filter(v => v.warehouseId === activeWarehouseId));
-
+        
         if (poSum && poSum.orders) {
           const hubOrders = poSum.orders.filter(o => o.warehouseId === activeWarehouseId);
           setPoSummary({
@@ -91,9 +115,26 @@ export const useReportsData = (filterWarehouseId?: number | null) => {
       } else {
         // Global View
         setTotalValue(val);
-        // Filter low stock to only show active products
-        const activeProductIds = new Set(prods.filter(p => p.active).map(p => p.productId));
-        setLowStock(low.filter(l => activeProductIds.has(l.productId)));
+        
+        let currentLowStock = low.filter(l => activeProductIds.has(l.productId));
+        
+        if (currentLowStock.length === 0 && prods.length > 0) {
+           // Aggregated global low stock (optional fallback)
+           currentLowStock = prods
+            .filter(p => p.active && p.currentQuantity <= p.reorderLevel)
+            .map(p => ({
+              snapshotId: -(p.productId),
+              productId: p.productId,
+              productName: p.name,
+              warehouseId: 0,
+              quantity: p.currentQuantity,
+              stockValue: p.currentQuantity * p.costPrice,
+              snapshotDate: new Date().toISOString().slice(0, 10),
+              createdAt: new Date().toISOString()
+            } as InventorySnapshot));
+        }
+        
+        setLowStock(currentLowStock);
         setValuationDetails(valDet);
         setPoSummary(poSum);
         setWarehouses(whs);

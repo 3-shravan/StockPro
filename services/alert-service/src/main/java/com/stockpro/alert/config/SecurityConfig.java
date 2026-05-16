@@ -40,7 +40,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/actuator/**").permitAll()
                     // Internal scheduler endpoints — callable only from gateway (verified by InternalSecurityFilter)
-                    .requestMatchers("/api/v1/alerts/low-stock", "/api/v1/alerts/overstock").permitAll()
+                    .requestMatchers("/alerts/low-stock", "/alerts/overstock").permitAll()
                     .anyRequest().authenticated())
             .addFilterBefore(internalSecurityFilter, UsernamePasswordAuthenticationFilter.class);
 

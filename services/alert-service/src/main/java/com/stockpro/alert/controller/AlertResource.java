@@ -11,6 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
 
 import java.util.List;
 
@@ -22,11 +28,28 @@ public class AlertResource {
 
   private final AlertService alertService;
 
-  /** Only Admins can send individual targeted alerts. */
+  /** Support both targeted and broadcast alerts. */
   @PostMapping
-  @PreAuthorize("hasRole('ADMIN')")
   public ResponseEntity<ApiResponse<AlertResponse>> sendAlert(@Valid @RequestBody AlertRequest request) {
     return ResponseEntity.ok(ApiResponse.success("Alert sent successfully", alertService.sendAlert(request)));
+  }
+
+  @GetMapping("/context")
+  public ResponseEntity<ApiResponse<List<AlertResponse>>> getByContext(
+      @RequestParam int userId,
+      @RequestParam String role,
+      @RequestParam(required = false) Integer warehouseId) {
+    return ResponseEntity.ok(ApiResponse.success("Alerts retrieved successfully", 
+        alertService.getByContext(userId, role, warehouseId)));
+  }
+
+  @GetMapping("/context/unread-count")
+  public ResponseEntity<ApiResponse<Integer>> getUnreadCountByContext(
+      @RequestParam int userId,
+      @RequestParam String role,
+      @RequestParam(required = false) Integer warehouseId) {
+    return ResponseEntity.ok(ApiResponse.success("Unread count retrieved", 
+        alertService.getUnreadCountByContext(userId, role, warehouseId)));
   }
 
   @PostMapping("/low-stock")
@@ -41,6 +64,8 @@ public class AlertResource {
   public ResponseEntity<ApiResponse<Void>> sendOverstockAlert(@RequestParam int productId,
       @RequestParam int warehouseId,
       @RequestParam int currentQty) {
+    log.info("API: Processing overstock alert for product {} in warehouse {} (currentQty: {})", 
+        productId, warehouseId, currentQty);
     alertService.sendOverstockAlert(productId, warehouseId, currentQty);
     return ResponseEntity.ok(ApiResponse.success("Overstock alert processed", null));
   }
@@ -76,7 +101,9 @@ public class AlertResource {
   @GetMapping("/unacknowledged")
   @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'OFFICER', 'STAFF')")
   public ResponseEntity<ApiResponse<List<AlertResponse>>> getUnacknowledged() {
-    return ResponseEntity.ok(ApiResponse.success("Unacknowledged alerts retrieved", alertService.getUnacknowledged()));
+    log.info("API: Listing unacknowledged alerts");
+    List<AlertResponse> alerts = alertService.getUnacknowledged();
+    return ResponseEntity.ok(ApiResponse.success("Unacknowledged alerts retrieved", filterAlerts(alerts)));
   }
 
   @DeleteMapping("/{id}")
@@ -103,7 +130,121 @@ public class AlertResource {
   @GetMapping
   @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'OFFICER', 'STAFF')")
   public ResponseEntity<ApiResponse<List<AlertResponse>>> getAll() {
-    return ResponseEntity.ok(ApiResponse.success("All alerts retrieved successfully", alertService.getAll()));
+    log.info("API: Listing all alerts");
+    List<AlertResponse> alerts = alertService.getAll();
+    return ResponseEntity.ok(ApiResponse.success("All alerts retrieved successfully", filterAlerts(alerts)));
+  }
+
+  private List<AlertResponse> filterAlerts(List<AlertResponse> alerts) {
+    String role = getCurrentUserRole();
+    if ("ROLE_ADMIN".equals(role) || "ROLE_OFFICER".equals(role)) {
+      return alerts;
+    }
+
+    if ("ROLE_MANAGER".equals(role)) {
+      int userId = getCurrentUserId();
+      List<Integer> managedHubs = getManagedWarehouseIds(userId);
+      return alerts.stream()
+          .filter(a -> a.getRelatedWarehouseId() == null || managedHubs.contains(a.getRelatedWarehouseId()))
+          .toList();
+    }
+
+    if ("ROLE_STAFF".equals(role)) {
+      String dept = getCurrentUserDepartment();
+      Integer warehouseId = resolveWarehouseIdByName(dept);
+      return alerts.stream()
+          .filter(a -> a.getRelatedWarehouseId() == null || (warehouseId != null && a.getRelatedWarehouseId().equals(warehouseId)))
+          .toList();
+    }
+
+    return List.of();
+  }
+
+  private String getCurrentUserRole() {
+    return SecurityContextHolder.getContext().getAuthentication()
+        .getAuthorities().iterator().next().getAuthority();
+  }
+
+  private int getCurrentUserId() {
+    var auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth != null && auth.getDetails() instanceof java.util.Map details) {
+      Object userIdObj = details.get("userId");
+      if (userIdObj instanceof Integer) {
+        return (Integer) userIdObj;
+      } else if (userIdObj instanceof String) {
+        try {
+          return Integer.parseInt((String) userIdObj);
+        } catch (NumberFormatException e) {
+          log.error("Failed to parse userId string from details: {}", userIdObj);
+        }
+      }
+    }
+    return 0;
+  }
+
+  private String getCurrentUserDepartment() {
+    var auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth instanceof org.springframework.security.authentication.UsernamePasswordAuthenticationToken token) {
+      var details = token.getDetails();
+      if (details instanceof java.util.Map map) {
+        return (String) map.get("department");
+      }
+    }
+    return null;
+  }
+
+  @Value("${services.warehouse.url}")
+  private String warehouseServiceUrl;
+
+  private final org.springframework.web.client.RestTemplate restTemplate;
+
+  private List<Integer> getManagedWarehouseIds(int managerId) {
+    try {
+      String url = warehouseServiceUrl + "/warehouses";
+      HttpHeaders headers = new HttpHeaders();
+      headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+      headers.set("X-User-Name", "system");
+      headers.set("X-User-Roles", "ADMIN");
+      HttpEntity<Void> entity = new HttpEntity<>(headers);
+      
+      ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> res = 
+          restTemplate.exchange(url, HttpMethod.GET, entity, 
+          new ParameterizedTypeReference<ApiResponse<List<java.util.Map<String, Object>>>>() {});
+      
+      if (res.getBody() != null && res.getBody().getData() != null) {
+        return res.getBody().getData().stream()
+            .filter(w -> {
+              Object mId = w.get("managerId");
+              return mId instanceof Number && ((Number) mId).intValue() == managerId;
+            })
+            .map(w -> (Integer) w.get("warehouseId"))
+            .toList();
+      }
+    } catch (Exception e) {
+      log.error("Failed to fetch managed warehouses for manager {}: {}", managerId, e.getMessage());
+    }
+    return List.of();
+  }
+
+  private Integer resolveWarehouseIdByName(String name) {
+    if (name == null || name.isBlank()) return null;
+    try {
+      String url = warehouseServiceUrl + "/warehouses/name/" + name;
+      HttpHeaders headers = new HttpHeaders();
+      headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+      HttpEntity<Void> entity = new HttpEntity<>(headers);
+      
+      ResponseEntity<ApiResponse<java.util.Map<String, Object>>> res = 
+          restTemplate.exchange(url, HttpMethod.GET, entity, 
+          new ParameterizedTypeReference<ApiResponse<java.util.Map<String, Object>>>() {});
+          
+      if (res.getBody() != null && res.getBody().getData() != null) {
+        return (Integer) res.getBody().getData().get("warehouseId");
+      }
+    } catch (Exception e) {
+      log.warn("Failed to resolve warehouse ID for name {}: {}", name, e.getMessage());
+    }
+    return null;
   }
   
   @GetMapping("/test-email")

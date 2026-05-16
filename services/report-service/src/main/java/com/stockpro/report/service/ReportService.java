@@ -16,6 +16,7 @@ public interface ReportService {
     List<Integer> getSlowMovingProducts(int limit);
     Map<String, Object> getPOSummary(LocalDate start, LocalDate end);
     List<InventorySnapshot> getValuationDetails();
+    List<InventorySnapshot> getValuationDetailsByWarehouse(int warehouseId);
     void runSync();
     List<Integer> getDeadStock();
 }

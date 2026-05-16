@@ -1,7 +1,6 @@
 package com.stockpro.alert.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,8 +12,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class AlertRequest {
 
-  @NotNull(message = "recipientId is required")
   private Integer recipientId;
+  private String targetRole;
+  private Integer targetWarehouseId;
 
   @NotBlank(message = "type is required")
   private String type;

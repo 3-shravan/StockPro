@@ -20,17 +20,17 @@ export const RecentAlertsWidget = ({ alerts, userRole }: RecentAlertsWidgetProps
   };
 
   return (
-    <Card className="rounded-[2.5rem] border border-border/60 bg-rose-400/[0.02] backdrop-blur-xl shadow-sm overflow-hidden flex flex-col group">
-      <CardHeader className="bg-muted/5 border-b border-border/10 p-4 md:p-5 pb-3 relative text-left">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-rose-400/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-rose-400/10 transition-colors" />
-        <div className="flex items-center justify-between relative">
+    <Card className="rounded-[2.5rem] border border-border/60 bg-status-error/[0.02] backdrop-blur-xl shadow-sm overflow-hidden flex flex-col group">
+      <CardHeader className="bg-muted/5 border-b border-border/10 p-0 px-6 h-14 relative text-left">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-status-error/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-status-error/10 transition-colors" />
+        <div className="flex items-center justify-between relative h-full">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-rose-400/5 text-rose-400/80 flex items-center justify-center border border-rose-400/10 group-hover:bg-rose-400 group-hover:text-white transition-all duration-500 shadow-inner shrink-0">
-              <Alert02Icon className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-xl bg-status-error/5 text-status-error/80 flex items-center justify-center border border-status-error/20 group-hover:bg-status-error group-hover:text-white transition-all duration-500 shadow-inner shrink-0">
+              <Alert02Icon className="w-4.5 h-4.5" />
             </div>
             <div>
-              <CardTitle className="text-lg md:text-xl font-bold tracking-tight">System Alerts</CardTitle>
-              <CardDescription className="text-[10px] font-black text-foreground/60 uppercase tracking-wide mt-0.5 text-left">Live Detection</CardDescription>
+              <CardTitle className="text-sm font-bold tracking-tight">System Alerts</CardTitle>
+              <CardDescription className="text-[10px] font-bold text-foreground/50 uppercase tracking-widest mt-1 text-left leading-none">Current Status</CardDescription>
             </div>
           </div>
         </div>
@@ -42,29 +42,29 @@ export const RecentAlertsWidget = ({ alerts, userRole }: RecentAlertsWidgetProps
               <div className="w-8 h-8 rounded-lg bg-muted/5 border border-dashed border-border/60 flex items-center justify-center text-muted-foreground/40">
                 <Alert02Icon className="w-4 h-4" />
               </div>
-              <p className="font-black text-[8px] uppercase tracking-widest text-foreground/60">System Nominal</p>
+              <p className="font-black text-[8px] uppercase tracking-widest text-foreground/60">No Alerts Found</p>
             </div>
           ) : (
             alerts.slice(0, 6).map((alert) => (
               <div
                 key={alert.alertId}
-                className="group/row px-5 py-2 hover:bg-primary/[0.03] transition-all cursor-pointer flex items-center gap-3"
+                className="group/row px-6 py-3 hover:bg-muted/20 transition-all cursor-pointer flex items-center gap-4 border-b border-border/40 h-20"
                 onClick={() => handleRowClick(alert.alertId)}
               >
                 <div className={cn(
-                  "w-1.5 h-1.5 rounded-full shrink-0 shadow-sm",
-                  alert.severity === AlertSeverity.CRITICAL ? "bg-rose-400" : "bg-amber-500"
+                  "w-1.5 h-1.5 rounded-full shrink-0 shadow-sm animate-pulse",
+                  alert.severity === AlertSeverity.CRITICAL ? "bg-status-error shadow-status-error/40" : "bg-status-warning shadow-status-warning/40"
                 )} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-sm text-foreground/90 group-hover/row:text-primary transition-colors leading-tight truncate">{alert.message}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <p className="font-bold text-sm text-foreground/90 group-hover/row:text-primary transition-colors leading-tight truncate tracking-tight">{alert.message}</p>
+                  <div className="flex items-center gap-3 mt-1">
                     <span className={cn(
-                      "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm border",
-                      alert.severity === AlertSeverity.CRITICAL ? "bg-rose-400/10 text-rose-400 border-rose-400/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                      "text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border shadow-app-subtle",
+                      alert.severity === AlertSeverity.CRITICAL ? "bg-status-error/10 text-status-error border-status-error/20" : "bg-status-warning/10 text-status-warning border-status-warning/20"
                     )}>
                       {alert.severity}
                     </span>
-                    <span className="text-[8px] font-black text-foreground/20 uppercase tracking-widest">{formatDate(alert.createdAt)}</span>
+                    <span className="text-[8px] font-bold text-foreground/20 uppercase tracking-widest">{formatDate(alert.createdAt)}</span>
                   </div>
                 </div>
               </div>

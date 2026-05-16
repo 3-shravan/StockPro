@@ -10,7 +10,8 @@ import { movementsApi } from '@/features/movements/api/movements.api';
 import type { StockMovement } from '@/features/movements/types';
 import { showToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
-import { MovementType } from '@/types/enums';
+import { MovementType, Role } from '@/types/enums';
+import { useAuthStore } from '@/stores/auth.store';
 import {
   ArrowDown01Icon,
   ArrowUp01Icon,
@@ -21,8 +22,10 @@ import {
   Activity01Icon
 } from 'hugeicons-react';
 import { useEffect, useMemo, useState } from 'react';
+import { EmptyState } from '@/components/common/EmptyState';
 
 export const MovementsPage = () => {
+  const { user } = useAuthStore();
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [typeFilter, setTypeFilter] = useState<'ALL' | MovementType>('ALL');
   const [query, setQuery] = useState('');
@@ -32,7 +35,14 @@ export const MovementsPage = () => {
     setIsLoading(true);
     try {
       const data = await movementsApi.getAll();
-      setMovements(data);
+      let allMovements = data;
+
+      // STAFF Isolation: Only see movements for assigned hub
+      if (user?.role === Role.STAFF) {
+        allMovements = allMovements.filter(m => m.warehouseName === user.department);
+      }
+
+      setMovements(allMovements);
     } catch (error: any) {
       console.error("[MovementsPage] Failed to load movements:", error);
       showToast.error('Unable to access ledger data.');
@@ -70,7 +80,7 @@ export const MovementsPage = () => {
       </div>
 
       {/* Action Bar */}
-      <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
+      <div className="flex flex-col items-center justify-center gap-10 w-full py-4">
         <div className="flex items-center gap-4 w-full max-w-4xl">
           <div className="relative group flex-1">
             <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -133,12 +143,12 @@ export const MovementsPage = () => {
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-64 text-center">
-                  <div className="space-y-4">
-                    <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto shadow-app-subtle border border-border/40">
-                      <Activity01Icon className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-wider">No activity identified in current audit</p>
-                  </div>
+                  <EmptyState
+                    icon={Activity01Icon}
+                    title="No Activity Detected"
+                    description="The audit ledger contains no historical movement protocols matching your current search parameters."
+                    containerClassName="border-none bg-transparent py-20"
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -180,7 +190,7 @@ export const MovementsPage = () => {
                   <TableCell className="px-8 text-center">
                     <div className={cn(
                       "inline-flex items-center gap-2 font-bold",
-                      m.quantity >= 0 ? "text-emerald-500" : "text-rose-400"
+                      m.quantity >= 0 ? "text-primary" : "text-status-error"
                     )}>
                       <span className="text-sm tracking-tight tabular-nums">
                         {m.quantity >= 0 ? '+' : ''}{m.quantity}
@@ -208,13 +218,13 @@ export const MovementsPage = () => {
 
 const getMovementStyles = (type: MovementType) => {
   switch (type) {
-    case MovementType.STOCK_IN: return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-    case MovementType.STOCK_OUT: return 'bg-rose-400/10 text-rose-600 border-rose-400/20';
+    case MovementType.STOCK_IN: return 'bg-primary/10 text-primary border-primary/20';
+    case MovementType.STOCK_OUT: return 'bg-status-error/10 text-status-error border-status-error/20';
     case MovementType.TRANSFER_IN:
     case MovementType.TRANSFER_OUT: return 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20';
     case MovementType.ADJUSTMENT: return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
     case MovementType.WRITE_OFF: return 'bg-slate-500/10 text-slate-600 border-slate-500/20';
-    case MovementType.RETURN: return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+    case MovementType.RETURN: return 'bg-status-warning/10 text-status-warning border-status-warning/20';
     default: return 'bg-muted/10 text-muted-foreground border-border/40';
   }
 };

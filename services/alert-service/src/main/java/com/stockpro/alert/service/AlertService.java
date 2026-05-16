@@ -24,7 +24,11 @@ public interface AlertService {
 
   List<AlertResponse> getByRecipient(int recipientId);
 
+  List<AlertResponse> getByContext(int userId, String role, Integer warehouseId);
+
   int getUnreadCount(int recipientId);
+
+  int getUnreadCountByContext(int userId, String role, Integer warehouseId);
 
   List<AlertResponse> getUnacknowledged();
 

@@ -87,8 +87,8 @@ export const ProcurementPipelineWidget = ({ orders, userRole }: ProcurementPipel
                     <TableCell className="px-5 py-4 text-center hidden md:table-cell">
                       <span className={cn(
                         "inline-flex items-center px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm transition-all",
-                        o.status === 'FULLY_RECEIVED' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                          o.status === 'PARTIALLY_RECEIVED' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                        o.status === 'FULLY_RECEIVED' ? "bg-primary/10 text-primary border-primary/20" :
+                          o.status === 'PARTIALLY_RECEIVED' ? "bg-status-warning/10 text-status-warning border-status-warning/20" :
                             "bg-muted/40 text-foreground/60 border-border/40"
                       )}>
                         {o.status.replace(/_/g, ' ')}

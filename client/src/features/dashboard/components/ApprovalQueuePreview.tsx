@@ -30,10 +30,10 @@ export const ApprovalQueuePreview = ({ orders, userRole }: ApprovalQueuePreviewP
   return (
     <Card className="rounded-[2.5rem] border border-border/60 bg-card/40 backdrop-blur-xl shadow-sm overflow-hidden flex flex-col group">
       <CardHeader className="bg-muted/5 border-b border-border/10 p-6 md:p-8 pb-4 md:pb-6 relative text-left">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-amber-500/10 transition-colors" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-status-warning/5 blur-[50px] -mr-16 -mt-16 rounded-full group-hover:bg-status-warning/10 transition-colors" />
         <div className="flex items-center justify-between relative">
           <div className="flex items-center gap-6">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/5 text-amber-600 flex items-center justify-center border border-amber-500/10 group-hover:bg-amber-500 group-hover:text-white transition-all duration-500 shadow-inner shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-status-warning/5 text-status-warning flex items-center justify-center border border-status-warning/10 group-hover:bg-status-warning group-hover:text-white transition-all duration-500 shadow-inner shrink-0">
               <ShoppingBasket01Icon className="w-5 h-5" />
             </div>
             <div>
@@ -41,7 +41,7 @@ export const ApprovalQueuePreview = ({ orders, userRole }: ApprovalQueuePreviewP
               <CardDescription className="text-[9px] font-black text-foreground/70 uppercase tracking-wider mt-1 text-left">Pending Authorization Stream</CardDescription>
             </div>
           </div>
-          <span className="px-3 py-1 rounded-full bg-amber-500 text-white text-[8px] font-black uppercase tracking-wider shadow-lg shadow-amber-500/20 shrink-0">
+          <span className="px-3 py-1 rounded-full bg-status-warning text-white text-[8px] font-black uppercase tracking-wider shadow-lg shadow-status-warning/20 shrink-0">
             {pending.length} STREAMS
           </span>
         </div>
@@ -70,7 +70,7 @@ export const ApprovalQueuePreview = ({ orders, userRole }: ApprovalQueuePreviewP
                     onClick={handleRowClick}
                   >
                     <TableCell className="px-4 md:px-6 py-3">
-                      <p className="text-sm md:text-base font-bold text-foreground group-hover/row:text-amber-500 transition-colors leading-none truncate">#{o.poId} · {o.supplierName}</p>
+                      <p className="text-sm md:text-base font-bold text-foreground group-hover/row:text-status-warning transition-colors leading-none truncate">#{o.poId} · {o.supplierName}</p>
                       <p className="text-[9px] font-black text-foreground/70 uppercase tracking-wider mt-1.5 opacity-60 truncate">Cycle: {formatDate(o.orderDate)}</p>
                     </TableCell>
                     <TableCell className="px-4 md:px-6 py-3 text-right">

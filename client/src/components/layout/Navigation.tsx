@@ -18,6 +18,7 @@ import {
 } from 'hugeicons-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useAlertsStore } from '@/stores/alerts.store';
+import { showToast } from '@/lib/toast';
 import { Role } from '@/types';
 import {
   Sidebar,
@@ -44,13 +45,13 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/purchase', icon: DashboardCircleIcon, roles: [Role.OFFICER] },
 
   // Analytics / Reports — Admin & Manager only
-  { label: 'Intelligence', path: '/admin/analytics', icon: Chart01Icon, roles: [Role.ADMIN] },
-  { label: 'Intelligence', path: '/manager/reports', icon: Chart01Icon, roles: [Role.MANAGER] },
+  { label: 'Reports', path: '/admin/analytics', icon: Chart01Icon, roles: [Role.ADMIN] },
+  { label: 'Reports', path: '/manager/reports', icon: Chart01Icon, roles: [Role.MANAGER] },
 
   // Inventory — hub-scoped for Manager/Staff; global catalogue for Admin; OFFICER has no inventory nav
   { label: 'Products', path: '/admin/products', icon: PackageIcon, roles: [Role.ADMIN] },
-  { label: 'Hub Inventory', path: '/manager/products', icon: PackageIcon, roles: [Role.MANAGER] },
-  { label: 'Hub Inventory', path: '/warehouse/products', icon: PackageIcon, roles: [Role.STAFF] },
+  { label: 'Inventory', path: '/manager/products', icon: PackageIcon, roles: [Role.MANAGER] },
+  { label: 'Inventory', path: '/warehouse/products', icon: PackageIcon, roles: [Role.STAFF] },
 
   // Suppliers — Officer and Admin only
   { label: 'Suppliers', path: '/purchase/suppliers', icon: UserGroupIcon, roles: [Role.OFFICER, Role.ADMIN] },
@@ -61,7 +62,7 @@ const navItems: NavItem[] = [
   { label: 'Purchase Orders', path: '/admin/purchase-orders', icon: ShoppingBasket01Icon, roles: [Role.ADMIN] },
 
   // Warehouse / Stock operations
-  { label: 'Warehouses', path: '/manager/stock', icon: WarehouseIcon, roles: [Role.MANAGER, Role.ADMIN] },
+  { label: 'Warehouses', path: '/admin/warehouses', icon: WarehouseIcon, roles: [Role.ADMIN] },
   { label: 'Receive Goods', path: '/warehouse/receive', icon: PackageReceiveIcon, roles: [Role.STAFF, Role.ADMIN] },
   { label: 'Issue Stock', path: '/warehouse/issue', icon: PackageMovingIcon, roles: [Role.STAFF] },
 
@@ -70,10 +71,10 @@ const navItems: NavItem[] = [
   { label: 'Movements', path: '/warehouse/movements', icon: ArrowLeftRightIcon, roles: [Role.STAFF] },
 
   // Alerts
-  { label: 'Operations Pulse', path: '/admin/alerts', icon: Notification01Icon, roles: [Role.ADMIN] },
-  { label: 'Operations Pulse', path: '/manager/alerts', icon: Notification01Icon, roles: [Role.MANAGER] },
-  { label: 'Operations Pulse', path: '/warehouse/alerts', icon: Notification01Icon, roles: [Role.STAFF] },
-  { label: 'Operations Pulse', path: '/purchase/alerts', icon: Notification01Icon, roles: [Role.OFFICER] },
+  { label: 'System Alerts', path: '/admin/alerts', icon: Notification01Icon, roles: [Role.ADMIN] },
+  { label: 'System Alerts', path: '/manager/alerts', icon: Notification01Icon, roles: [Role.MANAGER] },
+  { label: 'System Alerts', path: '/warehouse/alerts', icon: Notification01Icon, roles: [Role.STAFF] },
+  { label: 'System Alerts', path: '/purchase/alerts', icon: Notification01Icon, roles: [Role.OFFICER] },
 
   // Admin-only
   { label: 'Users', path: '/admin/users', icon: UserGroupIcon, roles: [Role.ADMIN] },
@@ -93,16 +94,6 @@ export const Navigation = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user?.userId) {
-      void fetchUnreadCount(user.userId);
-      const interval = setInterval(() => {
-        void fetchUnreadCount(user.userId);
-      }, 60000);
-      return () => clearInterval(interval);
-    }
-  }, [user?.userId, fetchUnreadCount]);
-
-  useEffect(() => {
     localStorage.setItem('stockpro-sidebar-collapsed', String(collapsed));
     // Offset = left-4 (1rem) + sidebar width + gap (1.5rem)
     document.documentElement.style.setProperty(
@@ -110,6 +101,25 @@ export const Navigation = () => {
       collapsed ? '8.5rem' : '20.5rem',
     );
   }, [collapsed]);
+
+  const [lastCount, setLastCount] = useState(unreadCount);
+
+  useEffect(() => {
+    if (user?.userId) {
+      void fetchUnreadCount(user.userId, user.role, (user as any).warehouseId);
+      const interval = setInterval(() => {
+        void fetchUnreadCount(user.userId, user.role, (user as any).warehouseId);
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchUnreadCount]);
+
+  useEffect(() => {
+    if (unreadCount > lastCount) {
+      showToast.info("New system alert received");
+    }
+    setLastCount(unreadCount);
+  }, [unreadCount]);
 
   return (
     <Sidebar className={cn("transition-all duration-500 border-r border-border/40 bg-sidebar/50 backdrop-blur-3xl", collapsed ? 'w-24' : 'w-72')}>
@@ -169,18 +179,6 @@ export const Navigation = () => {
                     >
                       <item.icon className={cn("h-5 w-5 transition-transform duration-500 group-hover/btn:scale-110", isActive && "text-background")} />
                       {!collapsed && <span className="font-bold text-[11px] uppercase tracking-[0.15em]">{item.label}</span>}
-
-                      {item.label === 'Operations Pulse' && unreadCount > 0 && (
-                        <span className={cn(
-                          "flex h-5 min-w-5 items-center justify-center rounded-full text-[9px] font-bold shadow-sm",
-                          isActive
-                            ? "bg-background text-foreground"
-                            : "bg-primary text-primary-foreground",
-                          collapsed ? "absolute -right-1 -top-1 border-2 border-background" : "ml-auto"
-                        )}>
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </span>
-                      )}
                     </SidebarMenuButton>
                   )}
                 </NavLink>
@@ -190,30 +188,27 @@ export const Navigation = () => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-5 border-t border-border/5">
+      <SidebarFooter className="p-5 border-border/5">
         <NavLink
           to="/profile"
           className={cn(
-            "flex items-center transition-all duration-500 group rounded-[1.5rem]",
-            collapsed ? "justify-center p-2" : "gap-4 px-4 py-4 bg-foreground/[0.02] dark:bg-white/[0.02] hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] border border-border/10 shadow-sm"
+            "flex items-center transition-all duration-500 group rounded-full",
+            collapsed ? "justify-center p-2" : "gap-4 pl-3 pr-6 py-2 bg-foreground/[0.02] dark:bg-white/[0.05] hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] border border-border/10 shadow-sm"
           )}
         >
           <div className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-500",
-            "bg-foreground text-background group-hover:scale-110",
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all duration-500 shadow-sm border border-white/10",
+            "group-hover:scale-110",
+            user?.role === Role.ADMIN ? "bg-[#963E3E] text-white" :
+              user?.role === Role.MANAGER ? "bg-[#7C69E3] text-white" :
+                user?.role === Role.OFFICER ? "bg-[#C5CE75] text-black" : "bg-primary text-white",
             collapsed && "mx-auto"
           )}>
-            <UserIcon className="h-5 w-5" />
+            <UserIcon className="h-3 w-3" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-[10px] font-black uppercase tracking-[0.15em] text-foreground/80 group-hover:text-foreground transition-colors leading-none">{user?.email || 'User Account'}</p>
-              <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-border/10">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
-                <p className="truncate text-[9px] font-black text-primary uppercase tracking-[0.1em]">
-                  {user?.role === Role.ADMIN ? 'GLOBAL OPERATIONS' : (user?.department || 'UNASSIGNED HUB')}
-                </p>
-              </div>
+              <p className="truncate text-[12px] font-medium tracking-[0.01em] text-foreground group-hover:text-foreground transition-colors leading-none">{user?.email || 'User Account'}</p>
             </div>
           )}
         </NavLink>

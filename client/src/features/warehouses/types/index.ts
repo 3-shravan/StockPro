@@ -35,6 +35,9 @@ export interface StockUpdateRequest {
   warehouseId: number;
   productId: number;
   quantity: number;
+  notes?: string;
+  referenceType?: string;
+  referenceId?: number;
 }
 
 export interface StockReservationRequest {

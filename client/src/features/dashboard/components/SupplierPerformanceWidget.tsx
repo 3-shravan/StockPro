@@ -43,9 +43,9 @@ export const SupplierPerformanceWidget = ({ suppliers, orders }: SupplierPerform
       <CardContent className="p-6 md:p-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {stats.length === 0 ? (
-             <div className="col-span-full py-12 text-center text-[9px] font-black uppercase tracking-wider text-muted-foreground/30 italic border border-dashed border-border rounded-3xl">
-                Registry Empty: No active supplier activity.
-             </div>
+            <div className="col-span-full py-12 text-center text-[9px] font-black uppercase tracking-wider text-muted-foreground/30 italic border border-dashed border-border rounded-3xl">
+              Registry Empty: No active supplier activity.
+            </div>
           ) : (
             stats.map((s) => (
               <div
@@ -54,22 +54,22 @@ export const SupplierPerformanceWidget = ({ suppliers, orders }: SupplierPerform
                 onClick={handleRowClick}
               >
                 <div className="absolute top-0 right-0 w-28 h-28 bg-primary/5 blur-3xl -mr-14 -mt-14 group-hover/box:bg-primary/10 transition-colors" />
-                
+
                 <div className="flex justify-between items-start mb-6">
-                   <div className="min-w-0 flex-1">
-                      <p className="font-black text-2xl text-foreground group-hover/box:translate-x-1 transition-all truncate tracking-tighter leading-tight">{s.name}</p>
-                      <p className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mt-2 truncate">{s.city || 'Global'}</p>
-                   </div>
-                   <div className="w-12 h-12 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary text-base font-black shrink-0 shadow-inner">
-                      {s.orderCount}
-                   </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-2xl text-foreground group-hover/box:translate-x-1 transition-all truncate tracking-tighter leading-tight">{s.name}</p>
+                    <p className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mt-2 truncate">{s.city || 'Global'}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary text-base font-black shrink-0 shadow-inner">
+                    {s.orderCount}
+                  </div>
                 </div>
 
                 <div className="pt-6 border-t border-border/10 flex items-center justify-between">
-                   <div>
-                      <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Total Valuation</p>
-                      <p className="font-black text-3xl md:text-4xl tabular-nums tracking-tighter text-foreground mt-2">{formatCurrency(s.totalSpent)}</p>
-                   </div>
+                  <div>
+                    <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest">Total Valuation</p>
+                    <p className="font-black text-3xl md:text-4xl tabular-nums tracking-tighter text-foreground mt-2">{formatCurrency(s.totalSpent)}</p>
+                  </div>
                 </div>
               </div>
             ))

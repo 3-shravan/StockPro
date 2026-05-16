@@ -111,10 +111,10 @@ public class ProductController {
 
     /** Adjust stock level of a product. */
     @PutMapping("/{id}/stock")
-    public ResponseEntity<ApiResponse<Void>> adjustStock(@PathVariable int id, @RequestParam int quantity) {
+    public ResponseEntity<ApiResponse<ProductResponse>> adjustStock(@PathVariable int id, @RequestParam int quantity) {
         log.info("API: Adjusting stock for product ID: {} by {}", id, quantity);
-        productService.adjustStock(id, quantity);
-        return ResponseEntity.ok(ApiResponse.success("Stock level updated successfully", null));
+        ProductResponse response = productService.adjustStock(id, quantity);
+        return ResponseEntity.ok(ApiResponse.success("Stock level updated successfully", response));
     }
 
     /** Only Admins can permanently delete a product record. */

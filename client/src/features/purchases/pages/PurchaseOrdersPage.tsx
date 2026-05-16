@@ -224,9 +224,24 @@ export const PurchaseOrdersPage = () => {
     }
   };
 
-  const filteredOrders = useMemo(() =>
-    statusFilter === 'ALL' ? orders : orders.filter(o => o.status === statusFilter)
-    , [orders, statusFilter]);
+  const filteredOrders = useMemo(() => {
+    let result = orders;
+    if (statusFilter !== 'ALL') {
+      result = result.filter(o => o.status === statusFilter);
+    }
+    if (query.trim()) {
+      const lowerQuery = query.toLowerCase();
+      result = result.filter(o => 
+        o.supplierName?.toLowerCase().includes(lowerQuery) ||
+        o.warehouseName?.toLowerCase().includes(lowerQuery) ||
+        o.lineItems?.some(item => 
+          item.productName?.toLowerCase().includes(lowerQuery) || 
+          item.productSku?.toLowerCase().includes(lowerQuery)
+        )
+      );
+    }
+    return result;
+  }, [orders, statusFilter, query]);
 
   return (
     <section className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
@@ -267,7 +282,7 @@ export const PurchaseOrdersPage = () => {
       </div>
 
       {activeTab === 'create' ? (
-        <div className="max-w-5xl space-y-10 animate-in slide-in-from-bottom-8 duration-500">
+        <div className="max-w-5xl space-y-12 animate-in slide-in-from-bottom-8 duration-500">
           <div className="flex items-center gap-4 px-2">
             <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
               <ShoppingBasket01Icon className="w-6 h-6" />
@@ -284,11 +299,11 @@ export const PurchaseOrdersPage = () => {
             <form onSubmit={handleCreate} className="space-y-10">
               <div className="grid gap-8 md:grid-cols-3">
                 <div className="space-y-3">
-                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Supplier <span className="text-rose-400">*</span></label>
+                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Supplier <span className="text-status-error">*</span></label>
                   <SupplierSelect value={supplierId} onChange={setSupplierId} />
                 </div>
                 <div className="space-y-3">
-                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Warehouse <span className="text-rose-400">*</span></label>
+                  <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider px-2">Warehouse <span className="text-status-error">*</span></label>
                   <WarehouseSelect value={warehouseId} onChange={setWarehouseId} />
                 </div>
                 <div className="space-y-3">
@@ -346,7 +361,7 @@ export const PurchaseOrdersPage = () => {
                         type="button"
                         onClick={() => removeLine(index)}
                         disabled={lineItems.length === 1}
-                        className="h-12 w-12 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-white hover:bg-rose-400 bg-muted/20 border border-border/20 transition-all disabled:opacity-20 shadow-app-subtle"
+                        className="h-12 w-12 rounded-2xl flex items-center justify-center text-muted-foreground hover:text-white hover:bg-status-error bg-muted/20 border border-border/20 transition-all disabled:opacity-20 shadow-app-subtle"
                       >
                         <Delete02Icon className="w-6 h-6" />
                       </button>
@@ -419,11 +434,11 @@ export const PurchaseOrdersPage = () => {
                       <span className={cn(
                         "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
                         selectedOrder.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground border-border/40" :
-                          selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
-                            selectedOrder.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
-                              selectedOrder.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20" :
-                                selectedOrder.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                                  selectedOrder.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive border-destructive/20" :
+                          selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-status-warning/10 text-status-warning border-status-warning/20" :
+                            selectedOrder.status === PurchaseOrderStatus.APPROVED ? "bg-status-info/10 text-status-info border-status-info/20" :
+                              selectedOrder.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-status-info/10 text-status-info border-status-info/20" :
+                                selectedOrder.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-primary/10 text-primary border-primary/20" :
+                                  selectedOrder.status === PurchaseOrderStatus.CANCELLED ? "bg-status-error/10 text-status-error border-status-error/20" :
                                     "bg-muted text-muted-foreground"
                       )}>
                         {selectedOrder.status.replace('_', ' ')}
@@ -437,7 +452,7 @@ export const PurchaseOrdersPage = () => {
 
                 <div className="flex flex-wrap items-center gap-3">
                   {selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL && (user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
-                    <button onClick={() => approve(selectedOrder.poId)} className="h-10 px-6 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all">
+                    <button onClick={() => approve(selectedOrder.poId)} className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-xs hover:bg-primary/90 transition-all">
                       Approve Order
                     </button>
                   )}
@@ -447,7 +462,7 @@ export const PurchaseOrdersPage = () => {
                     </button>
                   )}
                   {(selectedOrder.status === PurchaseOrderStatus.DRAFT || selectedOrder.status === PurchaseOrderStatus.PENDING_APPROVAL) && (user?.role === Role.OFFICER || user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
-                    <button onClick={() => cancel(selectedOrder.poId)} className="h-10 px-6 rounded-lg border border-destructive/20 bg-destructive/10 text-destructive font-bold text-xs hover:bg-destructive/20 transition-all">
+                    <button onClick={() => cancel(selectedOrder.poId)} className="h-10 px-6 rounded-lg border border-status-error/20 bg-status-error/10 text-status-error font-bold text-xs hover:bg-status-error/20 transition-all">
                       Cancel Order
                     </button>
                   )}
@@ -486,8 +501,8 @@ export const PurchaseOrdersPage = () => {
                             <span className={cn(
                               "px-2 py-0.5 rounded text-[10px] font-bold",
                               item.receivedQty === 0 ? "bg-muted text-muted-foreground" :
-                                item.receivedQty < item.quantity ? "bg-amber-500/10 text-amber-600" :
-                                  "bg-emerald-500/10 text-emerald-600"
+                                item.receivedQty < item.quantity ? "bg-status-warning/10 text-status-warning" :
+                                  "bg-primary/10 text-primary"
                             )}>
                               {item.receivedQty} / {item.quantity}
                             </span>
@@ -564,9 +579,9 @@ export const PurchaseOrdersPage = () => {
           </div>
         </div>
       ) : (
-        <div className="space-y-6 animate-in fade-in duration-500 px-2">
+        <div className="space-y-10 animate-in fade-in duration-500 px-2">
           {/* Main Action Bar */}
-          <div className="flex flex-col gap-4 w-full">
+          <div className="flex flex-col gap-8 w-full">
             <div className="flex items-center gap-4 w-full">
               <div className="relative group flex-1">
                 <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -590,7 +605,7 @@ export const PurchaseOrdersPage = () => {
             </div>
 
             {/* Status Quick Filters */}
-            <div className="flex items-center justify-between gap-4 w-full">
+            <div className="flex items-center justify-between gap-8 w-full">
               <div className="flex p-1 bg-card/40 backdrop-blur-md rounded-xl border border-border shadow-inner overflow-x-auto no-scrollbar">
                 <div className="flex items-center gap-1">
                   <button
@@ -628,7 +643,7 @@ export const PurchaseOrdersPage = () => {
             </div>
           </div>
 
-          <div className="bg-card border border-border/40 rounded-[2rem] shadow-app-card overflow-hidden backdrop-blur-sm">
+          <div className="bg-card border border-border/40 rounded-[2.5rem] shadow-app-card overflow-x-auto no-scrollbar backdrop-blur-sm px-2">
             {isLoading ? (
               <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
                 <div className="w-10 h-10 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
@@ -643,87 +658,86 @@ export const PurchaseOrdersPage = () => {
                 </div>
               </div>
             ) : (
-              <Table>
+              <Table className="min-w-[1000px] w-full">
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
-                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Order Identifier</TableHead>
-                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Primary Asset</TableHead>
-                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Logistics Flux</TableHead>
-                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Status</TableHead>
-                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Valuation</TableHead>
-                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-right">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent border-b border-border/40 h-14">
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Protocol Date</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Primary Asset</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Logistics Flux</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Status</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest w-[180px]">Valuation</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-right w-[150px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredOrders.map((order) => (
                     <TableRow
                       key={order.poId}
-                      className="group hover:bg-primary/[0.02] transition-all cursor-pointer border-b border-border/10 h-20"
+                      className="group hover:bg-muted/20 border-b border-border/40 transition-all cursor-pointer h-20"
                       onClick={() => viewDetails(order.poId)}
                     >
                       <TableCell className="px-8">
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-black text-primary uppercase tracking-wider">Log #{order.poId}</span>
-                          <span className="text-[11px] font-bold text-muted-foreground mt-0.5">{formatDate(order.orderDate)}</span>
+                          <span className="text-[16px]  tracking-tight text-foreground">{formatDate(order.orderDate)}</span>
+                         
                         </div>
                       </TableCell>
-                      <TableCell className="px-8">
+                      <TableCell className="px-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center border border-border/10 group-hover:bg-primary/5 transition-colors">
-                            <ShoppingBasket01Icon className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                          <div className="w-10 h-10 rounded-xl bg-muted/50 text-primary flex items-center justify-center shrink-0 border border-border/40 group-hover:border-primary/20 transition-all shadow-app-subtle">
+                            <ShoppingBasket01Icon className="w-5 h-5" />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-base leading-tight tracking-tight">
-                              {order.lineItems?.[0]?.productName || 'Direct Procurement'}
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold text-sm block leading-tight tracking-tight group-hover:text-primary transition-colors truncate max-w-[240px]">
+                              {order.lineItems?.[0]?.productName || 'General SKU'}
                             </span>
                             {order.lineItems && order.lineItems.length > 1 && (
-                              <span className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter mt-0.5">
-                                +{order.lineItems.length - 1} Additional Items
+                              <span className="text-[9px] text-foreground/30 font-bold uppercase tracking-widest mt-1">
+                                +{order.lineItems.length - 1} Managed Entities
                               </span>
                             )}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-8">
+                      <TableCell className="px-7">
                         <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-wider">
-                            <UserIcon className="w-3 h-3 text-primary/40" />
-                            {order.supplierName || 'Unknown'}
+                          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/50 uppercase tracking-wider truncate max-w-[150px]">
+                            <UserIcon className="w-3.5 h-3.5 text-primary/30" />
+                            {order.supplierName || 'Vendor Pending'}
                           </div>
-                          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-wider">
-                            <DeliveryTruck01Icon className="w-3 h-3 text-primary/40" />
-                            {order.warehouseName || 'General Hub'}
+                          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/50 uppercase tracking-wider truncate max-w-[150px]">
+                            <DeliveryTruck01Icon className="w-3.5 h-3.5 text-primary/30" />
+                            {order.warehouseName || 'Node Unassigned'}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-8">
+                      <TableCell className="px-6">
                         <span className={cn(
-                          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                          "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em] border shadow-app-subtle flex items-center gap-1.5 w-fit",
                           order.status === PurchaseOrderStatus.DRAFT ? "bg-muted text-muted-foreground border-border/40" :
-                            order.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                            order.status === PurchaseOrderStatus.PENDING_APPROVAL ? "bg-status-warning/10 text-status-warning border-status-warning/20" :
                               order.status === PurchaseOrderStatus.APPROVED ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
                                 order.status === PurchaseOrderStatus.PARTIALLY_RECEIVED ? "bg-indigo-500/10 text-indigo-600 border-indigo-500/20" :
-                                  order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                                    order.status === PurchaseOrderStatus.CANCELLED ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                  order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-primary/10 text-primary border-primary/20" :
+                                    order.status === PurchaseOrderStatus.CANCELLED ? "bg-status-error/10 text-status-error border-status-error/20" :
                                       "bg-muted text-muted-foreground"
                         )}>
+                          <span className="w-1 h-1 rounded-full bg-current" />
                           {order.status.replace('_', ' ')}
                         </span>
                       </TableCell>
-                      <TableCell className="px-8">
+                      <TableCell className="px-6">
                         <div className="flex flex-col items-start">
-                          <span className="text-[11px] font-black text-muted-foreground/40 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                            <Money01Icon className="w-3 h-3 text-primary/40" /> Valuation
-                          </span>
-                          <span className="text-base font-bold tabular-nums tracking-tighter text-foreground/90">{formatCurrency(order.totalAmount)}</span>
+                         
+                          <span className="text-base font-bold tabular-nums tracking-tight text-primary">{formatCurrency(order.totalAmount)}</span>
                         </div>
                       </TableCell>
                       <TableCell className="px-8 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-3">
+                        <div className="flex items-center justify-end gap-2">
                           {order.status === PurchaseOrderStatus.DRAFT && (user?.role === Role.OFFICER || user?.role === Role.ADMIN) && (
                             <button
                               onClick={() => submitForApproval(order.poId)}
-                              className="h-9 px-4 rounded-xl bg-primary/10 text-primary font-bold text-[10px] uppercase tracking-wider hover:bg-primary transition-all hover:text-primary-foreground shadow-app-subtle"
+                              className="h-8 px-4 rounded-lg bg-primary/10 text-primary font-black text-[9px] uppercase tracking-widest hover:bg-primary transition-all hover:text-primary-foreground shadow-app-subtle border border-primary/10"
                             >
                               Submit
                             </button>
@@ -731,17 +745,12 @@ export const PurchaseOrdersPage = () => {
                           {order.status === PurchaseOrderStatus.PENDING_APPROVAL && (user?.role === Role.ADMIN || user?.role === Role.MANAGER) && (
                             <button
                               onClick={() => approve(order.poId)}
-                              className="h-9 px-4 rounded-xl bg-emerald-500/10 text-emerald-600 font-bold text-[10px] uppercase tracking-wider hover:bg-emerald-600 transition-all hover:text-white shadow-app-subtle"
+                              className="h-8 px-4 rounded-lg bg-primary/10 text-primary font-black text-[9px] uppercase tracking-widest hover:bg-primary transition-all hover:text-white shadow-app-subtle border border-primary/10"
                             >
                               Approve
                             </button>
                           )}
-                          <button
-                            onClick={() => viewDetails(order.poId)}
-                            className="w-9 h-9 flex items-center justify-center text-muted-foreground/40 hover:text-primary transition-all duration-300 border border-transparent hover:border-border/40 hover:bg-card rounded-xl"
-                          >
-                            <ArrowRight01Icon className="w-5 h-5" />
-                          </button>
+                          <ArrowRight01Icon className="w-5 h-5 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500" />
                         </div>
                       </TableCell>
                     </TableRow>

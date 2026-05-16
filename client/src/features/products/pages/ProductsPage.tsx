@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { EmptyState } from '@/components/common/EmptyState';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   PlusSignIcon,
@@ -28,9 +29,12 @@ import {
 } from "@/components/ui/table";
 import { showToast } from '@/lib/toast';
 import { productsApi } from '@/features/products/api';
+import { warehousesApi } from '@/features/warehouses/api';
 import type { Product, ProductRequest } from '@/features/products/types';
+import type { StockLevel } from '@/features/warehouses/types';
 import { cn, formatCurrency } from "@/lib/utils";
 import { useAuthStore } from '@/stores/auth.store';
+import { WarehouseSelect } from '@/components/common/WarehouseSelect';
 
 const emptyProduct: ProductRequest = {
   sku: '',
@@ -50,7 +54,7 @@ const emptyProduct: ProductRequest = {
   active: true,
 };
 
-type TabType = 'catalogue' | 'registration';
+type TabType = 'list' | 'add';
 
 const ArrowDown01Icon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -70,15 +74,19 @@ export const ProductsPage = () => {
     return `/warehouse/products/${id}`;
   };
 
-  const [activeTab, setActiveTab] = useState<TabType>('catalogue');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [activeTab, setActiveTab] = useState<TabType>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [products, setProducts] = useState<Product[]>([]);
+  const [hubName, setHubName] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState<boolean>((location.state as any)?.filter === 'LOW_STOCK');
   const [form, setForm] = useState<ProductRequest>(emptyProduct);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const searchParams = new URLSearchParams(location.search);
+  const hubId = searchParams.get('hubId');
 
   const filtered = useMemo(() => {
     let result = products;
@@ -97,7 +105,35 @@ export const ProductsPage = () => {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      setProducts(await productsApi.getAll());
+      let allProducts = await productsApi.getAll();
+
+      if (hubId) {
+        const hubIdNum = Number(hubId);
+        const [hubStock, hubDetails] = await Promise.all([
+          warehousesApi.getAllStockByWarehouse(hubIdNum).catch(() => []),
+          warehousesApi.getById(hubIdNum).catch(() => null)
+        ]);
+
+        if (hubDetails) {
+          setHubName(hubDetails.name);
+        }
+
+        // Map hub-specific stock to product list
+        const stockMap = new Map<number, number>(hubStock.map((s: StockLevel) => [s.productId, s.quantity]));
+
+        allProducts = allProducts.map(p => ({
+          ...p,
+          currentQuantity: stockMap.get(p.productId) ?? 0
+        }));
+
+        // Optional: Filter to only show products relevant to this hub?
+        // User request "View Hub Inventory" implies seeing what's there.
+        // But it's better to show all SKUs with 0 if they don't exist in the hub but are in the catalog.
+      } else {
+        setHubName(null);
+      }
+
+      setProducts(allProducts);
     } catch (error: any) {
       showToast.error(error.response?.data?.message || 'Unable to load products.');
     } finally {
@@ -107,7 +143,19 @@ export const ProductsPage = () => {
 
   useEffect(() => {
     void loadProducts();
-  }, []);
+  }, [hubId]);
+
+  useEffect(() => {
+    const state = location.state as { editProductId?: number };
+    if (state?.editProductId && products.length > 0) {
+      const productToEdit = products.find(p => p.productId === state.editProductId);
+      if (productToEdit) {
+        edit(productToEdit);
+        // Clear state to prevent re-triggering
+        navigate(location.pathname + location.search, { replace: true, state: {} });
+      }
+    }
+  }, [location.state, products]);
 
   const update = (field: keyof ProductRequest, value: string | number) => {
     const numericFields = ['costPrice', 'sellingPrice', 'reorderLevel', 'maxStockLevel', 'leadTimeDays', 'currentQuantity'];
@@ -120,7 +168,7 @@ export const ProductsPage = () => {
   const reset = () => {
     setEditingId(null);
     setForm(emptyProduct);
-    if (activeTab === 'registration') setActiveTab('catalogue');
+    if (activeTab === 'add') setActiveTab('list');
   };
 
   const edit = (product: Product) => {
@@ -142,7 +190,7 @@ export const ProductsPage = () => {
       currentQuantity: product.currentQuantity ?? 0,
       active: product.active ?? true,
     });
-    setActiveTab('registration');
+    setActiveTab('add');
   };
 
   const save = async (event: React.FormEvent) => {
@@ -155,7 +203,35 @@ export const ProductsPage = () => {
     setIsSubmitting(true);
     try {
       if (editingId) {
-        await productsApi.update(editingId, form);
+        // If in a hub context, we handle stock synchronization through the Warehouse Service
+        // to ensure movements are recorded and alerts are triggered.
+        if (hubId) {
+          const productInList = products.find(p => p.productId === editingId);
+          const oldHubStock = productInList?.currentQuantity ?? 0;
+
+          if (form.currentQuantity !== oldHubStock) {
+            await warehousesApi.updateStock({
+              warehouseId: Number(hubId),
+              productId: editingId,
+              quantity: form.currentQuantity,
+              notes: 'Manual inventory adjustment via Location Inventory'
+            });
+            // Note: warehousesApi.updateStock will automatically trigger a delta-sync
+            // to the product-service to update the global total.
+          }
+
+          // Before updating metadata, we fetch the fresh global quantity
+          // to ensure our metadata update doesn't overwrite the global sync with the location quantity.
+          const globalProduct = await productsApi.getById(editingId);
+          const metadataPayload = {
+            ...form,
+            currentQuantity: globalProduct.currentQuantity
+          };
+          await productsApi.update(editingId, metadataPayload);
+        } else {
+          // Global context: Direct update to product list
+          await productsApi.update(editingId, form);
+        }
         showToast.success('Product updated.');
       } else {
         await productsApi.create(form);
@@ -174,49 +250,71 @@ export const ProductsPage = () => {
     <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Inventory Catalogue</p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
-            Stock Protocols
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">
+            {hubName ? `${hubName} Inventory` : 'Inventory'}
+          </p>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter text-foreground text-left">
+            {hubName ? 'Warehouse Stock' : 'Products'}
           </h1>
         </div>
 
-        <div className="flex p-2 bg-card/30 rounded-full border border-border shadow-app-card backdrop-blur-md">
-          <button
-            onClick={() => { setActiveTab('catalogue'); reset(); }}
-            className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
-              activeTab === 'catalogue' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <ShoppingBasket01Icon className="w-5 h-5" />
-            Catalogue
-          </button>
-          {isManagerOrAdmin && (
-            <button
-              onClick={() => setActiveTab('registration')}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
-                activeTab === 'registration' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <PlusSignIcon className="w-5 h-5" />
-              {editingId ? 'Modify SKU' : 'Register SKU'}
-            </button>
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          {user?.role === 'ADMIN' && activeTab === 'list' && (
+            <div className="flex items-center gap-2 px-6 h-14 bg-card/30 rounded-full border border-border shadow-app-subtle backdrop-blur-md">
+              <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Context</p>
+              <WarehouseSelect
+                value={Number(hubId) || 0}
+                onChange={(id) => {
+                  if (id === 0) {
+                    navigate(location.pathname);
+                  } else {
+                    navigate(`${location.pathname}?hubId=${id}`);
+                  }
+                }}
+                placeholder="All Locations"
+                className="w-48 !border-none !bg-transparent !shadow-none !h-10"
+              />
+            </div>
           )}
 
-          {user?.role === 'ADMIN' && (
+          <div className="flex p-2 bg-card/30 rounded-full border border-border shadow-app-card backdrop-blur-md h-fit">
             <button
-              onClick={() => navigate('/warehouse/issue')}
-              className="flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 text-muted-foreground hover:text-foreground border-l border-border/20 ml-2 pl-4"
+              onClick={() => { setActiveTab('list'); reset(); }}
+              className={cn(
+                "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
+                activeTab === 'list' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
+              )}
             >
-              <PackageMovingIcon className="w-5 h-5" />
-              Issue Stock
+              <ShoppingBasket01Icon className="w-5 h-5" />
+              Products
             </button>
-          )}
+            {isManagerOrAdmin && (
+              <button
+                onClick={() => setActiveTab('add')}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300",
+                  activeTab === 'add' ? "bg-primary text-primary-foreground shadow-app-subtle" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <PlusSignIcon className="w-5 h-5" />
+                {editingId ? 'Edit Product' : 'Add Product'}
+              </button>
+            )}
+
+            {user?.role === 'ADMIN' && (
+              <button
+                onClick={() => navigate('/warehouse/issue')}
+                className="flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 text-muted-foreground hover:text-foreground border-l border-border/20 ml-2 pl-4"
+              >
+                <PackageMovingIcon className="w-5 h-5" />
+                Issue Stock
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {activeTab === 'catalogue' && (
+      {activeTab === 'list' && (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col items-center justify-center gap-6 w-full py-4">
             <div className="flex items-center gap-4 w-full max-w-4xl">
@@ -224,7 +322,7 @@ export const ProductsPage = () => {
                 <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input
                   className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
-                  placeholder="Search protocols by name, SKU, category or brand..."
+                  placeholder="Search products by name, SKU, category or brand..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -235,12 +333,12 @@ export const ProductsPage = () => {
                 className={cn(
                   "flex items-center gap-3 px-8 h-16 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 border shadow-app-subtle shrink-0",
                   lowStockOnly
-                    ? "bg-destructive text-destructive-foreground border-destructive/50 shadow-destructive/20"
+                    ? "bg-status-error text-white border-status-error/50 shadow-status-error/20"
                     : "bg-card border-border text-muted-foreground hover:text-foreground"
                 )}
               >
                 <FilterIcon className="w-5 h-5" />
-                {lowStockOnly ? "Critical Stock" : "All Density"}
+                {lowStockOnly ? "Low Stock" : hubId ? "Warehouse Inventory" : "All Inventory"}
               </button>
 
               <div className="flex p-2 bg-card/50 rounded-2xl border border-border shadow-app-subtle shrink-0">
@@ -269,16 +367,14 @@ export const ProductsPage = () => {
           {loading ? (
             <div className="p-32 text-center flex flex-col items-center gap-6">
               <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
-              <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Decoding SKU Registry...</p>
+              <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Loading products...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-32 text-center space-y-6 bg-muted/5 rounded-[3rem] border border-dashed border-border/60">
-              <PackageIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
-              <div className="space-y-2">
-                <p className="text-xl font-bold text-foreground">No protocols found</p>
-                <p className="text-sm text-foreground/70 uppercase tracking-wider font-medium">Adjust query parameters or register new asset.</p>
-              </div>
-            </div>
+            <EmptyState
+              icon={PackageIcon}
+              title="No Products Found"
+              description="No products match your current filters or search query."
+            />
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map((product) => (
@@ -294,30 +390,44 @@ export const ProductsPage = () => {
                       <PackageIcon className="w-7 h-7" />
                     </div>
                     {product.currentQuantity <= product.reorderLevel && (
-                      <span className="text-[8px] font-black px-3 py-1 bg-rose-400/10 text-rose-500 uppercase tracking-widest rounded-full border border-rose-400/20 animate-pulse">
+                      <span className="text-[8px] font-black px-3 py-1 bg-status-error/10 text-status-error uppercase tracking-widest rounded-full border border-status-error/20 animate-pulse">
                         CRITICAL
+                      </span>
+                    )}
+                    {product.currentQuantity >= product.maxStockLevel && product.maxStockLevel > 0 && (
+                      <span className="text-[8px] font-black px-3 py-1 bg-amber-500/10 text-amber-500 uppercase tracking-widest rounded-full border border-amber-500/20">
+                        OVERSTOCK
                       </span>
                     )}
                   </div>
 
                   <div className="space-y-2 mb-6 relative">
-                    <p className="text-[9px] font-black text-primary/40 uppercase tracking-widest leading-none">{product.sku}</p>
-                    <h3 className="font-black text-xl leading-tight tracking-tighter group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
+
+                    <h3 className="font-black text-xl leading-tight tracking-tighter group-hover:text-primary transition-colors pt-2 line-clamp-2">{product.name}</h3>
                   </div>
 
-                  <div className="space-y-4 relative">
-                    <div className="flex items-end justify-between">
-                      <div className="space-y-1">
-                        <p className="text-[9px] font-black text-foreground/40 uppercase tracking-widest leading-none">Density</p>
+                  <div className="space-y-6 mt-auto relative">
+                    <div className="grid grid-cols-2 gap-8 pt-6 border-t border-border/10">
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest leading-none">Stock</p>
                         <p className={cn(
                           "text-2xl font-black tabular-nums tracking-tighter leading-none pt-1",
-                          product.currentQuantity <= product.reorderLevel ? "text-rose-400" : "text-foreground"
+                          product.currentQuantity <= product.reorderLevel ? "text-status-error" :
+                            (product.currentQuantity >= product.maxStockLevel && product.maxStockLevel > 0) ? "text-amber-500" : "text-foreground"
                         )}>
-                          {product.currentQuantity} <span className="text-[9px] font-bold opacity-30 ml-0.5 uppercase">{product.unitOfMeasure}</span>
+                          {product.currentQuantity} <span className="text-[10px] font-bold opacity-30 ml-0.5 uppercase">{product.unitOfMeasure}</span>
                         </p>
                       </div>
-                      <div className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500">
-                        <ArrowRight01Icon className="w-5 h-5" />
+                      <div className="text-right space-y-1.5">
+                        <p className="text-[10px] font-black text-foreground/40 uppercase tracking-widest leading-none">Price</p>
+                        <p className="text-2xl font-black tabular-nums tracking-tighter leading-none pt-1 group-hover:text-primary transition-colors">
+                          {formatCurrency(product.sellingPrice)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end pt-2">
+                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-primary/5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500 border border-transparent group-hover:border-primary/20">
+                        <ArrowRight01Icon className="w-6 h-6" />
                       </div>
                     </div>
                   </div>
@@ -329,10 +439,10 @@ export const ProductsPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
-                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Protocol Asset</TableHead>
-                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Classification</TableHead>
-                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Density Status</TableHead>
-                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Valuation</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Product</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Category</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Stock Level</TableHead>
+                    <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider">Price</TableHead>
                     <TableHead className="px-10 font-black text-[10px] text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -349,7 +459,7 @@ export const ProductsPage = () => {
                             <PackageIcon className="w-6 h-6" />
                           </div>
                           <div className="text-left">
-                            <span className="text-[10px] font-black text-primary uppercase tracking-wider opacity-60 block mb-1">{product.sku}</span>
+
                             <span className="font-bold text-xl block leading-tight tracking-tight group-hover:text-primary transition-colors">{product.name}</span>
                           </div>
                         </div>
@@ -363,11 +473,17 @@ export const ProductsPage = () => {
                         <div className={cn(
                           "inline-flex items-center gap-3 px-6 py-2.5 rounded-full border text-[11px] font-black uppercase tracking-widest",
                           product.currentQuantity <= product.reorderLevel
-                            ? "bg-destructive/10 text-destructive border-destructive/20"
-                            : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            ? "bg-status-error/10 text-status-error border-status-error/20"
+                            : (product.currentQuantity >= product.maxStockLevel && product.maxStockLevel > 0)
+                              ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                              : "bg-primary/10 text-primary border-primary/20"
                         )}>
-                          <div className={cn("w-2 h-2 rounded-full", product.currentQuantity <= product.reorderLevel ? "bg-destructive animate-pulse" : "bg-emerald-500")} />
-                          {product.currentQuantity.toLocaleString()} {product.unitOfMeasure} LEFT
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            product.currentQuantity <= product.reorderLevel ? "bg-status-error animate-pulse" :
+                              (product.currentQuantity >= product.maxStockLevel && product.maxStockLevel > 0) ? "bg-amber-500" : "bg-primary"
+                          )} />
+                          {product.currentQuantity.toLocaleString()} {product.unitOfMeasure} {product.currentQuantity >= product.maxStockLevel && product.maxStockLevel > 0 ? 'FULL' : 'IN STOCK'}
                         </div>
                       </TableCell>
                       <TableCell className="px-10">
@@ -394,19 +510,34 @@ export const ProductsPage = () => {
         </div>
       )}
 
-      {activeTab === 'registration' && (
+      {activeTab === 'add' && (
         <div className="max-w-5xl space-y-12 animate-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center gap-4 px-2">
             <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
               {editingId ? <Edit02Icon className="w-6 h-6" /> : <PlusSignIcon className="w-6 h-6" />}
             </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">{editingId ? 'Modify Resource' : 'Asset Initialization'}</h2>
-              <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
-                {editingId ? `RECONFIGURING LOGISTICS STREAM FOR ${form.name}` : 'PROVISIONING NEW SKU RECORD IN THE GLOBAL REGISTRY'}
+              <h2 className="text-2xl font-bold tracking-tight">{editingId ? 'Edit Product' : 'New Product'}</h2>
+              <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mt-1">
+                {editingId ? `Editing product ${form.name}` : 'Add a new product to the list'}
               </p>
             </div>
           </div>
+
+          {hubId && (
+            <div className="mx-2 p-6 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 flex items-center gap-6 animate-in slide-in-from-top-4 duration-500">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                <InformationCircleIcon className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-black text-amber-500 uppercase tracking-widest leading-none">Location View Active: {hubName}</p>
+                <p className="text-[10px] font-bold text-amber-500/60 uppercase tracking-wider">
+                  You are editing this product within the context of a specific location. Quantity adjustments will target this location specifically.
+                  Metadata changes (Name, Price, etc.) remain global.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="px-2">
             <form onSubmit={save} className="space-y-10">
@@ -415,13 +546,13 @@ export const ProductsPage = () => {
                   <div className="space-y-3 sm:col-span-2 lg:col-span-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Resource Identity <span className="text-rose-400">*</span>
+                      Product Name <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-lg font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/20"
-                        placeholder="OFFICIAL PRODUCT DESIGNATION"
+                        placeholder="ENTER PRODUCT NAME"
                         value={form.name}
                         onChange={(e) => update("name", e.target.value)}
                       />
@@ -431,7 +562,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Protocol SKU <span className="text-rose-400">*</span>
+                      SKU <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <Tag01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -447,13 +578,13 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Registry Barcode
+                      Barcode
                     </label>
                     <div className="relative group">
                       <BarCode01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                        placeholder="SCAN IDENTITY"
+                        placeholder="ENTER BARCODE"
                         value={form.barcode}
                         onChange={(e) => update("barcode", e.target.value)}
                       />
@@ -463,7 +594,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Classification <span className="text-rose-400">*</span>
+                      Category <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <Grid02Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -479,7 +610,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Registry Unit <span className="text-destructive">*</span>
+                      Unit <span className="text-status-error">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -500,7 +631,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Acquisition Evaluation
+                      Cost Price
                     </label>
                     <div className="relative group">
                       <Money01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -518,7 +649,7 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Market Evaluation
+                      Selling Price
                     </label>
                     <div className="relative group">
                       <Money01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -536,14 +667,14 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Risk Threshold
+                      Reorder Level
                     </label>
                     <div className="relative group">
                       <ChartUpIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
                         type="number"
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                        placeholder="MIN. STOCK"
+                        placeholder="MIN QTY"
                         value={form.reorderLevel || ''}
                         onChange={(e) => update("reorderLevel", e.target.value)}
                       />
@@ -553,7 +684,24 @@ export const ProductsPage = () => {
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Supply Lead Period
+                      Max Stock Level
+                    </label>
+                    <div className="relative group">
+                      <ChartUpIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="number"
+                        className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                        placeholder="MAX QTY"
+                        value={form.maxStockLevel || ''}
+                        onChange={(e) => update("maxStockLevel", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      Lead Time (Days)
                     </label>
                     <div className="relative group">
                       <InformationCircleIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -569,15 +717,15 @@ export const ProductsPage = () => {
 
                   {editingId && (
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black text-destructive uppercase tracking-wider px-2 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                        Manual Density Override
+                      <label className="text-[10px] font-black text-status-error uppercase tracking-wider px-2 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-status-error" />
+                        Manual Stock Adjustment
                       </label>
                       <div className="relative group">
-                        <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive/60" />
+                        <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-status-error/60" />
                         <input
                           type="number"
-                          className="h-14 w-full rounded-2xl border border-destructive/20 bg-destructive/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-destructive/10 outline-none transition-all text-destructive"
+                          className="h-14 w-full rounded-2xl border border-status-error/20 bg-status-error/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-status-error/10 outline-none transition-all text-status-error"
                           placeholder="CURRENT QTY"
                           value={form.currentQuantity ?? 0}
                           onChange={(e) => update("currentQuantity", e.target.value)}
@@ -594,14 +742,14 @@ export const ProductsPage = () => {
                   onClick={reset}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
-                  ABORT
+                  CANCEL
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-app-subtle shadow-primary/20 disabled:opacity-50"
                 >
-                  {isSubmitting ? 'SYNCHRONIZING...' : editingId ? 'COMMIT SPECIFICATIONS' : 'AUTHORIZE INITIALIZATION'}
+                  {isSubmitting ? 'SAVING...' : editingId ? 'SAVE CHANGES' : 'ADD PRODUCT'}
                 </button>
               </div>
             </form>

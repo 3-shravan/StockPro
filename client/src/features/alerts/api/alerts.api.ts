@@ -20,6 +20,22 @@ export const alertsApi = {
     return data.data;
   },
 
+  /** GET /alerts/context → alerts based on role/warehouse context */
+  getByContext: async (userId: number, role: string, warehouseId?: number) => {
+    const params = new URLSearchParams({ userId: userId.toString(), role });
+    if (warehouseId) params.append('warehouseId', warehouseId.toString());
+    const { data } = await apiClient.get<ApiResponse<Alert[]>>(`/alerts/context?${params.toString()}`);
+    return data.data;
+  },
+
+  /** GET /alerts/context/unread-count → unread count based on context */
+  getUnreadCountByContext: async (userId: number, role: string, warehouseId?: number) => {
+    const params = new URLSearchParams({ userId: userId.toString(), role });
+    if (warehouseId) params.append('warehouseId', warehouseId.toString());
+    const { data } = await apiClient.get<ApiResponse<number>>(`/alerts/context/unread-count?${params.toString()}`);
+    return data.data;
+  },
+
   /** PUT /alerts/:alertId/read → mark single alert as read */
   markAsRead: async (alertId: number) => {
     const { data } = await apiClient.put<ApiResponse<void>>(`/alerts/${alertId}/read`);

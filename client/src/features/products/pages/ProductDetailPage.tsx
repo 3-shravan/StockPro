@@ -2,34 +2,33 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft01Icon,
-  Settings02Icon,
   DatabaseIcon,
   Money01Icon,
   ChartBarLineIcon,
   Building05Icon,
   Clock01Icon,
   ArrowRight01Icon,
-  Alert01Icon
+  UserEdit01Icon
 } from "hugeicons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { productsApi } from "@/features/products/api";
 import { warehousesApi } from "@/features/warehouses/api";
 import { movementsApi } from "@/features/movements/api/movements.api";
-import type { Product, ProductRequest } from "@/features/products/types";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import type { Product } from "@/features/products/types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import type { StockLevel, Warehouse } from "@/features/warehouses/types";
 import type { StockMovement } from "@/types";
 import { showToast } from "@/lib/toast";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { Modal } from "@/components/ui/modal";
+
 import { useAuthStore } from "@/stores/auth.store";
 import { Role } from "@/types";
 
@@ -37,29 +36,14 @@ export const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const isManagerOrAdmin = user?.role === Role.MANAGER || user?.role === Role.ADMIN;
+  const canEdit = user?.role === Role.MANAGER || user?.role === Role.ADMIN || user?.role === Role.OFFICER;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [stockBreakdown, setStockBreakdown] = useState<StockLevel[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [editForm, setEditForm] = useState<ProductRequest>({
-    name: "",
-    sku: "",
-    barcode: "",
-    category: "",
-    unitOfMeasure: "PCS",
-    costPrice: 0,
-    sellingPrice: 0,
-    reorderLevel: 0,
-    maxStockLevel: 1000,
-    leadTimeDays: 0,
-    currentQuantity: 0,
-    active: true
-  });
+
 
   const loadData = async () => {
     if (!id) return;
@@ -75,21 +59,6 @@ export const ProductDetailPage = () => {
       setStockBreakdown(sData);
       setWarehouses(wData);
       setMovements(mData.slice(0, 10)); // Top 10 recent movements
-      
-      setEditForm({
-        name: pData.name,
-        sku: pData.sku,
-        barcode: pData.barcode ?? "",
-        category: pData.category,
-        unitOfMeasure: pData.unitOfMeasure,
-        costPrice: pData.costPrice,
-        sellingPrice: pData.sellingPrice,
-        reorderLevel: pData.reorderLevel,
-        maxStockLevel: pData.maxStockLevel,
-        leadTimeDays: pData.leadTimeDays,
-        currentQuantity: pData.currentQuantity,
-        active: pData.active
-      });
     } catch (error: any) {
       showToast.error("Failed to load product details.");
     } finally {
@@ -97,21 +66,7 @@ export const ProductDetailPage = () => {
     }
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
-    try {
-      setIsUpdating(true);
-      await productsApi.update(Number(id), editForm);
-      showToast.success("Product updated successfully.");
-      setIsEditModalOpen(false);
-      await loadData();
-    } catch (error: any) {
-      showToast.error("Failed to update product.");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+
 
   useEffect(() => {
     void loadData();
@@ -121,7 +76,7 @@ export const ProductDetailPage = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-muted-foreground font-medium">Analyzing product inventory...</p>
+        <p className="text-muted-foreground font-medium">Loading product...</p>
       </div>
     );
   }
@@ -135,154 +90,251 @@ export const ProductDetailPage = () => {
       {/* Header Section */}
       <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between pt-4">
         <div className="flex items-center gap-6">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate(-1)}
             className="rounded-full hover:bg-card/60 backdrop-blur-sm shadow-sm w-12 h-12 border border-border/40 shrink-0"
           >
             <ArrowLeft01Icon className="w-5 h-5" />
           </Button>
           <div>
-            <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Asset Inventory</p>
+            <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Product Information</p>
             <div className="flex items-center gap-4">
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
                 {product.name}
               </h1>
-              <span className="bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest h-fit">
-                SKU: {product.sku}
-              </span>
             </div>
             <div className="flex items-center gap-2 mt-3">
-              <div className={cn("w-2 h-2 rounded-full shadow-sm", product.active ? (product.currentQuantity > product.reorderLevel ? "bg-emerald-500 shadow-emerald-500/50" : "bg-rose-400/80 animate-pulse shadow-rose-400/50") : "bg-muted-foreground/40")} />
+              <div className={cn("w-2 h-2 rounded-full shadow-sm", product.active ? (product.currentQuantity > product.reorderLevel ? "bg-primary shadow-primary/50" : "bg-status-error/80 animate-pulse shadow-status-error/50") : "bg-muted-foreground/40")} />
               <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider">
-                {product.category} • {product.active ? (product.currentQuantity > product.reorderLevel ? "Inventory Nominal" : "Critical Depletion") : "Product Suspended"}
+                {product.category} • {product.active ? (product.currentQuantity > product.reorderLevel ? "In Stock" : "Low Stock") : "Inactive"}
               </p>
               <span className={cn(
                 "ml-3 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
                 product.active ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/40 text-foreground/40 border-border/40"
               )}>
-                {product.active ? "Active SKU" : "Deactivated"}
+                {product.active ? "Active" : "Deactivated"}
               </span>
             </div>
           </div>
         </div>
 
-        {isManagerOrAdmin && (
-          <div className="flex items-center gap-4 p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
-            <button 
-              className="flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-primary/20"
-              onClick={() => setIsEditModalOpen(true)}
+        {canEdit && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/admin/products', { state: { editProductId: Number(id) } })}
+              className="w-12 h-12 rounded-full border border-border bg-primary text-primary-foreground flex-center hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+              title="Edit Product"
             >
-              <Settings02Icon className="w-4 h-4" />
-              Manage Configuration
+              <UserEdit01Icon className="icon-md" />
             </button>
           </div>
         )}
       </div>
 
       {/* Main Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Global Inventory" 
-          value={product.currentQuantity.toLocaleString()}
-          unit={product.unitOfMeasure}
-          icon={<DatabaseIcon className="w-6 h-6" />}
-          description="Consolidated physical stock"
-        />
-        <StatCard 
-          title="Selling Price" 
-          value={formatCurrency(product.sellingPrice)}
-          unit="Current"
-          icon={<Money01Icon className="w-6 h-6" />}
-          description={`Net Cost: ${formatCurrency(product.costPrice)}`}
-        />
-        <StatCard 
-          title="Reorder Point" 
-          value={product.reorderLevel.toString()}
-          unit="Threshold"
-          icon={<Alert01Icon className="w-6 h-6" />}
-          description="Automatic alert trigger"
-          variant={product.currentQuantity <= product.reorderLevel ? "warning" : "default"}
-        />
-        <StatCard 
-          title="Avg Lead Time" 
-          value={`${product.leadTimeDays}d`}
-          unit="ETA"
-          icon={<Clock01Icon className="w-6 h-6" />}
-          description="Procurement cycle window"
-        />
+      {/* Key Metrics */}
+      <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] p-1 shadow-app-card overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border/20">
+
+          {/* Stock Summary */}
+          <div className="p-10 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <DatabaseIcon className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Total Stock</span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-black tracking-tighter text-foreground">
+                  {product.currentQuantity.toLocaleString()}
+                </span>
+                <span className="text-xs font-bold text-muted-foreground uppercase">{product.unitOfMeasure}</span>
+              </div>
+              <p className="text-xs font-bold text-foreground/50 uppercase tracking-widest">Across All Locations</p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <div className={cn(
+                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border",
+                product.currentQuantity <= product.reorderLevel ? "bg-status-error/10 text-status-error border-status-error/20" : "bg-muted/50 text-muted-foreground border-border/40"
+              )}>
+                RRP: {product.reorderLevel}
+              </div>
+              <div className={cn(
+                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border",
+                product.currentQuantity >= product.maxStockLevel ? "bg-status-warning/10 text-status-warning border-status-warning/20" : "bg-muted/50 text-muted-foreground border-border/40"
+              )}>
+                CAP: {product.maxStockLevel}
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing & Cost */}
+          <div className="p-10 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-status-info/10 text-status-info flex items-center justify-center">
+                <Money01Icon className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Pricing</span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black tracking-tighter text-primary">
+                  {formatCurrency(product.sellingPrice)}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-foreground/50 uppercase tracking-widest">Current Unit Price</p>
+            </div>
+            <div className="pt-2">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                <span>Net Cost:</span>
+                <span className="text-foreground">{formatCurrency(product.costPrice)}</span>
+              </div>
+              <div className="w-full h-1 bg-muted/30 rounded-full mt-3 overflow-hidden">
+                <div
+                  className="h-full bg-primary"
+                  style={{ width: `${Math.min((product.costPrice / product.sellingPrice) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery Information */}
+          <div className="p-10 space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-status-warning/10 text-status-warning flex items-center justify-center">
+                <Clock01Icon className="w-4 h-4" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Delivery</span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black tracking-tighter text-foreground">
+                  {product.leadTimeDays}d
+                </span>
+                <span className="text-xs font-bold text-muted-foreground uppercase">Lead Time</span>
+              </div>
+              <p className="text-xs font-bold text-foreground/50 uppercase tracking-widest">Avg fulfillment window</p>
+            </div>
+            <p className="text-[10px] text-muted-foreground/60 leading-relaxed font-medium pt-2">
+              Optimized cycle based on recent historical fulfillment latency.
+            </p>
+          </div>
+
+          {/* Quick Action / Summary */}
+          <div className="p-10 flex flex-col justify-center bg-muted/5">
+            <div className="space-y-4">
+              <div className="p-5 rounded-2xl bg-card border border-border/40 shadow-app-subtle">
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Stock Value</p>
+                <p className="text-2xl font-black tracking-tighter text-foreground">
+                  {formatCurrency(product.currentQuantity * product.sellingPrice)}
+                </p>
+              </div>
+              <button
+                onClick={() => navigate(`/warehouse/movements?productId=${product.productId}`)}
+                className="w-full group h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-between px-6 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+              >
+                View History
+                <ArrowRight01Icon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-3">
+      <div className="grid gap-10 lg:grid-cols-3 items-start">
         {/* Stock Breakdown */}
-        <Card className="lg:col-span-2 rounded-[2.5rem] border border-border/40 bg-card shadow-2xl overflow-hidden">
+        <Card className="lg:col-span-2 rounded-[2.5rem] border border-border/40 bg-card shadow-sm overflow-hidden">
           <CardHeader className="p-8 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-bold tracking-tight">Inventory Distribution</CardTitle>
-                <CardDescription className="text-xs font-medium text-muted-foreground/60 mt-1 uppercase tracking-wider">Real-time stock levels across node network</CardDescription>
+                <CardTitle className="text-xl font-bold tracking-tight">Stock Distribution</CardTitle>
+                <CardDescription className="text-xs font-medium text-muted-foreground/60 mt-1 uppercase tracking-wider">Current stock levels by warehouse</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table className="min-w-full">
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/40 h-16">
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest whitespace-nowrap">Storage Node</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest whitespace-nowrap">Physical Qty</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest whitespace-nowrap">Reserved</TableHead>
-                  <TableHead className="px-8 font-black text-xs text-muted-foreground/80 uppercase tracking-widest text-right whitespace-nowrap">Availability</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stockBreakdown.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="px-8 py-16 text-center text-muted-foreground italic text-sm border-none">No active stock in distribution network.</TableCell>
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/40 h-12">
+                    <TableHead className="px-8 font-black text-xs text-foreground/40 uppercase tracking-widest">Warehouse</TableHead>
+                    <TableHead className="px-8 font-black text-xs text-foreground/40 uppercase tracking-widest text-center">In Stock</TableHead>
+                    <TableHead className="px-8 font-black text-xs text-foreground/40 uppercase tracking-widest text-center">Unit Price</TableHead>
+                    <TableHead className="px-8 font-black text-xs text-foreground/40 uppercase tracking-widest text-right">Total Value</TableHead>
                   </TableRow>
-                ) : (
-                  stockBreakdown.map((stock) => (
-                    <TableRow key={stock.warehouseId} className="group hover:bg-muted/10 border-b border-border/40 transition-colors last:border-0 h-24">
-                      <TableCell className="px-8 whitespace-nowrap">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center text-base font-black text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
-                            <Building05Icon className="w-5 h-5" />
-                          </div>
-                          <span className="font-black text-lg text-foreground tracking-tighter truncate">{getWarehouseName(stock.warehouseId)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 font-black text-xl text-foreground tracking-tighter whitespace-nowrap">
-                        {stock.quantity.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="px-8 text-muted-foreground text-sm whitespace-nowrap">
-                        {stock.reservedQuantity.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="px-8 text-right whitespace-nowrap">
-                        <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[11px] font-black uppercase tracking-widest border border-emerald-500/10 whitespace-nowrap">
-                          {(stock.quantity - stock.reservedQuantity).toLocaleString()} Units
-                        </span>
-                      </TableCell>
+                </TableHeader>
+                <TableBody>
+                  {stockBreakdown.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="px-8 py-16 text-center text-muted-foreground italic text-sm border-none">No active stock in any location.</TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    <>
+                      {stockBreakdown.map((stock) => (
+                        <TableRow key={stock.warehouseId} className="group hover:bg-muted/10 border-b border-border/40 transition-colors last:border-0 h-24">
+                          <TableCell className="px-8">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center text-base font-black text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
+                                <Building05Icon className="w-5 h-5" />
+                              </div>
+                              <span className="font-black text-lg text-foreground tracking-tighter">{getWarehouseName(stock.warehouseId)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-8 text-center font-black text-xl text-foreground tracking-tighter">
+                            {stock.quantity.toLocaleString()} <span className="text-[10px] opacity-30 uppercase">{product.unitOfMeasure}</span>
+                          </TableCell>
+                          <TableCell className="px-8 text-center">
+                            <span className="text-sm font-bold text-muted-foreground/60">{formatCurrency(product.sellingPrice)}</span>
+                          </TableCell>
+                          <TableCell className="px-8 text-right">
+                            <p className="font-black text-xl text-foreground tracking-tighter">{formatCurrency(stock.quantity * product.sellingPrice)}</p>
+                            <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest mt-1">Stock Value</p>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Total Row */}
+                      <TableRow className="bg-primary/5 h-20 border-t-2 border-primary/20">
+                        <TableCell className="px-8">
+                          <span className="font-black text-sm uppercase tracking-[0.2em] text-primary">Totals</span>
+                        </TableCell>
+                        <TableCell className="px-8 text-center">
+                          <p className="font-black text-2xl text-primary tracking-tighter">
+                            {stockBreakdown.reduce((acc, s) => acc + s.quantity, 0).toLocaleString()}
+                          </p>
+                        </TableCell>
+                        <TableCell className="px-8 text-center">
+                          <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">Average</span>
+                        </TableCell>
+                        <TableCell className="px-8 text-right">
+                          <p className="font-black text-xl text-primary tracking-tighter">
+                            {formatCurrency(stockBreakdown.reduce((acc, s) => acc + (s.quantity * product.sellingPrice), 0))}
+                          </p>
+                          <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest mt-1">Total Stock Value</p>
+                        </TableCell>
+                      </TableRow>
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Audit Log / Movements */}
-        <Card className="rounded-[2.5rem] border border-border/40 bg-card shadow-2xl flex flex-col">
+        {/* Movement History */}
+        <Card className="rounded-[2.5rem] border border-border/40 bg-card shadow-sm flex flex-col">
           <CardHeader className="p-8">
             <div className="flex items-center justify-between">
-               <div>
-                 <CardTitle className="text-xl font-bold tracking-tight">Audit Trail</CardTitle>
-                 <CardDescription className="text-xs font-medium text-muted-foreground/60 mt-1 uppercase tracking-wider">Asset trajectory log</CardDescription>
-               </div>
-               <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 border border-border/40 hover:bg-primary/5 hover:text-primary transition-all" onClick={() => navigate('/warehouse/movements')}>
-                 <ArrowRight01Icon className="w-5 h-5" />
-               </Button>
+              <div>
+                <CardTitle className="text-xl font-bold tracking-tight">Latest Movements</CardTitle>
+                <CardDescription className="text-xs font-medium text-muted-foreground/60 mt-1 uppercase tracking-wider">Recent stock history</CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 border border-border/40 hover:bg-primary/5 hover:text-primary transition-all" onClick={() => navigate('/warehouse/movements')}>
+                <ArrowRight01Icon className="w-5 h-5" />
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-8 pt-0 flex-1">
@@ -290,21 +342,21 @@ export const ProductDetailPage = () => {
               {movements.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
                   <Clock01Icon className="w-10 h-10 text-muted-foreground/20" />
-                  <p className="text-muted-foreground text-sm font-medium italic">Log entries pending...</p>
+                  <p className="text-muted-foreground text-sm font-medium italic">No recent movements recorded.</p>
                 </div>
               ) : (
                 movements.map((m) => (
                   <div key={m.movementId} className="flex gap-6 relative group">
                     <div className={cn(
                       "w-10 h-10 rounded-xl z-10 flex items-center justify-center shrink-0 shadow-sm border border-white/5",
-                      m.movementType === 'STOCK_IN' || m.movementType === 'TRANSFER_IN' ? "bg-emerald-500 text-white" : "bg-destructive text-white"
+                      m.movementType === 'STOCK_IN' || m.movementType === 'TRANSFER_IN' ? "bg-primary text-white" : "bg-status-error text-white"
                     )}>
                       {m.movementType.includes('IN') ? <ChartBarLineIcon className="w-5 h-5" /> : <ChartBarLineIcon className="w-5 h-5 rotate-180" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black uppercase tracking-wider text-foreground">{m.movementType.replace('_', ' ')}</p>
                       <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        <span className="font-bold text-foreground">{m.quantity} Units</span> {m.movementType.includes('IN') ? 'provisioned to' : 'allocated from'} <span className="text-foreground/80">{getWarehouseName(m.warehouseId)}</span>
+                        <span className="font-bold text-foreground">{m.quantity} Units</span> {m.movementType.includes('IN') ? 'added to' : 'removed from'} <span className="text-foreground/80">{getWarehouseName(m.warehouseId)}</span>
                       </p>
                       <p className="text-[10px] text-muted-foreground/60 mt-2 uppercase font-black tracking-widest flex items-center gap-2">
                         <Clock01Icon className="w-3 h-3" />
@@ -319,113 +371,7 @@ export const ProductDetailPage = () => {
         </Card>
       </div>
 
-      <Modal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)} 
-        title="Product Configuration"
-      >
-        <form onSubmit={handleUpdate} className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <label className="text-sm font-bold px-1">Product Name</label>
-              <input 
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.name}
-                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                required
-              />
-            </div>
 
-            <div className="space-y-2 sm:col-span-2 p-4 rounded-2xl bg-muted/30 border border-border/40">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold">Catalog Status</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Activate or suspend this SKU globally</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditForm({ ...editForm, active: !editForm.active })}
-                  className={cn(
-                    "w-12 h-6 rounded-full relative transition-all duration-300",
-                    editForm.active ? "bg-primary" : "bg-muted-foreground/30"
-                  )}
-                >
-                  <div className={cn(
-                    "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300",
-                    editForm.active ? "left-7" : "left-1"
-                  )} />
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold px-1">Category</label>
-              <input 
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.category}
-                onChange={e => setEditForm({ ...editForm, category: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold px-1">Selling Price</label>
-              <input 
-                type="number"
-                step="0.01"
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.sellingPrice}
-                onChange={e => setEditForm({ ...editForm, sellingPrice: Number(e.target.value) })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold px-1">Reorder Level</label>
-              <input 
-                type="number"
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.reorderLevel}
-                onChange={e => setEditForm({ ...editForm, reorderLevel: Number(e.target.value) })}
-              />
-            </div>
-             <div className="space-y-2">
-              <label className="text-sm font-bold px-1">Lead Time (Days)</label>
-              <input 
-                type="number"
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.leadTimeDays}
-                onChange={e => setEditForm({ ...editForm, leadTimeDays: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-4 pt-4">
-            <Button type="submit" className="flex-1 h-12 rounded-2xl" disabled={isUpdating}>
-              {isUpdating ? "Applying Changes..." : "Save Configuration"}
-            </Button>
-            <Button type="button" variant="ghost" className="h-12 px-6 rounded-2xl" onClick={() => setIsEditModalOpen(false)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 };
-
-const StatCard = ({ title, value, unit, icon, description, variant = 'default' }: any) => (
-  <Card className="rounded-[2.5rem] border-none bg-white/[0.05] shadow-2xl backdrop-blur-xl overflow-hidden group hover:bg-white/[0.05] transition-all">
-    <CardContent className="p-8 text-center">
-      <div className={cn(
-        "mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-white/5",
-        variant === 'warning' ? "bg-amber-500/10 text-amber-500" : "bg-primary/10 text-primary"
-      )}>
-        {icon}
-      </div>
-      <div className="flex items-baseline justify-center gap-1.5">
-        <span className="text-4xl font-bold tracking-tight text-foreground">{value}</span>
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{unit}</span>
-      </div>
-      <p className="text-sm font-bold text-foreground/70 mt-3 uppercase tracking-widest">{title}</p>
-      <div className="mt-4 pt-4 border-t border-border/10">
-        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">{description}</p>
-      </div>
-    </CardContent>
-  </Card>
-);

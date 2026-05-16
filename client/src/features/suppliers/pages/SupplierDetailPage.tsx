@@ -6,17 +6,17 @@ import {
   Mail01Icon,
   CallIcon,
   Location01Icon,
-  Settings02Icon,
   InvoiceIcon,
   CheckmarkCircle02Icon,
   Timer02Icon,
-  CreditCardIcon
+  ArrowRight01Icon,
+  UserEdit01Icon
 } from "hugeicons-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { suppliersApi } from "@/features/suppliers/api";
 import { purchasesApi } from "@/features/purchases/api";
-import type { Supplier, SupplierRequest } from "@/features/suppliers/types";
+import type { Supplier } from "@/features/suppliers/types";
 import type { PurchaseOrder } from "@/features/purchases/types";
 import { showToast } from "@/lib/toast";
 import { cn, formatDate, formatCurrency } from "@/lib/utils";
@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { Modal } from "@/components/ui/modal";
+
 import { useAuthStore } from "@/stores/auth.store";
 import { Role } from "@/types";
 import { PurchaseOrderStatus } from "@/types/enums";
@@ -42,21 +42,6 @@ export const SupplierDetailPage = () => {
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [editForm, setEditForm] = useState<SupplierRequest & { active: boolean }>({
-    name: "",
-    contactPerson: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    country: "",
-    taxId: "",
-    paymentTerms: "",
-    leadTimeDays: 0,
-    active: true
-  });
 
   const loadData = async () => {
     if (!id) return;
@@ -68,20 +53,6 @@ export const SupplierDetailPage = () => {
       ]);
       setSupplier(sData);
       setOrders(oData.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()));
-
-      setEditForm({
-        name: sData.name,
-        contactPerson: sData.contactPerson ?? "",
-        email: sData.email ?? "",
-        phone: sData.phone ?? "",
-        address: sData.address ?? "",
-        city: sData.city ?? "",
-        country: sData.country ?? "",
-        taxId: sData.taxId ?? "",
-        paymentTerms: sData.paymentTerms ?? "",
-        leadTimeDays: sData.leadTimeDays,
-        active: sData.active
-      });
     } catch (error: any) {
       showToast.error("Failed to load supplier details.");
     } finally {
@@ -89,21 +60,7 @@ export const SupplierDetailPage = () => {
     }
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
-    try {
-      setIsUpdating(true);
-      await suppliersApi.update(Number(id), editForm);
-      showToast.success("Supplier updated successfully.");
-      setIsEditModalOpen(false);
-      await loadData();
-    } catch (error: any) {
-      showToast.error("Failed to update supplier.");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+
 
   useEffect(() => {
     void loadData();
@@ -142,19 +99,22 @@ export const SupplierDetailPage = () => {
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
                 {supplier.name}
               </h1>
-              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-600 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-500/20">
+              <div className={cn(
+                "flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black border",
+                getRatingStyles(supplier.rating)
+              )}>
                 <StarIcon className="w-3.5 h-3.5 fill-current" />
                 {supplier.rating?.toFixed(1) || '0.0'}
               </div>
             </div>
             <div className="flex items-center gap-2 mt-3">
-              <div className={cn("w-2 h-2 rounded-full animate-pulse shadow-sm", supplier.active ? "bg-emerald-500" : "bg-rose-400")} />
+              <div className={cn("w-2 h-2 rounded-full animate-pulse shadow-sm", supplier.active ? "bg-primary" : "bg-status-error")} />
               <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider">
                 {supplier.active ? "Active Strategic Partner" : "Inactive Partner"} • ID #{supplier.supplierId}
               </p>
               <span className={cn(
                 "ml-3 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                supplier.active ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-400/10 text-rose-400 border-rose-400/20"
+                supplier.active ? "bg-primary/10 text-primary border-primary/20" : "bg-status-error/10 text-status-error border-status-error/20"
               )}>
                 {supplier.active ? "Operational" : "Suspended"}
               </span>
@@ -163,53 +123,124 @@ export const SupplierDetailPage = () => {
         </div>
 
         {isOfficerOrAdmin && (
-          <div className="flex items-center gap-4 p-2 bg-card/30 rounded-full border border-border shadow-2xl backdrop-blur-md">
+          <div className="flex items-center gap-3">
             <button
-              className="flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-primary/20"
-              onClick={() => setIsEditModalOpen(true)}
+              onClick={() => navigate('/purchase/suppliers', { state: { editSupplierId: Number(id) } })}
+              className="w-12 h-12 rounded-full border border-border bg-primary text-primary-foreground flex-center hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+              title="Edit Supplier"
             >
-              <Settings02Icon className="w-4 h-4" />
-              Edit Profile
+              <UserEdit01Icon className="icon-md" />
             </button>
           </div>
         )}
       </div>
 
       {/* Main Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Fulfillment"
-          value={fulfilledOrders.toString()}
-          unit="Orders"
-          icon={<CheckmarkCircle02Icon className="w-6 h-6" />}
-          description="Successfully delivered and received"
-        />
-        <StatCard
-          title="Lead Time Efficiency"
-          value={`${supplier.leadTimeDays}d`}
-          unit="Avg"
-          icon={<Timer02Icon className="w-6 h-6" />}
-          description="Expected arrival after order placement"
-        />
-        <StatCard
-          title="Payment Terms"
-          value={supplier.paymentTerms || "N/A"}
-          unit=""
-          icon={<CreditCardIcon className="w-6 h-6" />}
-          description="Standard financial agreement"
-        />
-        <StatCard
-          title="Total Volume"
-          value={formatCurrency(totalSpent)}
-          unit=""
-          icon={<InvoiceIcon className="w-6 h-6" />}
-          description="Cumulative transaction value"
-        />
+      <div className="w-full">
+        {/* Integrated Partner Analytics Hub */}
+        <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] p-1 shadow-app-card overflow-hidden w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border/20">
+
+            {/* Procurement Efficiency Cluster */}
+            <div className="p-10 space-y-6 text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <CheckmarkCircle02Icon className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Fulfillment Stream</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-black tracking-tighter text-foreground">
+                    {fulfilledOrders}
+                  </span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase">Orders</span>
+                </div>
+                <p className="text-xs font-bold text-foreground/50 uppercase tracking-widest">Successfully Received</p>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[9px] font-black uppercase tracking-wider border border-primary/20">
+                  L/T: {supplier.leadTimeDays} Days
+                </div>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Avg Cycle</span>
+              </div>
+            </div>
+
+            {/* Financial Engagement Cluster */}
+            <div className="p-10 space-y-6 text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-status-info/10 text-status-info flex items-center justify-center">
+                  <InvoiceIcon className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Fiscal Volume</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-black tracking-tighter text-primary">
+                    {formatCurrency(totalSpent)}
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-foreground/50 uppercase tracking-widest">Total Procurement Value</p>
+              </div>
+              <div className="pt-2">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  <span>Terms:</span>
+                  <span className="text-foreground">{supplier.paymentTerms || "Standard"}</span>
+                </div>
+                <div className="w-full h-1 bg-muted/30 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-status-info w-[75%]" /> {/* Visual indicator of term stability */}
+                </div>
+              </div>
+            </div>
+
+            {/* Logistics Reliability Cluster */}
+            <div className="p-10 space-y-6 text-left">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-status-warning/10 text-status-warning flex items-center justify-center">
+                  <Timer02Icon className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Network Trust</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-black tracking-tighter text-foreground">
+                    {supplier.rating?.toFixed(1) || '0.0'}
+                  </span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase">Score</span>
+                </div>
+                <p className="text-xs font-bold text-foreground/50 uppercase tracking-widest">Global Integrity Index</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground/60 leading-relaxed font-medium pt-2">
+                Performance metrics based on historical fulfillment latency and order accuracy.
+              </p>
+            </div>
+
+            {/* Partner Action Hub */}
+            <div className="p-10 flex flex-col justify-center bg-muted/5">
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-card border border-border/40 shadow-app-subtle">
+                  <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Active Pipeline</p>
+                  <p className="text-2xl font-black tracking-tighter text-foreground">
+                    {orders.filter(o => o.status !== PurchaseOrderStatus.FULLY_RECEIVED).length} Pending
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/purchase/orders')}
+                  className="w-full group h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-between px-6 text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                >
+                  Order Registry
+                  <ArrowRight01Icon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-3">
         {/* Contact Info & Details */}
-        <Card className="rounded-[2.5rem] border border-border/40 bg-card shadow-2xl">
+        <Card className="rounded-3xl border border-border/40 bg-card shadow-sm">
           <CardHeader className="p-6">
             <CardTitle className="text-lg">Partner Details</CardTitle>
             <CardDescription className="text-xs">Contact and administrative information.</CardDescription>
@@ -232,7 +263,7 @@ export const SupplierDetailPage = () => {
         </Card>
 
         {/* Transaction History */}
-        <Card className="lg:col-span-2 rounded-[2.5rem] border border-border/40 bg-card shadow-2xl overflow-hidden">
+        <Card className="lg:col-span-2 rounded-3xl border border-border/40 bg-card shadow-sm overflow-hidden">
           <CardHeader className="p-6 pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -271,7 +302,7 @@ export const SupplierDetailPage = () => {
                       <TableCell className="px-8 text-right whitespace-nowrap">
                         <span className={cn(
                           "inline-flex items-center px-5 py-2 rounded-full text-[11px] font-black uppercase tracking-widest border",
-                          order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/10" : "bg-primary/10 text-primary border-primary/10"
+                          order.status === PurchaseOrderStatus.FULLY_RECEIVED ? "bg-primary/10 text-primary border-primary/10" : "bg-primary/10 text-primary border-primary/10"
                         )}>
                           {order.status}
                         </span>
@@ -286,114 +317,10 @@ export const SupplierDetailPage = () => {
       </div>
 
       {/* Edit Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Edit Partner Profile"
-      >
-        <form onSubmit={handleUpdate} className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <label className="text-sm font-bold px-1">Company Name</label>
-              <input
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.name}
-                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                required
-              />
-            </div>
 
-            <div className="space-y-2 sm:col-span-2 p-4 rounded-2xl bg-muted/30 border border-border/40">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold">Partner Status</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Suspend or resume procurement cycles</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditForm({ ...editForm, active: !editForm.active })}
-                  className={cn(
-                    "w-12 h-6 rounded-full relative transition-all duration-300",
-                    editForm.active ? "bg-emerald-500" : "bg-muted-foreground/30"
-                  )}
-                >
-                  <div className={cn(
-                    "absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300",
-                    editForm.active ? "left-7" : "left-1"
-                  )} />
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold px-1">Email</label>
-              <input
-                type="email"
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.email}
-                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold px-1">Phone</label>
-              <input
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.phone}
-                onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold px-1">City</label>
-              <input
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.city}
-                onChange={e => setEditForm({ ...editForm, city: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold px-1">Country</label>
-              <input
-                className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                value={editForm.country}
-                onChange={e => setEditForm({ ...editForm, country: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-4 pt-4">
-            <Button type="submit" className="flex-1 h-12 rounded-2xl" disabled={isUpdating}>
-              {isUpdating ? "Saving..." : "Save Profile"}
-            </Button>
-            <Button type="button" variant="ghost" className="h-12 px-6 rounded-2xl" onClick={() => setIsEditModalOpen(false)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 };
-
-const StatCard = ({ title, value, unit, icon, description }: any) => (
-  <Card className="rounded-[2.5rem] border-none bg-white/[0.05] shadow-2xl backdrop-blur-xl overflow-hidden group hover:bg-white/[0.05] transition-all">
-    <CardContent className="p-8 text-center">
-      <div className={cn(
-        "mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-inner border border-white/5",
-        "bg-primary/10 text-primary"
-      )}>
-        {icon}
-      </div>
-      <div className="flex items-baseline justify-center gap-1.5">
-        <span className="text-4xl font-bold tracking-tight text-foreground">{value}</span>
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{unit}</span>
-      </div>
-      <p className="text-sm font-bold text-foreground/70 mt-3 uppercase tracking-widest">{title}</p>
-      <div className="mt-4 pt-4 border-t border-border/10">
-        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">{description}</p>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 const DetailItem = ({ icon, label, value }: any) => (
   <div className="flex items-center gap-4">
@@ -406,3 +333,10 @@ const DetailItem = ({ icon, label, value }: any) => (
     </div>
   </div>
 );
+
+const getRatingStyles = (rating: number = 0) => {
+  if (rating >= 4.5) return 'bg-primary/10 text-primary border-primary/20';
+  if (rating >= 3.5) return 'bg-status-info/10 text-status-info border-status-info/20';
+  if (rating >= 2.5) return 'bg-status-warning/10 text-status-warning border-status-warning/20';
+  return 'bg-status-error/10 text-status-error border-status-error/20';
+};

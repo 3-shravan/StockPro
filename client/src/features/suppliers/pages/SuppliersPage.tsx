@@ -11,6 +11,7 @@ import type { Supplier, SupplierRequest } from '@/features/suppliers/types';
 import { showToast } from '@/lib/toast';
 import { cn } from "@/lib/utils";
 import {
+  Building05Icon,
   CallIcon,
   Delete02Icon,
   Edit02Icon,
@@ -31,7 +32,8 @@ import {
   InformationCircleIcon
 } from 'hugeicons-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '@/components/common/EmptyState';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
 
@@ -56,13 +58,26 @@ export const SuppliersPage = () => {
   const isOfficerOrAdmin = user?.role === Role.OFFICER || user?.role === Role.ADMIN;
 
   const [activeTab, setActiveTab] = useState<TabType>('directory');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [query, setQuery] = useState('');
   const [form, setForm] = useState<SupplierRequest>(emptySupplier);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const location = useLocation();
+  const editSupplierIdFromState = location?.state?.editSupplierId;
+
+  useEffect(() => {
+    if (editSupplierIdFromState && suppliers.length > 0) {
+      const supplierToEdit = suppliers.find(s => s.supplierId === editSupplierIdFromState);
+      if (supplierToEdit) {
+        edit(supplierToEdit);
+        // Clear state to prevent re-triggering
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [editSupplierIdFromState, suppliers]);
   const [showInactive, setShowInactive] = useState(false);
 
   const filtered = useMemo(() => {
@@ -266,13 +281,11 @@ export const SuppliersPage = () => {
               <p className="text-muted-foreground text-sm">Loading suppliers...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-24 text-center space-y-4 bg-muted/10 rounded-3xl border border-dashed border-border">
-              <UserGroupIcon className="w-12 h-12 text-muted-foreground/20 mx-auto" />
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-foreground">No suppliers found</p>
-                <p className="text-sm text-muted-foreground">Adjust your filters or register a new partner.</p>
-              </div>
-            </div>
+            <EmptyState
+              icon={UserGroupIcon}
+              title="No Suppliers Found"
+              description="Our global database contains no registered partners matching your current query parameters."
+            />
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filtered.map((s) => (
@@ -290,7 +303,10 @@ export const SuppliersPage = () => {
                     <div className="w-14 h-14 rounded-3xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 group-hover:scale-110 transition-transform duration-500 shadow-inner">
                       <UserGroupIcon className="w-7 h-7 text-primary" />
                     </div>
-                    <div className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500/10 text-amber-500 rounded-full border border-amber-500/20">
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-4 py-1.5 rounded-full border",
+                      getRatingStyles(s.rating)
+                    )}>
                       <StarIcon className="w-3.5 h-3.5 fill-current" />
                       <span className="font-black text-[10px] tracking-widest">{s.rating?.toFixed(1) || '0.0'}</span>
                     </div>
@@ -303,7 +319,7 @@ export const SuppliersPage = () => {
                     </p>
                   </div>
 
-                  <div className="space-y-3 relative border-t border-border/5 pt-6">
+                  <div className="space-y-3 relative border-t border-border/5 pt-6 mt-auto">
                     <div className="flex items-center justify-between">
                       <div className="space-y-3">
                         <div className="flex items-center gap-2.5 text-[9px] font-black text-foreground/40 uppercase tracking-widest leading-none">
@@ -315,6 +331,7 @@ export const SuppliersPage = () => {
                           <span>{s.phone}</span>
                         </div>
                       </div>
+
                       <div className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500">
                         <ArrowRight01Icon className="w-5 h-5" />
                       </div>
@@ -324,103 +341,87 @@ export const SuppliersPage = () => {
               ))}
             </div>
           ) : (
-            <div className="bg-card border border-border/40 rounded-[2rem] shadow-app-card overflow-hidden backdrop-blur-sm bg-opacity-50">
-              <Table>
+            <div className="bg-card border border-border/40 rounded-[2.5rem] shadow-app-card overflow-x-auto no-scrollbar backdrop-blur-sm bg-opacity-50">
+              <Table className="min-w-[1000px] w-full">
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
-                    <TableHead className="px-6 font-bold text-xs text-foreground/70 uppercase tracking-wider">Supplier</TableHead>
-                    <TableHead className="px-6 font-bold text-xs text-foreground/70 uppercase tracking-wider">Contact Details</TableHead>
-                    <TableHead className="px-6 font-bold text-xs text-foreground/70 uppercase tracking-wider">Performance</TableHead>
-                    <TableHead className="px-6 font-bold text-xs text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent border-b border-border/40 h-14">
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Protocol Partner</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest w-[200px]">Market Segment</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Performance Tier</TableHead>
+                    <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest w-[150px]">Trust Index</TableHead>
+                    <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-right w-[150px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((s) => (
                     <TableRow
                       key={s.supplierId}
-                      className={cn(
-                        "group hover:bg-muted/30 transition-all cursor-pointer border-b border-border/10 h-20",
-                        !s.active && "opacity-50 grayscale"
-                      )}
+                      className="group hover:bg-muted/20 border-b border-border/40 transition-all cursor-pointer h-20"
                       onClick={() => navigate(`/purchase/suppliers/${s.supplierId}`)}
                     >
-                      <TableCell className="px-6">
+                      <TableCell className="px-8">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-105 transition-transform">
-                            <UserGroupIcon className="w-6 h-6" />
+                          <div className="w-10 h-10 rounded-xl bg-muted/50 text-primary flex items-center justify-center shrink-0 border border-border/40 group-hover:border-primary/20 transition-all shadow-app-subtle">
+                            <Building05Icon className="w-5 h-5" />
                           </div>
-                          <div className="min-w-0">
-                            <span className="font-bold text-xl block leading-tight tracking-tight group-hover:text-primary transition-colors truncate max-w-[300px]">{s.name}</span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className={cn("w-1.5 h-1.5 rounded-full", s.active ? "bg-emerald-500" : "bg-muted")} />
-                              <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-wider">{s.active ? 'Active Partner' : 'Inactive'}</span>
-                            </div>
+                          <div className="text-left min-w-0">
+                            <span className="font-bold text-sm block leading-tight tracking-tight group-hover:text-primary transition-colors truncate">{s.name}</span>
+                            <span className="text-[11px] font-bold text-foreground/50 mt-1 block uppercase tracking-wider truncate">{s.email}</span>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-6">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-3 text-sm font-bold text-foreground/80">
-                            <Mail01Icon className="w-4 h-4 text-primary/40" />
-                            {s.email}
-                          </div>
-                          <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground">
-                            <CallIcon className="w-4 h-4 text-muted-foreground/50" />
-                            {s.phone}
-                          </div>
-                        </div>
+                        <span className="text-[9px] font-black px-3 py-1 bg-muted text-foreground/70 uppercase tracking-[0.1em] rounded-full border border-border/40 shadow-app-subtle">
+                          {s.category || 'GENERAL'}
+                        </span>
                       </TableCell>
                       <TableCell className="px-6">
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <StarIcon className="w-4 h-4 text-amber-500 fill-current" />
-                            <span className="font-bold text-base">{s.rating?.toFixed(1) || '0.0'}</span>
-                          </div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{s.leadTimeDays}d lead time</span>
+                        <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em] border bg-primary/10 text-primary border-primary/20 shadow-app-subtle">
+                          STABLE
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-6">
+                        <div className="flex items-center gap-2">
+                          <StarIcon className={cn("w-4 h-4 fill-current", getRatingIconColor(s.rating))} />
+                          <span className="font-bold text-sm tracking-tight tabular-nums text-primary">{s.rating?.toFixed(1) || '0.0'}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
+                      <TableCell className="px-8 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-3">
                           {isOfficerOrAdmin && (
                             <>
                               <button
                                 onClick={() => edit(s)}
-                                className="w-10 h-10 flex items-center justify-center text-primary/60 hover:text-primary transition-all duration-300"
-                                title="Edit"
+                                className="w-9 h-9 flex items-center justify-center text-primary/60 hover:text-primary hover:bg-primary/10 rounded-xl transition-all duration-300"
                               >
-                                <Edit02Icon className="w-5 h-5" />
+                                <Edit02Icon className="w-4.5 h-4.5" />
                               </button>
                               {s.active ? (
                                 <button
                                   onClick={() => deactivate(s)}
-                                  className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
-                                  title="Deactivate"
+                                  className="w-9 h-9 flex items-center justify-center text-status-error/60 hover:text-status-error hover:bg-status-error/10 rounded-xl transition-all duration-300"
                                 >
-                                  <Delete02Icon className="w-5 h-5" />
+                                  <Delete02Icon className="w-4.5 h-4.5" />
                                 </button>
                               ) : (
                                 <>
                                   <button
                                     onClick={() => activate(s)}
-                                    className="w-10 h-10 flex items-center justify-center text-emerald-500/60 hover:text-emerald-500 transition-all duration-300"
-                                    title="Activate"
+                                    className="w-9 h-9 flex items-center justify-center text-primary/60 hover:text-primary hover:bg-primary/10 rounded-xl transition-all duration-300"
                                   >
-                                    <PlusSignIcon className="w-5 h-5" />
+                                    <PlusSignIcon className="w-4.5 h-4.5" />
                                   </button>
                                   <button
                                     onClick={() => remove(s)}
-                                    className="w-10 h-10 flex items-center justify-center text-rose-400/60 hover:text-rose-400 transition-all duration-300"
-                                    title="Delete"
+                                    className="w-9 h-9 flex items-center justify-center text-status-error/60 hover:text-status-error hover:bg-status-error/10 rounded-xl transition-all duration-300"
                                   >
-                                    <Delete02Icon className="w-5 h-5" />
+                                    <Delete02Icon className="w-4.5 h-4.5" />
                                   </button>
                                 </>
                               )}
                             </>
                           )}
-                          <div className="w-8 h-8 flex items-center justify-center text-muted-foreground/30 group-hover:text-primary transition-all group-hover:translate-x-1">
-                            <ArrowRight01Icon className="w-5 h-5" />
-                          </div>
+                          <ArrowRight01Icon className="w-5 h-5 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500" />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -453,7 +454,7 @@ export const SuppliersPage = () => {
                   <div className="space-y-3 sm:col-span-2">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Legal Identity Designation <span className="text-rose-400">*</span>
+                      Legal Identity Designation <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <UserGroupIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -497,7 +498,7 @@ export const SuppliersPage = () => {
                   <div className="space-y-6">
                     <div className="space-y-3">
                       <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center justify-between">
-                        Direct Channel <span className="text-rose-400">*</span>
+                        Direct Channel <span className="text-status-error">*</span>
                       </label>
                       <div className="relative group">
                         <Mail01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -606,4 +607,18 @@ export const SuppliersPage = () => {
       )}
     </div>
   );
+};
+
+const getRatingStyles = (rating: number = 0) => {
+  if (rating >= 4.5) return 'bg-primary/10 text-primary border-primary/20';
+  if (rating >= 3.5) return 'bg-status-info/10 text-status-info border-status-info/20';
+  if (rating >= 2.5) return 'bg-status-warning/10 text-status-warning border-status-warning/20';
+  return 'bg-status-error/10 text-status-error border-status-error/20';
+};
+
+const getRatingIconColor = (rating: number = 0) => {
+  if (rating >= 4.5) return 'text-primary';
+  if (rating >= 3.5) return 'text-status-info';
+  if (rating >= 2.5) return 'text-status-warning';
+  return 'text-status-error';
 };

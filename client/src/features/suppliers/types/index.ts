@@ -12,6 +12,7 @@ export interface Supplier {
   leadTimeDays: number;
   rating: number;
   active: boolean;
+  category?: string;
 }
 
 export interface SupplierRequest {
@@ -25,4 +26,5 @@ export interface SupplierRequest {
   taxId?: string;
   paymentTerms?: string;
   leadTimeDays: number;
+  category?: string;
 }

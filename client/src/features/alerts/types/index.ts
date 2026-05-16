@@ -19,7 +19,9 @@ export interface Alert {
 }
 
 export interface AlertRequest {
-  recipientId: number;
+  recipientId?: number;
+  targetRole?: string;
+  targetWarehouseId?: number;
   type: string;
   severity: string;
   title: string;

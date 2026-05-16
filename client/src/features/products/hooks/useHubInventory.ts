@@ -44,58 +44,47 @@ export interface HubProduct {
 interface UseHubInventoryResult {
   loading: boolean;
   warehouse: Warehouse | null;
+  warehouses: Warehouse[];
   products: HubProduct[];
+  setSelectedWarehouse: (w: Warehouse) => void;
   refresh: () => void;
 }
 
 export const useHubInventory = (): UseHubInventoryResult => {
   const [loading, setLoading] = useState(true);
   const [warehouse, setWarehouse] = useState<Warehouse | null>(null);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [products, setProducts] = useState<HubProduct[]>([]);
 
-  const load = useCallback(async () => {
+  const loadProducts = useCallback(async (targetWarehouses: Warehouse[]) => {
     setLoading(true);
     try {
-      // Step 1: Get the user's scoped warehouse (backend already filters by department)
-      const warehouses = await warehousesApi.getAll();
-      const myWarehouse = warehouses[0] ?? null; // Manager/Staff always have exactly one
-      setWarehouse(myWarehouse);
-
-      if (!myWarehouse) {
-        // No warehouse assigned — show empty inventory
-        setProducts([]);
-        return;
-      }
-
-      // Step 2: Fetch all stock levels for this warehouse + full product catalog in parallel
-      let stockLevels: StockLevel[] = [];
       const allProducts = await productsApi.getAll();
+      const isAggregated = targetWarehouses.length > 1;
 
-      try {
-        // Try the bulk endpoint first (newly added, might not be deployed yet)
-        // Pass 'true' for silent to suppress 500 error toast if not deployed
-        stockLevels = await warehousesApi.getAllStockByWarehouse(myWarehouse.warehouseId, true);
-      } catch (err) {
-        console.warn('Bulk stock endpoint not available, falling back to individual calls...');
-        // Fallback: Fetch stock for each product individually (works with existing backend)
-        const individualCalls = allProducts.map(p => 
-          warehousesApi.getStock(myWarehouse.warehouseId, p.productId, true)
-            .catch(() => null) // Ignore products not in this warehouse
-        );
-        const results = await Promise.all(individualCalls);
-        stockLevels = results.filter((s): s is StockLevel => s !== null);
-      }
-
-      // Step 3: Build a map of productId → StockLevel for fast lookup
-      const stockMap = new Map<number, StockLevel>(
-        stockLevels.map((s) => [s.productId, s])
+      // Fetch stock levels for ALL target warehouses in parallel
+      const stockLevelPromises = targetWarehouses.map(w => 
+        warehousesApi.getAllStockByWarehouse(w.warehouseId, true).catch(() => [] as StockLevel[])
       );
+      const stockLevelResults = await Promise.all(stockLevelPromises);
+      const allStockLevels = stockLevelResults.flat();
 
-      // Step 4: Merge — Include ALL products from the catalog
-      // This ensures Managers can see global products even if they have 0 stock in their hub
+      // Create an aggregated stock map
+      const stockMap = new Map<number, { quantity: number; reserved: number; available: number; stockId: number | null }>();
+      
+      allStockLevels.forEach(s => {
+        const existing = stockMap.get(s.productId) || { quantity: 0, reserved: 0, available: 0, stockId: null };
+        stockMap.set(s.productId, {
+          quantity: existing.quantity + s.quantity,
+          reserved: existing.reserved + (s.reservedQuantity ?? 0),
+          available: existing.available + (s.availableQuantity ?? 0),
+          stockId: isAggregated ? null : (existing.stockId || s.stockId), // stockId is only meaningful for single warehouse
+        });
+      });
+
       const merged: HubProduct[] = allProducts.map(product => {
         const stock = stockMap.get(product.productId);
-        
+        const hubQty = stock?.quantity ?? 0;
         return {
           productId: product.productId,
           sku: product.sku,
@@ -112,26 +101,61 @@ export const useHubInventory = (): UseHubInventoryResult => {
           imageUrl: product.imageUrl,
           barcode: product.barcode,
           active: product.active,
-          // Hub-specific stock — default to 0 if no record exists
-          hubQty: stock?.quantity ?? 0,
-          reservedQty: stock?.reservedQuantity ?? 0,
-          availableQty: stock?.availableQuantity ?? 0,
-          isLowStock: (stock?.quantity ?? 0) <= product.reorderLevel,
+          hubQty: hubQty,
+          reservedQty: stock?.reserved ?? 0,
+          availableQty: stock?.available ?? 0,
+          isLowStock: hubQty <= product.reorderLevel,
           stockId: stock?.stockId ?? null,
         };
       });
 
       setProducts(merged);
-    } catch (err: any) {
+    } catch (err) {
       showToast.error('Unable to load hub inventory.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const init = useCallback(async () => {
+    setLoading(true);
+    try {
+      const all = await warehousesApi.getAll();
+      setWarehouses(all);
+      
+      if (all.length > 0) {
+        // Default to the first warehouse instead of aggregation, as requested.
+        setWarehouse(all[0]);
+        await loadProducts([all[0]]);
+      } else {
+        setProducts([]);
+        setLoading(false);
+      }
+    } catch (err) {
+      showToast.error('Unable to initialize hub data.');
+      setLoading(false);
+    }
+  }, [loadProducts]);
 
-  return { loading, warehouse, products, refresh: load };
+  useEffect(() => {
+    void init();
+  }, [init]);
+
+  return { 
+    loading, 
+    warehouse, 
+    warehouses, 
+    products, 
+    setSelectedWarehouse: (w) => {
+      setWarehouse(w);
+      void loadProducts([w]);
+    },
+    refresh: () => {
+      if (warehouse) {
+        void loadProducts([warehouse]);
+      } else if (warehouses.length > 0) {
+        void loadProducts(warehouses);
+      }
+    }
+  };
 };

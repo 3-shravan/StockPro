@@ -8,15 +8,14 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+
+import com.stockpro.warehouse.common.response.ApiResponse;
 
 import com.stockpro.warehouse.dto.request.StockUpdateRequest;
 import com.stockpro.warehouse.dto.request.WarehouseRequest;
@@ -62,20 +61,21 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Value("${services.movement.url}")
     private String movementServiceUrl;
 
-    private static final String GATEWAY_SECRET = "StockProGateway2024";
-
-    private HttpHeaders getInternalHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Internal-Gateway-Secret", GATEWAY_SECRET);
-        headers.set("X-User-Name", "system");
-        headers.set("X-User-Roles", "ADMIN");
-        return headers;
-    }
 
     @Override
     @Transactional
     public WarehouseResponse createWarehouse(WarehouseRequest request) {
         log.info("Creating new warehouse: {}", request.getName());
+        
+        // Ensure manager is not already assigned to another active warehouse
+        if (request.getManagerId() != null && request.getManagerId() > 0) {
+            List<Warehouse> existing = warehouseRepository.findByManagerId(request.getManagerId());
+            boolean alreadyManaging = existing.stream().anyMatch(Warehouse::isActive);
+            if (alreadyManaging) {
+                throw new CustomException("Manager ID " + request.getManagerId() + " is already assigned to another active hub.", HttpStatus.CONFLICT);
+            }
+        }
+
         Warehouse warehouse = warehouseMapper.toEntity(request);
         Warehouse saved = warehouseRepository.save(warehouse);
         return warehouseMapper.toResponse(saved);
@@ -143,6 +143,15 @@ public class WarehouseServiceImpl implements WarehouseService {
 
         if (!isAdmin && (warehouse.getManagerId() == null || !warehouse.getManagerId().equals(currentUserId))) {
             throw new CustomException("Access Denied: You are not the assigned manager for this warehouse.", HttpStatus.FORBIDDEN);
+        }
+
+        // Ensure manager is not already assigned elsewhere (if changing manager)
+        if (request.getManagerId() != null && request.getManagerId() > 0 && !request.getManagerId().equals(warehouse.getManagerId())) {
+            List<Warehouse> existing = warehouseRepository.findByManagerId(request.getManagerId());
+            boolean alreadyManaging = existing.stream().anyMatch(Warehouse::isActive);
+            if (alreadyManaging) {
+                throw new CustomException("Manager ID " + request.getManagerId() + " is already assigned to another active hub.", HttpStatus.CONFLICT);
+            }
         }
 
         warehouseMapper.updateEntity(request, warehouse);
@@ -254,9 +263,9 @@ public class WarehouseServiceImpl implements WarehouseService {
         StockLevel saved = stockLevelRepository.save(stockLevel);
         
         updateWarehouseUsedCapacity(request.getWarehouseId());
-        recordMovement(request.getWarehouseId(), request.getProductId(), request.getQuantity() - oldQty, 
+        Map<String, Object> productMetadata = recordMovement(request.getWarehouseId(), request.getProductId(), request.getQuantity() - oldQty, 
                 "ADJUSTMENT", saved.getQuantity(), request);
-        evaluateAndDispatchStockAlerts(saved);
+        evaluateAndDispatchStockAlerts(saved, productMetadata);
     }
 
     @Override
@@ -280,9 +289,9 @@ public class WarehouseServiceImpl implements WarehouseService {
         StockLevel saved = stockLevelRepository.save(stockLevel);
         
         updateWarehouseUsedCapacity(request.getWarehouseId());
-        recordMovement(request.getWarehouseId(), request.getProductId(), request.getQuantity(), 
+        Map<String, Object> productMetadata = recordMovement(request.getWarehouseId(), request.getProductId(), request.getQuantity(), 
                 request.getQuantity() > 0 ? "STOCK_IN" : "STOCK_OUT", saved.getQuantity(), request);
-        evaluateAndDispatchStockAlerts(saved);
+        evaluateAndDispatchStockAlerts(saved, productMetadata);
     }
 
     private StockLevel getOrCreateStockLevel(int warehouseId, int productId) {
@@ -367,11 +376,11 @@ public class WarehouseServiceImpl implements WarehouseService {
         updateWarehouseUsedCapacity(fromWarehouseId);
         updateWarehouseUsedCapacity(toWarehouseId);
 
-        recordMovement(fromWarehouseId, productId, -quantity, "TRANSFER_OUT", savedSource.getQuantity(), null);
-        recordMovement(toWarehouseId, productId, quantity, "TRANSFER_IN", savedDestination.getQuantity(), null);
+        Map<String, Object> sourceMetadata = recordMovement(fromWarehouseId, productId, -quantity, "TRANSFER_OUT", savedSource.getQuantity(), null);
+        Map<String, Object> destMetadata = recordMovement(toWarehouseId, productId, quantity, "TRANSFER_IN", savedDestination.getQuantity(), null);
 
-        evaluateAndDispatchStockAlerts(savedSource);
-        evaluateAndDispatchStockAlerts(savedDestination);
+        evaluateAndDispatchStockAlerts(savedSource, sourceMetadata);
+        evaluateAndDispatchStockAlerts(savedDestination, destMetadata);
     }
 
     @Override
@@ -382,12 +391,24 @@ public class WarehouseServiceImpl implements WarehouseService {
                 .collect(Collectors.toList());
     }
 
-    private void evaluateAndDispatchStockAlerts(StockLevel stockLevel) {
+    private void evaluateAndDispatchStockAlerts(StockLevel stockLevel, Map<String, Object> metadata) {
         int availableQty = stockLevel.getAvailableQuantity();
+        
+        // Use reorderLevel from product metadata if available, otherwise fallback to global threshold
+        int lowThreshold = lowStockThreshold;
+        if (metadata != null && metadata.get("reorderLevel") instanceof Number) {
+            lowThreshold = ((Number) metadata.get("reorderLevel")).intValue();
+        }
 
-        if (availableQty < lowStockThreshold) {
+        // Use maxStockLevel from product metadata if available, otherwise fallback to global threshold
+        int highThreshold = overstockThreshold;
+        if (metadata != null && metadata.get("maxStockLevel") instanceof Number) {
+            highThreshold = ((Number) metadata.get("maxStockLevel")).intValue();
+        }
+
+        if (availableQty < lowThreshold) {
             dispatchLowStockAlert(stockLevel.getProductId(), stockLevel.getWarehouseId(), availableQty);
-        } else if (availableQty > overstockThreshold) {
+        } else if (availableQty > highThreshold) {
             dispatchOverstockAlert(stockLevel.getProductId(), stockLevel.getWarehouseId(), availableQty);
         }
     }
@@ -397,6 +418,8 @@ public class WarehouseServiceImpl implements WarehouseService {
             String url = alertServiceUrl + "/alerts/low-stock?productId=" + productId
                     + "&warehouseId=" + warehouseId + "&currentQty=" + currentQty;
             restTemplate.postForEntity(url, null, Void.class);
+        } catch (org.springframework.web.client.HttpClientErrorException.Unauthorized e) {
+            log.error("Failed to dispatch low stock alert: warehouse-service rejected by alert-service (401). Check gateway secret.");
         } catch (Exception e) {
             log.error("Failed to dispatch low stock alert: {}", e.getMessage());
         }
@@ -406,7 +429,11 @@ public class WarehouseServiceImpl implements WarehouseService {
         try {
             String url = alertServiceUrl + "/alerts/overstock?productId=" + productId
                     + "&warehouseId=" + warehouseId + "&currentQty=" + currentQty;
+            log.info("Dispatching overstock alert: {}", url);
             restTemplate.postForEntity(url, null, Void.class);
+            log.info("Overstock alert dispatched successfully");
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("Failed to dispatch overstock alert: HTTP {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("Failed to dispatch overstock alert: {}", e.getMessage());
         }
@@ -459,17 +486,11 @@ public class WarehouseServiceImpl implements WarehouseService {
         try {
             String url = productServiceUrl + "/products/" + productId;
             // Using a simple Map response to avoid creating another DTO for product
-            HttpEntity<Void> entity = new HttpEntity<>(getInternalHeaders());
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                url, 
-                HttpMethod.GET, 
-                entity, 
-                new ParameterizedTypeReference<Map<String, Object>>() {}
-            );
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
             
-            if (response.getBody() != null && response.getBody().get("data") instanceof Map) {
+            if (response != null && response.get("data") instanceof Map) {
                 @SuppressWarnings("unchecked")
-                Map<String, Object> data = (Map<String, Object>) response.getBody().get("data");
+                Map<String, Object> data = (Map<String, Object>) response.get("data");
                 return (String) data.get("name");
             }
         } catch (Exception e) {
@@ -486,7 +507,7 @@ public class WarehouseServiceImpl implements WarehouseService {
         warehouseRepository.save(warehouse);
     }
 
-    private void recordMovement(int warehouseId, int productId, int quantity, String type, int balanceAfter, StockUpdateRequest context) {
+    private Map<String, Object> recordMovement(int warehouseId, int productId, int quantity, String type, int balanceAfter, StockUpdateRequest context) {
         try {
             Map<String, Object> request = new HashMap<>();
             request.put("productId", productId);
@@ -506,10 +527,32 @@ public class WarehouseServiceImpl implements WarehouseService {
             request.put("balanceAfter", balanceAfter);
             request.put("notes", notes);
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, getInternalHeaders());
-            restTemplate.postForEntity(movementServiceUrl + "/movements", entity, Void.class);
+            restTemplate.postForEntity(movementServiceUrl + "/movements", request, Void.class);
+
+            // Synchronize global inventory in Product Service (Centralized Orchestration)
+            return syncProductGlobalStock(productId, quantity);
+
         } catch (Exception e) {
-            log.error("Failed to record movement: {}", e.getMessage());
+            log.error("Failed to record movement or sync product stock: {}", e.getMessage());
         }
+        return null;
+    }
+
+    private Map<String, Object> syncProductGlobalStock(int productId, int delta) {
+        try {
+            String url = productServiceUrl + "/products/" + productId + "/stock?quantity=" + delta;
+            
+            ResponseEntity<ApiResponse> response = 
+                restTemplate.exchange(url, HttpMethod.PUT, null, 
+                ApiResponse.class);
+            
+            if (response.getBody() != null && response.getBody().getData() instanceof Map) {
+                log.info("Synchronized global product {} stock by delta {}", productId, delta);
+                return (Map<String, Object>) response.getBody().getData();
+            }
+        } catch (Exception e) {
+            log.error("Failed to sync global stock for product {}: {}", productId, e.getMessage());
+        }
+        return null;
     }
 }

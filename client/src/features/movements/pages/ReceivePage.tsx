@@ -21,8 +21,12 @@ import {
 } from 'hugeicons-react';
 import { useEffect, useState } from 'react';
 import { formatDate, cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
+import { Role } from '@/types/enums';
+import { EmptyState } from '@/components/common/EmptyState';
 
 export const ReceivePage = () => {
+  const { user } = useAuthStore();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
   const [receiveQtys, setReceiveQtys] = useState<Record<number, number>>({});
@@ -34,7 +38,14 @@ export const ReceivePage = () => {
         purchasesApi.getByStatus(PurchaseOrderStatus.APPROVED),
         purchasesApi.getByStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED)
       ]);
-      setOrders([...approved, ...partiallyReceived]);
+      let allOrders = [...approved, ...partiallyReceived];
+
+      // STAFF Isolation: Only see manifests for assigned hub
+      if (user?.role === Role.STAFF) {
+        allOrders = allOrders.filter(o => o.warehouseName === user.department);
+      }
+
+      setOrders(allOrders);
     } catch (error) {
       showToast.error('Failed to load pending purchase orders.');
     }
@@ -90,8 +101,8 @@ export const ReceivePage = () => {
     <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20 px-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <p className="text-[10px] font-black text-foreground/40 uppercase tracking-[0.2em] mb-2">Inventory Management</p>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Inventory Management</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
             Receive Goods
           </h1>
         </div>
@@ -115,72 +126,81 @@ export const ReceivePage = () => {
           </div>
 
           <div className="bg-card/50 backdrop-blur-xl rounded-2xl border border-border shadow-sm overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-b border-border h-14">
-                  <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground">PO ID</TableHead>
-                  <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground">Status</TableHead>
-                  <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground text-left">Supplier & Hub</TableHead>
-                  <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground text-center">Item Count</TableHead>
-                  <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow
-                    key={order.poId}
-                    className="hover:bg-primary/[0.01] transition-all border-b border-border/10 group h-20"
-                  >
-                    <TableCell className="px-8">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-primary/5 text-primary flex items-center justify-center border border-primary/10 transition-all duration-500">
-                          <ShoppingBasket01Icon className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <p className="font-bold text-lg tracking-tight">PO #{order.poId}</p>
-                          <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{formatDate(order.orderDate)}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-8">
-                      <span className={cn(
-                        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
-                        order.status === PurchaseOrderStatus.PARTIALLY_RECEIVED
-                          ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                          : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                      )}>
-                        {order.status.replace('_', ' ')}
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-8">
-                      <div className="space-y-1 text-left">
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-tight">
-                          <Building05Icon className="w-4 h-4 text-primary/40" />
-                          {order.warehouseName}
-                        </div>
-                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                          {order.supplierName}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-8 text-center">
-                      <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-tight">
-                        <PackageIcon className="w-4 h-4 text-primary/40" />
-                        {order.lineItems.length} ITEMS
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-8 text-right">
-                      <button
-                        onClick={() => handleSelectOrder(order)}
-                        className="px-6 h-10 rounded-full bg-foreground text-background font-black text-[10px] uppercase tracking-widest transition-all hover:opacity-90 shadow-sm"
-                      >
-                        Record Receipt
-                      </button>
-                    </TableCell>
+            {orders.length === 0 ? (
+              <EmptyState
+                icon={ShoppingBasket01Icon}
+                title="No Pending Manifests"
+                description="The global registry indicates all purchase orders for your hub have been successfully received and synchronized."
+                containerClassName="border-none bg-transparent py-32"
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b border-border h-14">
+                    <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground">PO ID</TableHead>
+                    <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground">Status</TableHead>
+                    <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground text-left">Supplier & Hub</TableHead>
+                    <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground text-center">Item Count</TableHead>
+                    <TableHead className="px-8 font-black uppercase tracking-wider text-[11px] text-muted-foreground text-right">Action</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow
+                      key={order.poId}
+                      className="hover:bg-primary/[0.01] transition-all border-b border-border/10 group h-20"
+                    >
+                      <TableCell className="px-8">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-primary/5 text-primary flex items-center justify-center border border-primary/10 transition-all duration-500">
+                            <ShoppingBasket01Icon className="w-5 h-5" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-bold text-lg tracking-tight">PO #{order.poId}</p>
+                            <p className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{formatDate(order.orderDate)}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-8">
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                          order.status === PurchaseOrderStatus.PARTIALLY_RECEIVED
+                            ? 'bg-status-warning/10 text-status-warning border-status-warning/20'
+                            : 'bg-primary/10 text-primary border-primary/20'
+                        )}>
+                          {order.status.replace('_', ' ')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-8">
+                        <div className="space-y-1 text-left">
+                          <div className="flex items-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-tight">
+                            <Building05Icon className="w-4 h-4 text-primary/40" />
+                            {order.warehouseName}
+                          </div>
+                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                            {order.supplierName}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-8 text-center">
+                        <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-foreground/70 uppercase tracking-tight">
+                          <PackageIcon className="w-4 h-4 text-primary/40" />
+                          {order.lineItems.length} ITEMS
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-8 text-right">
+                        <button
+                          onClick={() => handleSelectOrder(order)}
+                          className="px-6 h-10 rounded-full bg-foreground text-background font-black text-[10px] uppercase tracking-widest transition-all hover:opacity-90 shadow-sm"
+                        >
+                          Record Receipt
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </div>
       ) : (
@@ -313,9 +333,9 @@ export const ReceivePage = () => {
                   )}
                 </button>
 
-                <div className="flex items-start gap-4 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-left">
-                  <InformationCircleIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-[8px] font-black text-amber-500/80 leading-relaxed uppercase tracking-widest">
+                <div className="flex items-start gap-4 p-4 rounded-2xl bg-status-warning/5 border border-status-warning/10 text-left">
+                  <InformationCircleIcon className="w-4 h-4 text-status-warning shrink-0 mt-0.5" />
+                  <p className="text-[8px] font-black text-status-warning/80 leading-relaxed uppercase tracking-widest">
                     Execution will commit these units to the permanent inventory ledger. Verify all counts before confirming.
                   </p>
                 </div>

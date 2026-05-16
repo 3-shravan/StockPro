@@ -45,6 +45,12 @@ public class WarehouseController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<WarehouseResponse>> getById(@PathVariable int id) {
         log.info("API: Retrieving warehouse by ID: {}", id);
+        
+        if (!isAuthorizedForWarehouse(id)) {
+            log.warn("Access denied for warehouse ID: {}", id);
+            throw new CustomException("Access denied: you are not authorized to access this warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         return warehouseService.getWarehouseById(id)
                 .map(response -> ResponseEntity.ok(ApiResponse.success("Warehouse found", response)))
                 .orElseThrow(() -> new CustomException("Warehouse not found", HttpStatus.NOT_FOUND));
@@ -63,8 +69,13 @@ public class WarehouseController {
         if (isAdmin || isOfficer) {
             // High-level roles see everything
             response = warehouseService.getAllWarehouses(includeInactive);
+        } else if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"))) {
+            // Managers see hubs they are assigned to
+            int managerId = getCurrentUserId();
+            log.info("Scoping warehouse list to manager ID: {}", managerId);
+            response = warehouseService.getWarehousesByManager(managerId, includeInactive);
         } else {
-            // Managers and Staff see only their assigned hubs
+            // Staff see hubs matching their department
             String department = getCurrentUserDepartment();
             log.info("Scoping warehouse list to department: {}", department);
             
@@ -91,6 +102,25 @@ public class WarehouseController {
             }
         }
         return null;
+    }
+
+    private int getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> details = (Map<String, Object>) auth.getDetails();
+            Object userIdObj = details.get("userId");
+            if (userIdObj instanceof Integer) {
+                return (Integer) userIdObj;
+            } else if (userIdObj instanceof String) {
+                try {
+                    return Integer.parseInt((String) userIdObj);
+                } catch (NumberFormatException e) {
+                    log.error("Failed to parse userId string: {}", userIdObj);
+                }
+            }
+        }
+        return 0;
     }
 
     @PutMapping("/{id}")
@@ -132,6 +162,11 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<StockLevelResponse>> getStock(@PathVariable int warehouseId,
             @PathVariable int productId) {
         log.info("API: Retrieving stock level for warehouse {} and product {}", warehouseId, productId);
+        
+        if (!isAuthorizedForWarehouse(warehouseId)) {
+            throw new CustomException("Access denied: you are not authorized to view stock for this warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         return warehouseService.getStockLevel(warehouseId, productId)
                 .map(response -> ResponseEntity.ok(ApiResponse.success("Stock level found", response)))
                 .orElseThrow(() -> new CustomException("Stock not found", HttpStatus.NOT_FOUND));
@@ -142,6 +177,11 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<List<StockLevelResponse>>> getAllStockByWarehouse(
             @PathVariable int warehouseId) {
         log.info("API: Retrieving all stock levels for warehouse {}", warehouseId);
+        
+        if (!isAuthorizedForWarehouse(warehouseId)) {
+            throw new CustomException("Access denied: you are not authorized to view stock for this warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         List<StockLevelResponse> response = warehouseService.getAllStockByWarehouse(warehouseId);
         return ResponseEntity.ok(ApiResponse.success("Stock levels retrieved", response));
     }
@@ -150,7 +190,9 @@ public class WarehouseController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'OFFICER')")
     public ResponseEntity<ApiResponse<List<StockLevelResponse>>> getStockByProduct(@PathVariable int productId) {
         log.info("API: Retrieving all stock levels for product ID: {}", productId);
-        List<StockLevelResponse> response = warehouseService.getStockLevelsByProductId(productId);
+        List<StockLevelResponse> response = warehouseService.getStockLevelsByProductId(productId).stream()
+                .filter(s -> isAuthorizedForWarehouse(s.getWarehouseId()))
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success("Product stock levels retrieved", response));
     }
 
@@ -159,6 +201,11 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<Void>> updateStock(@Valid @RequestBody StockUpdateRequest request) {
         log.info("API: Updating stock for warehouse {} product {}: quantity {}",
                 request.getWarehouseId(), request.getProductId(), request.getQuantity());
+        
+        if (!isAuthorizedForWarehouse(request.getWarehouseId())) {
+            throw new CustomException("Access denied: you can only update stock for your assigned warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         warehouseService.updateStock(request);
         return ResponseEntity.ok(ApiResponse.success("Stock updated successfully", null));
     }
@@ -168,6 +215,11 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<Void>> adjustStock(@Valid @RequestBody StockUpdateRequest request) {
         log.info("API: Adjusting stock for warehouse {} product {}: delta {}",
                 request.getWarehouseId(), request.getProductId(), request.getQuantity());
+        
+        if (!isAuthorizedForWarehouse(request.getWarehouseId())) {
+            throw new CustomException("Access denied: you can only adjust stock for your assigned warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         warehouseService.adjustStock(request);
         return ResponseEntity.ok(ApiResponse.success("Stock adjusted successfully", null));
     }
@@ -177,6 +229,11 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<Void>> reserveStock(@Valid @RequestBody StockReservationRequest request) {
         log.info("API: Reserving {} units for warehouse {} product {}",
                 request.getQuantity(), request.getWarehouseId(), request.getProductId());
+        
+        if (!isAuthorizedForWarehouse(request.getWarehouseId())) {
+            throw new CustomException("Access denied: you can only reserve stock for your assigned warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         warehouseService.reserveStock(request.getWarehouseId(), request.getProductId(), request.getQuantity());
         return ResponseEntity.ok(ApiResponse.success("Stock reserved successfully", null));
     }
@@ -196,6 +253,11 @@ public class WarehouseController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'OFFICER')")
     public ResponseEntity<ApiResponse<List<StockLevelResponse>>> getLowStock(@PathVariable int warehouseId) {
         log.info("API: Retrieving low stock items for warehouse ID: {}", warehouseId);
+        
+        if (!isAuthorizedForWarehouse(warehouseId)) {
+            throw new CustomException("Access denied: you are not authorized to view logs for this warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         List<StockLevelResponse> response = warehouseService.getLowStockItems(warehouseId);
         return ResponseEntity.ok(ApiResponse.success("Low stock items retrieved", response));
     }
@@ -204,6 +266,11 @@ public class WarehouseController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'OFFICER')")
     public ResponseEntity<ApiResponse<com.stockpro.warehouse.dto.response.WarehouseStatsResponse>> getStats(@PathVariable int id) {
         log.info("API: Retrieving statistics for warehouse ID: {}", id);
+        
+        if (!isAuthorizedForWarehouse(id)) {
+            throw new CustomException("Access denied: you are not authorized to view statistics for this warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         return ResponseEntity.ok(ApiResponse.success("Warehouse statistics retrieved", warehouseService.getWarehouseStats(id)));
     }
 
@@ -211,8 +278,40 @@ public class WarehouseController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> reconcile(@PathVariable int id) {
         log.info("API: Reconciling capacity for warehouse ID: {}", id);
+        
+        if (!isAuthorizedForWarehouse(id)) {
+            throw new CustomException("Access denied: you are not authorized to perform operations on this warehouse hub", HttpStatus.FORBIDDEN);
+        }
+
         warehouseService.reconcileWarehouseCapacity(id);
         return ResponseEntity.ok(ApiResponse.success("Warehouse capacity reconciled successfully", null));
+    }
+
+    /**
+     * Checks if the current user has access to a specific warehouse ID.
+     * High-level roles (ADMIN, OFFICER) have global access.
+     */
+    private boolean isAuthorizedForWarehouse(int warehouseId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+        
+        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean isOfficer = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_OFFICER"));
+        
+        if (isAdmin || isOfficer) return true;
+
+        String department = getCurrentUserDepartment();
+        int userId = getCurrentUserId();
+        
+        return warehouseService.getWarehouseById(warehouseId)
+                .map(w -> {
+                    // Check managerId first (Direct assignment)
+                    if (w.getManagerId() != null && w.getManagerId() == userId) return true;
+                    // Check department (Staff assignment)
+                    if (department != null && !department.isBlank() && department.equalsIgnoreCase(w.getName())) return true;
+                    return false;
+                })
+                .orElse(false);
     }
 
 }

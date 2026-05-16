@@ -42,7 +42,10 @@ import lombok.extern.slf4j.Slf4j;
 public class InternalSecurityFilter extends OncePerRequestFilter {
 
     private static final String GATEWAY_SECRET_HEADER = "X-Internal-Gateway-Secret";
-    private static final String EXPECTED_SECRET = "StockProGateway2024";
+    
+    @org.springframework.beans.factory.annotation.Value("${stockpro.security.internal-secret}")
+    private String expectedSecret;
+
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -62,7 +65,7 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
 
         String gatewaySecret = request.getHeader(GATEWAY_SECRET_HEADER);
 
-        if (!EXPECTED_SECRET.equals(gatewaySecret)) {
+        if (!expectedSecret.equals(gatewaySecret)) {
             log.warn("Rejected request to {} — missing or invalid gateway secret", path);
             writeErrorResponse(response, HttpStatus.UNAUTHORIZED,
                     "Unauthorized: request must pass through the API Gateway.");

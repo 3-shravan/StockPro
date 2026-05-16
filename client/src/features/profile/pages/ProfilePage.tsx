@@ -95,7 +95,7 @@ export const ProfilePage = () => {
       {/* Header Section */}
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Security Protocol</p>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">User Profile</p>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
             Account Settings
           </h1>
@@ -183,7 +183,7 @@ export const ProfilePage = () => {
 
               <div className="sm:col-span-2 pt-2">
                 <button type="submit" disabled={isSaving} className="h-12 px-10 rounded-2xl bg-primary text-primary-foreground font-bold text-xs uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/20">
-                  {isSaving ? 'Syncing...' : 'Update Protocol'}
+                  {isSaving ? 'Saving...' : 'Update Profile'}
                 </button>
               </div>
             </form>
@@ -192,7 +192,7 @@ export const ProfilePage = () => {
           {/* Security / Password */}
           <div className="bg-white/[0.05] border-none rounded-[2rem] p-8 backdrop-blur-md shadow-sm space-y-8">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive shadow-inner">
+              <div className="w-12 h-12 rounded-2xl bg-status-error/10 flex items-center justify-center text-status-error shadow-inner">
                 <Shield01Icon className="w-6 h-6" />
               </div>
               <div>
@@ -203,29 +203,29 @@ export const ProfilePage = () => {
 
             <form onSubmit={handlePasswordSubmit} className="max-w-md space-y-8">
               <div className="space-y-2.5">
-                <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider px-1">New Access Key</label>
+                <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider px-1">New Password</label>
                 <div className="relative group">
-                  <LockPasswordIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-destructive transition-colors" />
+                  <LockPasswordIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-status-error transition-colors" />
                   <input
                     type="password"
                     value={passwordData.newPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    className="h-14 w-full rounded-2xl border border-border/40 bg-background/50 pl-12 pr-4 text-sm focus:ring-4 focus:ring-destructive/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
-                    placeholder="Minimum 6 characters required"
+                    className="h-14 w-full rounded-2xl border border-border/40 bg-background/50 pl-12 pr-4 text-sm focus:ring-4 focus:ring-status-error/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                    placeholder="Enter new password"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2.5">
-                <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider px-1">Verify Access Key</label>
+                <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider px-1">Confirm New Password</label>
                 <div className="relative group">
-                  <LockPasswordIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-destructive transition-colors" />
+                  <LockPasswordIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-status-error transition-colors" />
                   <input
                     type="password"
                     value={passwordData.confirmPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    className="h-14 w-full rounded-2xl border border-border/40 bg-background/50 pl-12 pr-4 text-sm focus:ring-4 focus:ring-destructive/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
+                    className="h-14 w-full rounded-2xl border border-border/40 bg-background/50 pl-12 pr-4 text-sm focus:ring-4 focus:ring-status-error/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
                     placeholder="Re-enter for verification"
                     required
                   />
@@ -235,9 +235,9 @@ export const ProfilePage = () => {
               <button 
                 type="submit" 
                 disabled={isChangingPassword} 
-                className="h-12 px-10 rounded-2xl bg-destructive text-destructive-foreground font-bold text-xs uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg shadow-destructive/20"
+                className="h-12 px-10 rounded-2xl bg-status-error text-white font-bold text-xs uppercase tracking-widest transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg shadow-status-error/20"
               >
-                {isChangingPassword ? 'Authorizing...' : 'Rotate Key'}
+                {isChangingPassword ? 'Changing...' : 'Change Password'}
               </button>
             </form>
           </div>
@@ -246,10 +246,20 @@ export const ProfilePage = () => {
         {/* Sidebar Info */}
         <div className="space-y-6">
           <div className="bg-white/[0.05] border-none rounded-2xl shadow-sm overflow-hidden p-8 text-center">
-            <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-background relative group">
-              <UserIcon className="w-12 h-12 text-primary group-hover:scale-110 transition-transform" />
-              <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
-                 <CheckmarkCircle02Icon className="w-3 h-3 text-white" />
+            <div className={cn(
+              "w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-background relative group text-white",
+              user?.role === Role.ADMIN ? "bg-rose-500" :
+              user?.role === Role.MANAGER ? "bg-[#7C69E3]" :
+              user?.role === Role.OFFICER ? "bg-amber-400" : "bg-primary"
+            )}>
+              <UserIcon className="w-12 h-12 group-hover:scale-110 transition-transform" />
+              <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-background border-2 border-background flex items-center justify-center">
+                 <CheckmarkCircle02Icon className={cn(
+                   "w-3 h-3",
+                   user?.role === Role.ADMIN ? "text-rose-500" :
+                   user?.role === Role.MANAGER ? "text-[#7C69E3]" :
+                   user?.role === Role.OFFICER ? "text-amber-500" : "text-primary"
+                 )} />
               </div>
             </div>
             <h3 className="font-bold text-xl">{user?.fullName}</h3>
@@ -260,15 +270,12 @@ export const ProfilePage = () => {
                 <Mail01Icon className="w-4 h-4 text-primary/60" />
                 <span className="truncate">{user?.email}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <Building05Icon className="w-4 h-4 text-primary/60" />
-                <span className="font-bold text-primary/80 uppercase tracking-wider">
-                  {user?.role === Role.ADMIN ? 'Global Surveillance' : (user?.department || 'GLOBAL HUB')}
-                </span>
-              </div>
-              {user?.role === Role.ADMIN && (
-                <div className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] mt-1 pl-7">
-                  All Facilities Active
+              {user?.role !== Role.ADMIN && (
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <Building05Icon className="w-4 h-4 text-primary/60" />
+                  <span className="font-bold text-primary/80 uppercase tracking-wider">
+                    {user?.department || 'GLOBAL HUB'}
+                  </span>
                 </div>
               )}
             </div>
@@ -283,7 +290,7 @@ export const ProfilePage = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Account Status</span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/10 uppercase">Active</span>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/10 uppercase">Active</span>
               </div>
             </div>
           </div>

@@ -48,7 +48,9 @@ import java.util.Map;
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
-    private static final String GATEWAY_SECRET = "StockProGateway2024";
+    @org.springframework.beans.factory.annotation.Value("${stockpro.security.internal-secret}")
+    private String gatewaySecret;
+
     private static final String GATEWAY_SECRET_HEADER = "X-Internal-Gateway-Secret";
     private static final String USER_NAME_HEADER = "X-User-Name";
     private static final String USER_ROLES_HEADER = "X-User-Roles";
@@ -117,7 +119,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     .header(USER_ROLES_HEADER, role != null ? role : "")
                     .header(USER_ID_HEADER, userId)
                     .header("X-User-Department", department != null ? department : "")
-                    .header(GATEWAY_SECRET_HEADER, GATEWAY_SECRET)
+                    .header(GATEWAY_SECRET_HEADER, gatewaySecret)
                     .build();
 
             return chain.filter(exchange.mutate().request(enrichedRequest).build());

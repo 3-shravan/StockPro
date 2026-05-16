@@ -2,45 +2,38 @@ import { MetricCard } from "../components/MetricCard";
 import { TaskQueue } from "../components/TaskQueue";
 import { RecentAlertsWidget } from "../components/RecentAlertsWidget";
 import { useDashboardData } from "../hooks/useDashboardData";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Role, type Role as RoleType } from "@/types";
 import {
   ArrowReloadHorizontalIcon,
-  PackageIcon,
   ShoppingBasket01Icon,
-  Money01Icon,
   Activity01Icon,
   WarehouseIcon,
   TruckDeliveryIcon,
+  MapsIcon,
+  CallIcon,
 } from "hugeicons-react";
 
 export const DashboardPage = ({ role }: { role: RoleType }) => {
   const {
     loading,
-    totalValue,
-    products,
     warehouses,
     alerts,
     orders,
     suppliers,
-    managedWarehouse,
+    managedWarehouses,
     refresh,
   } = useDashboardData();
 
   // ─── Derived Metrics ────────────────────────────────────────────────────────
-  // ADMIN: global low stock. MANAGER/OTHERS: already hub-scoped products from hook.
-  const lowStockProducts = products.filter(p => p.currentQuantity <= p.reorderLevel);
-
-  // For Manager: count POs pending approval in THEIR hub
   const hubPendingApprovals = orders.filter(o => o.status === 'PENDING_APPROVAL').length;
-
-  // For Staff: count APPROVED POs (incoming deliveries they need to receive)
   const pendingDeliveries = orders.filter(o => o.status === 'APPROVED' || o.status === 'PARTIALLY_RECEIVED').length;
 
-  // Hub name for Manager/Staff
-  const hubName = managedWarehouse?.name ?? 'Your Hub';
-  const hubCapacityUsed = managedWarehouse
-    ? Math.round((managedWarehouse.usedCapacity / managedWarehouse.capacity) * 100)
+  // Single hub context for simple roles (Staff/Single-Manager)
+  const primaryHub = managedWarehouses[0];
+  const hubName = primaryHub?.name ?? 'Your Hub';
+  const hubCapacityUsed = primaryHub
+    ? Math.round((primaryHub.usedCapacity / primaryHub.capacity) * 100)
     : 0;
 
   // ─── Loading State ────────────────────────────────────────────────────────
@@ -48,31 +41,31 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
     return (
       <div className="p-32 text-center flex flex-col items-center gap-6">
         <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
-        <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Decoding System Registry...</p>
+        <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Loading Dashboard...</p>
       </div>
     );
   }
 
   const DashboardHeader = () => (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4 mb-16">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4 mb-12">
       <div>
         <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">
-          {role === Role.MANAGER && managedWarehouse
-            ? `${managedWarehouse.name} · Operational Hub`
-            : role === Role.STAFF && managedWarehouse
-              ? `${managedWarehouse.name} · Staff Console`
-              : 'Operational Command'}
+          {role === Role.MANAGER
+            ? `${managedWarehouses.length} Active Locations`
+            : role === Role.STAFF && primaryHub
+              ? `${primaryHub.name} · Staff Console`
+              : 'System Overview'}
         </p>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
-          {role === Role.ADMIN ? 'Administrator Console' :
-            role === Role.MANAGER ? 'Management Hub' :
-              role === Role.OFFICER ? 'Procurement Desk' : 'Operations Dashboard'}
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground text-left">
+          {role === Role.ADMIN ? 'Admin Dashboard' :
+            role === Role.MANAGER ? 'Manager Dashboard' :
+              role === Role.OFFICER ? 'Purchasing Dashboard' : 'Operations Dashboard'}
         </h1>
-        {/* Hub context badge for Manager/Staff */}
-        {(role === Role.MANAGER || role === Role.STAFF) && managedWarehouse && (
+        {/* Hub context badge for Staff or Manager with 1 Hub */}
+        {(role === Role.STAFF || (role === Role.MANAGER && managedWarehouses.length === 1)) && primaryHub && (
           <div className="flex items-center gap-3 mt-4">
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/5 border border-primary/10 text-xs font-black uppercase tracking-widest text-primary/70">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               {hubName} · {hubCapacityUsed}% Capacity Used
             </div>
           </div>
@@ -86,56 +79,57 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
           className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-full text-xs font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/20"
         >
           <ArrowReloadHorizontalIcon className={cn("w-5 h-5", loading && "animate-spin")} />
-          Sync Registry
+          Sync Data
         </button>
       </div>
     </div>
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ADMIN DASHBOARD — Full global view. No changes from original behavior.
+  // ADMIN DASHBOARD
   // ═══════════════════════════════════════════════════════════════════════════
   if (role === Role.ADMIN) {
-    const globalLowStock = lowStockProducts;
+    const activeAlerts = alerts.filter(a => a.severity === 'CRITICAL' && !a.acknowledged).length;
     return (
       <div className="w-full space-y-10 pb-20">
         <DashboardHeader />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            label="Global Valuation"
-            value={formatCurrency(totalValue)}
-            hint="Aggregate Market Value"
-            icon={Money01Icon}
-            to="/manager/reports"
-          />
-          <MetricCard
-            label="Pending Protocols"
-            value={orders.length.toString()}
-            hint="Pending Order Cycles"
+            label="Pending Approvals"
+            value={orders.filter(o => o.status === 'PENDING_APPROVAL').length.toString()}
+            hint="Orders Awaiting Review"
             icon={ShoppingBasket01Icon}
-            color="warning"
+            color="primary"
             to="/admin/purchase-orders"
           />
           <MetricCard
-            label="Density Critical"
-            value={globalLowStock.length.toString()}
-            hint="SKUs below Risk Threshold"
-            icon={PackageIcon}
-            color="destructive"
-            to="/admin/products"
-            state={{ filter: 'LOW_STOCK' }}
+            label="Security Alerts"
+            value={activeAlerts.toString()}
+            hint="Unresolved Critical Events"
+            icon={Activity01Icon}
+            color={activeAlerts > 0 ? "destructive" : "primary"}
+            to="/admin/alerts"
           />
           <MetricCard
-            label="Managed Nodes"
+            label="Locations"
             value={warehouses.length.toString()}
-            hint="Active Distribution Centers"
-            icon={Activity01Icon}
+            hint="Active Warehouses"
+            icon={WarehouseIcon}
+            color="primary"
             to="/admin/warehouses"
           />
+          <MetricCard
+            label="Orders in Transit"
+            value={pendingDeliveries.toString()}
+            hint="Approved Orders in Transit"
+            icon={TruckDeliveryIcon}
+            color="primary"
+            to="/admin/purchase-orders"
+          />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-7 space-y-10">
-            <TaskQueue orders={orders} alerts={alerts} userRole={role} />
+            <TaskQueue orders={orders} userRole={role} />
           </div>
           <div className="lg:col-span-5 sticky top-12">
             <RecentAlertsWidget alerts={alerts} userRole={role} />
@@ -146,58 +140,115 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MANAGER DASHBOARD — Hub-scoped: only their warehouse's data.
+  // MANAGER DASHBOARD — Single-hub focus
   // ═══════════════════════════════════════════════════════════════════════════
   if (role === Role.MANAGER) {
+    const primaryHub = managedWarehouses[0];
+    const hubUtilization = primaryHub ? (primaryHub.usedCapacity / primaryHub.capacity) : 0;
+    const activeAlerts = alerts.filter(a => a.severity === 'CRITICAL' && !a.acknowledged).length;
+
     return (
       <div className="w-full space-y-10 pb-20">
         <DashboardHeader />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Hub-specific asset value from the reports API */}
+
+        {/* Operational Metrics for Manager - Action Oriented */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            label="Hub Asset Value"
-            value={formatCurrency(totalValue)}
-            hint="Local Hub Equity"
-            icon={Money01Icon}
-            to="/manager/reports"
-          />
-          {/* Hub POs pending approval */}
-          <MetricCard
-            label="Hub Approvals"
+            label="Approvals"
             value={hubPendingApprovals.toString()}
-            hint="POs awaiting authorization"
+            hint="POs Awaiting Approval"
             icon={ShoppingBasket01Icon}
-            color="warning"
+            color="primary"
             to="/manager/purchase-orders"
           />
-          {/* Low stock products (globally tracked, but manager sees all) */}
           <MetricCard
-            label="Local Risk Assets"
-            value={lowStockProducts.length.toString()}
-            hint="Hub stock below threshold"
-            icon={PackageIcon}
-            color="destructive"
-            to="/manager/products"
-            state={{ filter: 'LOW_STOCK' }}
+            label="Incoming Shipments"
+            value={pendingDeliveries.toString()}
+            hint="Deliveries Due / Inbound"
+            icon={TruckDeliveryIcon}
+            color="primary"
+            to="/manager/purchase-orders"
           />
-          {/* Hub capacity utilization */}
           <MetricCard
-            label="Hub Capacity"
-            value={managedWarehouse ? `${hubCapacityUsed}%` : 'N/A'}
-            hint={managedWarehouse
-              ? `${managedWarehouse.usedCapacity.toLocaleString()} / ${managedWarehouse.capacity.toLocaleString()} units`
-              : 'No hub assigned'}
+            label="Storage Used"
+            value={primaryHub ? `${Math.round(hubUtilization * 100)}%` : "0%"}
+            hint={primaryHub ? primaryHub.name : "No Hub Assigned"}
             icon={WarehouseIcon}
-            to={managedWarehouse ? `/manager/stock/${managedWarehouse.warehouseId}` : undefined}
+            color={hubUtilization > 0.8 ? "destructive" : "primary"}
+            to="/manager/warehouses"
+          />
+          <MetricCard
+            label="System Alerts"
+            value={activeAlerts.toString()}
+            hint="Critical Alerts"
+            icon={Activity01Icon}
+            color={activeAlerts > 0 ? "destructive" : "primary"}
+            to="/manager/alerts"
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          {/* Hub-scoped task queue + procurement pipeline */}
-          <div className="lg:col-span-7 space-y-10">
-            <TaskQueue orders={orders} alerts={alerts} userRole={role} />
+        {/* Detailed Hub Overview for Manager */}
+        {primaryHub && (
+          <div className="bg-card/40 backdrop-blur-xl border border-border/60 rounded-[2rem] shadow-app-subtle overflow-hidden p-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="flex items-center gap-6 text-left">
+                <div className="w-20 h-20 rounded-[2rem] bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+                  <WarehouseIcon className="w-10 h-10" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Current Location</p>
+                  <h3 className="text-3xl font-black tracking-tight">{primaryHub.name}</h3>
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-1.5 text-foreground/40 text-xs font-bold uppercase tracking-wider">
+                      <MapsIcon className="w-3.5 h-3.5" />
+                      {primaryHub.location}
+                    </div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-border" />
+                    <div className="flex items-center gap-1.5 text-foreground/40 text-xs font-bold uppercase tracking-wider">
+                      <CallIcon className="w-3.5 h-3.5" />
+                      {primaryHub.phone || 'No phone'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-8 px-6 py-4 bg-background/40 rounded-3xl border border-border/20">
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-foreground/20 uppercase tracking-widest mb-1">Used Volume</p>
+                  <p className="text-xl font-black tabular-nums">{primaryHub.usedCapacity.toLocaleString()}</p>
+                </div>
+                <div className="w-px h-10 bg-border/20" />
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-foreground/20 uppercase tracking-widest mb-1">Capacity</p>
+                  <p className="text-xl font-black tabular-nums text-foreground/40">{primaryHub.capacity.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-10 space-y-3">
+              <div className="flex-between text-[10px] font-black uppercase tracking-[0.2em]">
+                <span className="text-foreground/40">Usage</span>
+                <span className={cn(
+                  hubUtilization > 0.8 ? "text-status-error" : "text-primary"
+                )}>{Math.round(hubUtilization * 100)}% OCCUPIED</span>
+              </div>
+              <div className="h-4 rounded-full bg-muted overflow-hidden border border-border/10 p-0.5">
+                <div 
+                  className={cn(
+                    "h-full rounded-full transition-all duration-1000",
+                    hubUtilization > 0.8 ? "bg-status-error shadow-[0_0_15px_rgba(var(--status-error),0.4)]" : "bg-primary shadow-[0_0_15px_rgba(var(--primary),0.4)]"
+                  )}
+                  style={{ width: `${hubUtilization * 100}%` }}
+                />
+              </div>
+            </div>
           </div>
-          {/* Personal + hub alerts only */}
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-7 space-y-10">
+            <TaskQueue orders={orders} userRole={role} />
+          </div>
           <div className="lg:col-span-5 sticky top-12">
             <RecentAlertsWidget alerts={alerts} userRole={role} />
           </div>
@@ -207,20 +258,20 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // OFFICER DASHBOARD — Global procurement view across all hubs.
+  // OFFICER DASHBOARD
   // ═══════════════════════════════════════════════════════════════════════════
   if (role === Role.OFFICER) {
     const officerPending = orders.filter(o => o.status === 'PENDING_APPROVAL').length;
     return (
       <div className="w-full space-y-10 pb-20">
         <DashboardHeader />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCard
-            label="Active Procurement"
-            value={orders.length.toString()}
-            hint="Total Live PO Streams"
+            label="Purchasing"
+            value={orders.filter(o => o.status !== 'CANCELLED').length.toString()}
+            hint="Active Orders"
             icon={ShoppingBasket01Icon}
-            color="warning"
+            color="primary"
             to="/purchase/orders"
           />
           <MetricCard
@@ -234,15 +285,16 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
           <MetricCard
             label="Active Suppliers"
             value={suppliers.length.toString()}
-            hint="Verified Vendor Network"
+            hint="Verified Suppliers"
             icon={ShoppingBasket01Icon}
+            color="primary"
             to="/purchase/suppliers"
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-7 space-y-10">
-            <TaskQueue orders={orders} alerts={alerts} userRole={role} />
+            <TaskQueue orders={orders} userRole={role} />
           </div>
           <div className="lg:col-span-5 sticky top-12">
             <RecentAlertsWidget alerts={alerts} userRole={role} />
@@ -253,13 +305,12 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // STAFF DASHBOARD — Hub-scoped: incoming deliveries + personal alerts only.
+  // STAFF DASHBOARD
   // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div className="w-full space-y-10 pb-20">
       <DashboardHeader />
-      {/* Staff sees 3 focused metrics: their task count, deliveries due, hub capacity */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
           label="Active Tasks"
           value={(pendingDeliveries + alerts.filter(a => !a.acknowledged).length).toString()}
@@ -272,23 +323,23 @@ export const DashboardPage = ({ role }: { role: RoleType }) => {
           value={pendingDeliveries.toString()}
           hint="Incoming hub shipments"
           icon={TruckDeliveryIcon}
-          color="warning"
+          color="primary"
           to="/warehouse/receive"
         />
         <MetricCard
-          label="Hub Capacity"
-          value={managedWarehouse ? `${hubCapacityUsed}%` : 'N/A'}
-          hint={managedWarehouse
-            ? `${managedWarehouse.usedCapacity.toLocaleString()} / ${managedWarehouse.capacity.toLocaleString()} units`
-            : 'No hub assigned'}
+          label="Storage Used"
+          value={primaryHub ? `${hubCapacityUsed}%` : "0%"}
+          hint={primaryHub
+            ? `${primaryHub.name}: ${primaryHub.usedCapacity.toLocaleString()} / ${primaryHub.capacity.toLocaleString()} units`
+            : "No hub linked to your profile"}
           icon={WarehouseIcon}
+          color="primary"
         />
       </div>
 
-      {/* Staff only needs task queue + their personal alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-7">
-          <TaskQueue orders={orders} alerts={alerts} userRole={role} />
+          <TaskQueue orders={orders} userRole={role} />
         </div>
         <div className="lg:col-span-5 sticky top-12">
           <RecentAlertsWidget alerts={alerts} userRole={role} />

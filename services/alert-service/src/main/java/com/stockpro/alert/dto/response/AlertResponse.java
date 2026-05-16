@@ -18,6 +18,8 @@ public class AlertResponse {
 
   private Integer alertId;
   private Integer recipientId;
+  private String targetRole;
+  private Integer targetWarehouseId;
   private AlertType type;
   private AlertSeverity severity;
   private String title;

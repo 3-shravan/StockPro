@@ -13,7 +13,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       <BrowserRouter>
         {children}
         <Toaster
-          position="bottom-right"
+          position="top-center"
           theme={theme}
           toastOptions={{ duration: 4000 }}
         />

@@ -53,9 +53,9 @@ export const TransferPage = () => {
     <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20 px-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pt-4">
         <div>
-          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Logistics Cluster</p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-            Node Rebalancing
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3">Inventory Management</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
+            Stock Transfer
           </h1>
         </div>
       </div>
@@ -67,41 +67,41 @@ export const TransferPage = () => {
               <div className="grid gap-8 sm:grid-cols-2">
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Origin Node <span className="text-rose-400">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                    Origin Node <span className="text-status-error">*</span>
                   </label>
-                  <WarehouseSelect value={fromWarehouseId} onChange={setFromWarehouseId} placeholder="SOURCE HUB" />
+                  <WarehouseSelect value={fromWarehouseId} onChange={setFromWarehouseId} placeholder="SOURCE HUB" restrictToAssigned />
                 </div>
 
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Target Node <span className="text-rose-400">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                    Target Node <span className="text-status-error">*</span>
                   </label>
                   <WarehouseSelect value={toWarehouseId} onChange={setToWarehouseId} placeholder="DESTINATION HUB" />
                 </div>
 
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Asset Designation <span className="text-rose-400">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                    Asset Designation <span className="text-status-error">*</span>
                   </label>
                   <ProductSelect value={productId} onChange={setProductId} warehouseId={fromWarehouseId} placeholder="SELECT SKU" />
                 </div>
 
                 <div className="space-y-3 text-left">
                   <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Verified Quantity <span className="text-rose-400">*</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-status-warning" />
+                    Verified Quantity <span className="text-status-error">*</span>
                   </label>
                   <div className="relative group">
-                    <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-amber-500 transition-colors" />
+                    <PackageIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-status-warning transition-colors" />
                     <input
                       type="number"
                       min="1"
                       value={quantity || ''}
                       onChange={(e) => setQuantity(Number(e.target.value))}
-                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
+                      className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-status-warning/10 outline-none transition-all"
                       placeholder="UNIT COUNT"
                     />
                   </div>
@@ -113,7 +113,7 @@ export const TransferPage = () => {
               <button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="px-10 h-14 rounded-full bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                className="btn-primary bg-status-warning shadow-status-warning/20"
               >
                 {isSubmitting ? 'SYNCHRONIZING...' : 'AUTHORIZE TRANSFER'}
               </button>
@@ -122,9 +122,9 @@ export const TransferPage = () => {
         </div>
 
         <div className="space-y-8">
-          <div className="bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/40 space-y-8 text-left">
-            <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-wider flex items-center gap-3">
-              <HelpCircleIcon className="w-5 h-5" />
+          <div className="glass-panel space-y-8 text-left">
+            <h3 className="text-micro text-status-warning flex items-center gap-3">
+              <HelpCircleIcon className="icon-md" />
               Transfer Logistics
             </h3>
             <ul className="space-y-6">
@@ -134,8 +134,8 @@ export const TransferPage = () => {
                 "Authorized movements are logged as immutable audit events."
               ].map((text, i) => (
                 <li key={i} className="flex gap-4 group">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500/20 mt-1.5 shrink-0 group-hover:bg-amber-500 transition-colors" />
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider leading-relaxed">
+                  <div className="status-dot bg-status-warning/20 mt-1.5 shrink-0 group-hover:bg-status-warning transition-colors" />
+                  <p className="text-micro text-muted-foreground leading-relaxed">
                     {text}
                   </p>
                 </li>
@@ -143,9 +143,9 @@ export const TransferPage = () => {
             </ul>
           </div>
           
-          <div className="p-10 rounded-[2.5rem] bg-emerald-500/5 border border-emerald-500/10 backdrop-blur-xl text-left">
-            <p className="text-[10px] font-black uppercase text-emerald-500/40 mb-3 tracking-wider">System Status</p>
-            <p className="text-[10px] text-emerald-500/60 font-bold uppercase tracking-wider leading-relaxed italic">
+          <div className="p-10 rounded-[2.5rem] bg-primary/5 border border-primary/10 backdrop-blur-xl text-left">
+            <p className="text-micro text-primary/40 mb-3">System Status</p>
+            <p className="text-micro font-bold text-primary/60 leading-relaxed italic">
               Cluster nodes ready for asset rebalancing. Performance optimized for scale.
             </p>
           </div>

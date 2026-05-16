@@ -1,4 +1,4 @@
-package com.stockpro.purchase.config;
+package com.stockpro.auth.config;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -27,23 +27,21 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * InternalSecurityFilter — Gate-keeper for all inbound requests to this service.
+ * InternalSecurityFilter — Gate-keeper for all inbound requests to the Auth Service.
  *
- * <p>Validates the presence of the {@code X-Internal-Gateway-Secret} header which
- * the API Gateway injects after performing JWT authentication. If the secret is
- * missing or wrong, the request is rejected immediately with a 401 JSON response.
- *
- * <p>Upon valid secret, it reconstructs the Spring Security context from the
- * {@code X-User-Name} and {@code X-User-Roles} headers forwarded by the Gateway,
- * enabling {@code @PreAuthorize} role checks on controllers.
+ * <p>Validates the presence of the {@code X-Internal-Gateway-Secret} header.
+ * For the Auth Service, this is critical to ensure that even public endpoints 
+ * like /auth/login are only accessible through our managed API Gateway.
  */
 @Slf4j
 @Component
 public class InternalSecurityFilter extends OncePerRequestFilter {
 
     private static final String GATEWAY_SECRET_HEADER = "X-Internal-Gateway-Secret";
+    
     @org.springframework.beans.factory.annotation.Value("${stockpro.security.internal-secret}")
     private String expectedSecret;
+
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -54,8 +52,9 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Skip security check for actuator endpoints
         String path = request.getRequestURI();
+        
+        // Skip security check for actuator endpoints
         if (path.startsWith("/actuator")) {
             filterChain.doFilter(request, response);
             return;
@@ -70,11 +69,11 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Secret validated — reconstruct Security Context from gateway headers
-        String username   = request.getHeader("X-User-Name");
-        String roles      = request.getHeader("X-User-Roles");
-        String userId     = request.getHeader("X-User-Id");
-        String department = request.getHeader("X-User-Department");
+        // Secret validated — reconstruct Security Context from gateway headers if present
+        // (Note: For /auth/login, these might be missing, but the secret itself is enough)
+        String username = request.getHeader("X-User-Name");
+        String roles    = request.getHeader("X-User-Roles");
+        String userId   = request.getHeader("X-User-Id");
 
         if (username != null && roles != null && !username.isBlank() && !roles.isBlank()) {
             List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
@@ -86,7 +85,6 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(username, null, authorities);
             
-            // Inject context into details map for @PreAuthorize checks or logic
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("remoteAddress", request.getRemoteAddr());
             if (userId != null && !userId.isBlank()) {
@@ -94,18 +92,9 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
                     details.put("userId", Integer.parseInt(userId));
                 } catch (NumberFormatException ignored) {}
             }
-            if (department != null) {
-                details.put("department", department);
-            }
             authentication.setDetails(details);
             
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("Authenticated user={} id={} roles={} for path={}", username, userId, roles, path);
-        } else {
-            log.warn("Gateway secret present but user headers missing for path={}", path);
-            writeErrorResponse(response, HttpStatus.UNAUTHORIZED,
-                    "Unauthorized: user context headers missing.");
-            return;
         }
 
         filterChain.doFilter(request, response);

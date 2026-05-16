@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '@/components/common/EmptyState';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Delete02Icon,
   Edit02Icon,
@@ -13,7 +14,8 @@ import {
   CallIcon,
   ViewIcon,
   ViewOffIcon,
-  PlusSignIcon
+  PlusSignIcon,
+  ArrowRight01Icon
 } from 'hugeicons-react';
 import {
   Table,
@@ -63,6 +65,19 @@ export const AdminUsersPage = () => {
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const location = useLocation();
+  const editUserIdFromState = location?.state?.editUserId;
+
+  useEffect(() => {
+    if (editUserIdFromState && users.length > 0) {
+      const userToEdit = users.find(u => u.userId === editUserIdFromState);
+      if (userToEdit) {
+        editUser(userToEdit);
+        // Clear state to prevent re-triggering
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [editUserIdFromState, users]);
 
   const isEditing = editingUserId !== null;
 
@@ -118,6 +133,7 @@ export const AdminUsersPage = () => {
     void loadUsers();
     void loadWarehouses();
   }, []);
+  
 
   const updateField = (field: keyof UserFormState, value: string | boolean) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -198,9 +214,9 @@ export const AdminUsersPage = () => {
     <div className="w-full space-y-12 animate-in fade-in duration-700 pb-20 px-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between pt-4">
         <div>
-          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3 text-left">Administration</p>
+          <p className="text-sm font-bold text-foreground/70 uppercase tracking-wider mb-3 text-left">System Access</p>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground text-left">
-            Identity Grid
+            Users
           </h1>
         </div>
 
@@ -213,7 +229,7 @@ export const AdminUsersPage = () => {
             )}
           >
             <UserGroupIcon className="w-5 h-5" />
-            Registry
+            All Users
           </button>
           <button
             onClick={() => setActiveTab('create')}
@@ -223,7 +239,7 @@ export const AdminUsersPage = () => {
             )}
           >
             {isEditing ? <Edit02Icon className="w-5 h-5" /> : <PlusSignIcon className="w-5 h-5" />}
-            {isEditing ? 'Modify' : 'Provision'}
+            {isEditing ? 'Edit User' : 'New User'}
           </button>
         </div>
       </div>
@@ -236,7 +252,7 @@ export const AdminUsersPage = () => {
                 <Search01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <input
                   className="h-16 w-full rounded-2xl border border-border bg-card/50 pl-16 pr-6 text-sm focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-muted-foreground/30 shadow-inner"
-                  placeholder="Search identities by name, email, hub..."
+                  placeholder="Search by name, email, or location..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -264,8 +280,8 @@ export const AdminUsersPage = () => {
                   onChange={(e) => setHubFilter(e.target.value)}
                   className="h-16 w-56 rounded-2xl border border-border bg-card/50 px-8 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer hover:bg-muted/50 transition-all pr-12 shadow-sm"
                 >
-                  <option value="ALL">ALL HUBS</option>
-                  <option value="">GLOBAL HUB</option>
+                  <option value="ALL">ALL WAREHOUSES</option>
+                  <option value="">NO WAREHOUSE</option>
                   {warehouses.map(w => (
                     <option key={w.warehouseId} value={w.name}>{w.name}</option>
                   ))}
@@ -277,15 +293,15 @@ export const AdminUsersPage = () => {
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-hidden px-2 backdrop-blur-sm bg-opacity-50">
-            <Table>
+          <div className="bg-card border border-border rounded-3xl shadow-app-card overflow-x-auto px-2 backdrop-blur-sm bg-opacity-50 no-scrollbar">
+            <Table className="min-w-[1000px] w-full">
               <TableHeader>
-                <TableRow className="hover:bg-transparent border-b border-border/60 h-14">
-                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Identity Details</TableHead>
-                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Protocol Role</TableHead>
-                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Deployment Hub</TableHead>
-                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="px-10 font-black text-xs text-foreground/70 uppercase tracking-wider text-right">Actions</TableHead>
+                <TableRow className="hover:bg-transparent border-b border-border/40 h-14">
+                  <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest">User Information</TableHead>
+                  <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest w-[200px]">Role</TableHead>
+                  <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest">Warehouse</TableHead>
+                  <TableHead className="px-6 font-black text-[11px] text-foreground/70 uppercase tracking-widest w-[150px]">Status</TableHead>
+                  <TableHead className="px-8 font-black text-[11px] text-foreground/70 uppercase tracking-widest text-right w-[150px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -294,85 +310,83 @@ export const AdminUsersPage = () => {
                     <TableCell colSpan={5} className="h-64 text-center">
                       <div className="flex flex-col items-center gap-6">
                         <div className="w-12 h-12 rounded-full border-4 border-primary/10 border-t-primary animate-spin" />
-                        <p className="text-muted-foreground font-black text-[10px] uppercase tracking-wider">Synchronizing Identity Grid...</p>
+                        <p className="text-muted-foreground font-black text-[10px] uppercase tracking-wider">Loading users...</p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-64 text-center">
-                      <div className="py-20 space-y-6">
-                        <UserIcon className="w-16 h-16 text-muted-foreground/10 mx-auto" />
-                        <p className="text-xl font-bold text-foreground/50 uppercase tracking-tight">No identities located</p>
-                      </div>
+                      <EmptyState
+                        icon={UserIcon}
+                        title="No Users Found"
+                        description="No users match your search."
+                        containerClassName="border-none bg-transparent py-20"
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
                     <TableRow
                       key={user.userId}
-                      className="group hover:bg-primary/[0.02] transition-all border-b border-border/10 h-20 cursor-pointer"
+                      className="group hover:bg-muted/20 border-b border-border/40 transition-all cursor-pointer h-20"
                       onClick={() => navigate(`/admin/users/${user.userId}`)}
                     >
-                      <TableCell className="px-10">
-                        <div className="flex items-center gap-6">
-                          <div className="w-10 h-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-inner">
-                            <UserIcon className="w-5 h-5" />
+                      <TableCell className="px-8">
+                        <div className="flex items-center gap-5">
+                          <div className="w-11 h-11 rounded-xl bg-muted/50 text-primary flex items-center justify-center shrink-0 border border-border/40 group-hover:border-primary/20 transition-all shadow-app-subtle">
+                            <UserIcon className="w-6 h-6" />
                           </div>
-                          <div className="text-left">
-                            <span className="font-black text-sm block leading-none tracking-tight group-hover:text-primary transition-all">{user.fullName}</span>
-                            <span className="text-[11px] font-bold text-foreground/40 mt-1 block">{user.email}</span>
+                          <div className="text-left min-w-0">
+                            <span className="font-bold text-base block leading-tight tracking-tight group-hover:text-primary transition-all truncate">{user.fullName}</span>
+                            <span className="text-xs font-bold text-foreground/50 mt-1 block uppercase tracking-wider truncate">{user.email}</span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-10">
+                      <TableCell className="px-6">
                         <span className={cn(
-                          "text-[10px] font-black px-4 py-2 rounded-full border shadow-sm tracking-wide",
-                          user.role === Role.ADMIN ? "bg-rose-400/10 text-rose-400 border-rose-400/20" :
-                            user.role === Role.MANAGER ? "bg-violet-400/10 text-violet-400 border-violet-400/20" :
-                              user.role === Role.OFFICER ? "bg-zinc-400/10 text-zinc-400 border-zinc-400/20" :
-                                user.role === Role.STAFF ? "bg-cyan-400/10 text-cyan-400 border-cyan-400/20" :
+                          "text-[10px] font-black px-3.5 py-1.5 rounded-full border shadow-app-subtle tracking-[0.1em] uppercase",
+                          user.role === Role.ADMIN ? "bg-role-admin/10 text-role-admin border-role-admin/20" :
+                            user.role === Role.MANAGER ? "bg-role-manager/10 text-role-manager border-role-manager/20" :
+                              user.role === Role.OFFICER ? "bg-role-officer/10 text-role-officer border-role-officer/20" :
+                                user.role === Role.STAFF ? "bg-role-staff/10 text-role-staff border-role-staff/20" :
                                   "bg-primary/10 text-primary border-primary/20"
                         )}>
                           {user.role}
                         </span>
                       </TableCell>
-                      <TableCell className="px-10">
-                        <div className="flex items-center gap-3 text-xs font-bold text-foreground/70 tracking-tight whitespace-nowrap">
-                          <Building05Icon className="w-4 h-4 opacity-40" />
-                          {user.department || 'Global Hub'}
+                      <TableCell className="px-6">
+                        <div className="flex items-center gap-3 text-xs font-bold text-foreground/50 uppercase tracking-wider whitespace-nowrap">
+                          <Building05Icon className="w-5 h-5 opacity-40 text-primary/40" />
+                          {user.department || 'None'}
                         </div>
                       </TableCell>
-                      <TableCell className="px-10">
+                      <TableCell className="px-6">
                         <span className={cn(
-                          "px-4 py-1.5 rounded-full text-[10px] font-black tracking-wide border",
+                          "px-4 py-1.5 rounded-full text-[10px] font-black tracking-[0.1em] uppercase border inline-flex items-center whitespace-nowrap shadow-app-subtle",
                           (user.isActive ?? true)
                             ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-rose-400/10 text-rose-400 border-rose-400/20"
+                            : "bg-status-error/10 text-status-error border-status-error/20"
                         )}>
-                          {(user.isActive ?? true) ? 'Active' : 'Locked'}
+                          <span className="w-1.5 h-1.5 rounded-full bg-current mr-2" />
+                          {(user.isActive ?? true) ? 'ACTIVE' : 'INACTIVE'}
                         </span>
                       </TableCell>
-                      <TableCell className="px-10 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <TableCell className="px-8 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-3">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              editUser(user);
-                            }}
-                            className="w-10 h-10 flex items-center justify-center transition-all duration-300 text-primary/60 hover:text-primary hover:bg-primary/5 rounded-xl"
+                            onClick={() => editUser(user)}
+                            className="w-10 h-10 flex items-center justify-center transition-all duration-300 text-primary/60 hover:text-primary hover:bg-primary/10 rounded-xl"
                           >
-                            <Edit02Icon className="w-4 h-4" />
+                            <Edit02Icon className="w-5.5 h-5.5" />
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteUser(user);
-                            }}
-                            className="w-10 h-10 flex items-center justify-center transition-all duration-300 text-rose-400/60 hover:text-rose-400 hover:bg-rose-400/5 rounded-xl"
+                            onClick={() => deleteUser(user)}
+                            className="w-10 h-10 flex items-center justify-center transition-all duration-300 text-status-error/60 hover:text-status-error hover:bg-status-error/10 rounded-xl"
                           >
-                            <Delete02Icon className="w-4 h-4" />
+                            <Delete02Icon className="w-5.5 h-5.5" />
                           </button>
+                          <ArrowRight01Icon className="w-6 h-6 text-muted-foreground/20 group-hover:text-primary group-hover:translate-x-1 transition-all duration-500" />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -391,9 +405,9 @@ export const AdminUsersPage = () => {
               {isEditing ? <Edit02Icon className="w-6 h-6" /> : <UserAdd01Icon className="w-6 h-6" />}
             </div>
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">{isEditing ? 'Identity Modification' : 'Identity Provisioning'}</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{isEditing ? 'Edit User' : 'New User'}</h2>
               <p className="text-xs font-bold text-foreground/70 uppercase tracking-wider mt-1">
-                {isEditing ? `RECONFIGURING PERMISSIONS FOR ${formData.fullName}` : 'ENROLLING NEW OPERATIONAL NODE INTO THE GLOBAL REGISTRY'}
+                {isEditing ? `Editing user ${formData.fullName}` : 'Create a new user account'}
               </p>
             </div>
           </div>
@@ -405,13 +419,13 @@ export const AdminUsersPage = () => {
                   <div className="space-y-3 sm:col-span-2">
                     <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                      Legal Designation <span className="text-rose-400">*</span>
+                      Full Name <span className="text-status-error">*</span>
                     </label>
                     <div className="relative group">
                       <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                        placeholder="FULL LEGAL NAME"
+                        placeholder="ENTER FULL NAME"
                         value={formData.fullName}
                         onChange={(e) => updateField("fullName", e.target.value)}
                       />
@@ -419,13 +433,13 @@ export const AdminUsersPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Email <span className="text-rose-400">*</span></label>
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Email Address <span className="text-status-error">*</span></label>
                     <div className="relative group">
                       <Mail01Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
                         type="email"
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                        placeholder="EMAIL ADDRESS"
+                        placeholder="EMAIL@EXAMPLE.COM"
                         value={formData.email}
                         onChange={(e) => updateField("email", e.target.value)}
                       />
@@ -433,13 +447,13 @@ export const AdminUsersPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px) font-black text-foreground/70 uppercase tracking-wider px-2">Access Protocol {!isEditing && <span className="text-rose-400">*</span>}</label>
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Password {!isEditing && <span className="text-status-error">*</span>}</label>
                     <div className="relative group">
                       <LockPasswordIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
                         type="password"
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 pl-14 pr-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
-                        placeholder={isEditing ? "LEAVE BLANK TO RETAIN" : "SECURE PASSWORD"}
+                        placeholder={isEditing ? "LEAVE BLANK TO RETAIN" : "CREATE PASSWORD"}
                         value={formData.password}
                         onChange={(e) => updateField("password", e.target.value)}
                       />
@@ -448,7 +462,7 @@ export const AdminUsersPage = () => {
 
                   {formData.role !== Role.ADMIN && formData.role !== Role.OFFICER ? (
                     <div className="space-y-3">
-                      <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Deployment Hub</label>
+                      <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Location Access</label>
                       <div className="relative group">
                         <Building05Icon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
                         <select
@@ -456,7 +470,7 @@ export const AdminUsersPage = () => {
                           value={formData.department}
                           onChange={(e) => updateField("department", e.target.value)}
                         >
-                          <option value="">GLOBAL HUB (UNASSIGNED)</option>
+                          <option value="">NONE (GLOBAL ACCESS)</option>
                           {warehouses.map(w => (
                             <option key={w.warehouseId} value={w.name}>{w.name}</option>
                           ))}
@@ -468,16 +482,16 @@ export const AdminUsersPage = () => {
                     </div>
                   ) : (
                     <div className="space-y-3 opacity-60">
-                      <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Operational Scope</label>
+                      <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Access Level</label>
                       <div className="h-14 w-full rounded-2xl border border-border/40 bg-muted/20 flex items-center px-6 gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Global Authorized Scope</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Global Access</span>
                       </div>
                     </div>
                   )}
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Comms Protocol</label>
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Phone Number</label>
                     <div className="relative group">
                       <CallIcon className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <input
@@ -490,7 +504,7 @@ export const AdminUsersPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Identity Role <span className="text-rose-400">*</span></label>
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">User Role <span className="text-status-error">*</span></label>
                     <div className="relative">
                       <select
                         className="h-14 w-full rounded-2xl border border-border bg-muted/5 px-6 text-[10px] font-black uppercase tracking-wider focus:ring-4 focus:ring-primary/10 outline-none appearance-none cursor-pointer transition-all"
@@ -508,20 +522,20 @@ export const AdminUsersPage = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Operational State</label>
+                    <label className="text-[10px] font-black text-foreground/70 uppercase tracking-wider px-2">Status</label>
                     <button
                       type="button"
                       onClick={() => updateField("isActive", !formData.isActive)}
                       className={cn(
                         "h-14 w-full rounded-2xl border transition-all flex items-center justify-center gap-4 px-6",
                         formData.isActive
-                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-                          : "bg-rose-400/10 border-rose-400/20 text-rose-600 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+                          ? "bg-primary/10 border-primary/20 text-primary shadow-[0_0_15px_rgba(var(--primary),0.1)]"
+                          : "bg-status-error/10 border-status-error/20 text-status-error shadow-status-error/10"
                       )}
                     >
                       {formData.isActive ? <ViewIcon className="w-4 h-4" /> : <ViewOffIcon className="w-4 h-4" />}
                       <span className="text-[10px] font-black uppercase tracking-wider">
-                        {formData.isActive ? 'ACTIVE PROTOCOL' : 'LOCKED IDENTITY'}
+                        {formData.isActive ? 'ACTIVE' : 'INACTIVE'}
                       </span>
                     </button>
                   </div>
@@ -534,14 +548,14 @@ export const AdminUsersPage = () => {
                   onClick={resetForm}
                   className="px-10 h-14 rounded-full border border-border bg-card hover:bg-muted text-foreground font-black text-[10px] uppercase tracking-wider transition-all"
                 >
-                  ABORT
+                  CANCEL
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="px-10 h-14 rounded-full bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-50"
                 >
-                  {isSubmitting ? 'SYNCHRONIZING...' : isEditing ? 'COMMIT IDENTITY CHANGES' : 'AUTHORIZE PROVISIONING'}
+                  {isSubmitting ? 'SAVING...' : isEditing ? 'SAVE CHANGES' : 'CREATE USER'}
                 </button>
               </div>
             </form>

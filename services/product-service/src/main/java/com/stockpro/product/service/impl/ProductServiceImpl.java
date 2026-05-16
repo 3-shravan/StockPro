@@ -98,7 +98,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void adjustStock(int productId, int quantity) {
+    public ProductResponse adjustStock(int productId, int quantity) {
         log.info("Adjusting stock for product ID {}: +{}", productId, quantity);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException("Product not found with ID: " + productId, HttpStatus.NOT_FOUND));
@@ -109,7 +109,8 @@ public class ProductServiceImpl implements ProductService {
         }
         
         product.setCurrentQuantity(newQty);
-        productRepository.save(product);
+        Product saved = productRepository.save(product);
+        return productMapper.toResponse(saved);
     }
 
     @Override

@@ -8,7 +8,6 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -56,15 +55,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     @Value("${services.product.url}")
     private String productServiceUrl;
 
-    private static final String GATEWAY_SECRET = "StockProGateway2024";
 
-    private HttpHeaders getInternalHeaders() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Internal-Gateway-Secret", GATEWAY_SECRET);
-        headers.set("X-User-Name", "system");
-        headers.set("X-User-Roles", "ADMIN");
-        return headers;
-    }
 
     /**
      * Initializes a new Purchase Order in the database.
@@ -179,8 +170,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             payload.put("relatedWarehouseId", order.getWarehouseId());
             payload.put("channel", "IN_APP");
             
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, getInternalHeaders());
-            restTemplate.postForEntity(url, entity, Object.class);
+            restTemplate.postForEntity(url, payload, Object.class);
         } catch (Exception ex) {
             log.warn("PO status alert dispatch failed for PO {}: {}", order.getPoId(), ex.getMessage());
         }
@@ -189,8 +179,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     private void clearPoAlerts(int warehouseId, String type) {
         try {
             String url = alertServiceUrl + "/alerts/clear-type?type=" + type + "&warehouseId=" + warehouseId;
-            HttpEntity<Void> entity = new HttpEntity<>(getInternalHeaders());
-            restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+            restTemplate.exchange(url, HttpMethod.DELETE, org.springframework.http.HttpEntity.EMPTY, Void.class);
         } catch (Exception ex) {
             log.warn("Failed to clear alerts of type {} for warehouse {}: {}", type, warehouseId, ex.getMessage());
         }
@@ -243,10 +232,9 @@ public class PurchaseServiceImpl implements PurchaseService {
             // Why: Inventory balance is owned by the warehouse-service, not the
             // purchase-service.
             adjustWarehouseStock(order.getWarehouseId(), existingItem.getProductId(), receivedItem.getQuantity(), order.getPoId());
-            adjustProductGlobalStock(existingItem.getProductId(), receivedItem.getQuantity());
 
-            // Movement is now automatically recorded by warehouse-service using the PO context
-            // provided in adjustWarehouseStock.
+            // Movement and Global stock are now automatically recorded by warehouse-service 
+            // using the PO context provided in adjustWarehouseStock.
         }
 
         // Status Logic: Check if the entire order is now complete.
@@ -286,8 +274,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         request.put("notes", "Received from PO #" + poId);
 
         try {
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, getInternalHeaders());
-            restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+            restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(request), Void.class);
         } catch (org.springframework.web.client.HttpStatusCodeException e) {
             log.error("Downstream error from warehouse-service: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
             // Propagate the specific status and message from the warehouse-service
@@ -307,8 +294,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         String url = productServiceUrl + "/products/" + productId + "/stock?quantity=" + quantity;
 
         try {
-            HttpEntity<Void> entity = new HttpEntity<>(getInternalHeaders());
-            restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+            restTemplate.exchange(url, HttpMethod.PUT, org.springframework.http.HttpEntity.EMPTY, Void.class);
         } catch (Exception e) {
             log.error("Failed to update global product stock: {}", e.getMessage());
             // We don't necessarily want to fail the whole receipt if just the catalogue cache update fails,
@@ -444,8 +430,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             payload.put("relatedWarehouseId", order.getWarehouseId());
             payload.put("channel", "BOTH");
             
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, getInternalHeaders());
-            restTemplate.postForEntity(url, entity, Object.class);
+            restTemplate.postForEntity(url, payload, Object.class);
         } catch (Exception ex) {
             log.warn("Overdue receipt alert dispatch failed for PO {}: {}", order.getPoId(), ex.getMessage());
         }

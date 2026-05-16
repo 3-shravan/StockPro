@@ -2,17 +2,17 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReactNode } from "react";
 
-export const WidgetContainer = ({ 
-  title, 
-  subtitle, 
-  children, 
-  action, 
+export const WidgetContainer = ({
+  title,
+  subtitle,
+  children,
+  action,
   className,
-  headerClassName 
-}: { 
-  title: string; 
-  subtitle?: string; 
-  children: ReactNode; 
+  headerClassName
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
   action?: ReactNode;
   className?: string;
   headerClassName?: string;
@@ -33,24 +33,24 @@ export const WidgetContainer = ({
   </Card>
 );
 
-export const TaskItem = ({ 
-  icon: Icon, 
-  title, 
-  desc, 
-  action, 
-  type = 'primary' 
-}: { 
-  icon: any; 
-  title: string; 
-  desc: string; 
+export const TaskItem = ({
+  icon: Icon,
+  title,
+  desc,
+  action,
+  type = 'primary'
+}: {
+  icon: any;
+  title: string;
+  desc: string;
   action: ReactNode;
   type?: 'primary' | 'success' | 'warning' | 'destructive';
 }) => {
   const colors = {
     primary: 'bg-primary/10 text-primary border-primary/20',
-    success: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-    destructive: 'bg-destructive/10 text-destructive border-destructive/20',
+    success: 'bg-primary/10 text-primary border-primary/20',
+    warning: 'bg-status-warning/10 text-status-warning border-status-warning/20',
+    destructive: 'bg-status-error/10 text-status-error border-status-error/20',
   };
 
   return (
