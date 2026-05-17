@@ -10,7 +10,7 @@ export const supplierKeys = {
 export const useSuppliers = () => {
   return useQuery({
     queryKey: supplierKeys.all,
-    queryFn: suppliersApi.getAll,
+    queryFn: () => suppliersApi.getAll(),
   });
 };
 

@@ -1,7 +1,6 @@
 import { Modal } from "@/components/ui/modal";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import type { InventorySnapshot, POSummary } from "@/features/reports/types";
-import { Alert01Icon } from "hugeicons-react";
 
 // ─── Shared Sub-Components ──────────────────────────────────────────────────
 

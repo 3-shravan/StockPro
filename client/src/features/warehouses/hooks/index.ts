@@ -10,7 +10,7 @@ export const warehouseKeys = {
 export const useWarehouses = () => {
   return useQuery({
     queryKey: warehouseKeys.all,
-    queryFn: warehousesApi.getAll,
+    queryFn: () => warehousesApi.getAll(),
   });
 };
 

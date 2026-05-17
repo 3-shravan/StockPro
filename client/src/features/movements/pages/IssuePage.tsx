@@ -12,7 +12,6 @@ import { ProductSelect } from '@/components/common/ProductSelect';
 import { WarehouseSelect } from '@/components/common/WarehouseSelect';
 import { warehousesApi } from '@/features/warehouses/api';
 import { MovementType } from '@/types/enums';
-import { useAuthStore } from '@/stores/auth.store';
 import { showToast } from '@/lib/toast';
 
 const issueReasons = [

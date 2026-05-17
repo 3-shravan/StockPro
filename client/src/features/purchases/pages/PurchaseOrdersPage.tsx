@@ -8,7 +8,6 @@ import {
   Calendar03Icon,
   DeliveryTruck01Icon,
   UserIcon,
-  Money01Icon,
   Add01Icon,
   ArrowRight01Icon,
 } from 'hugeicons-react';

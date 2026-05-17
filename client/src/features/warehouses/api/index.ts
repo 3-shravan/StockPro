@@ -21,9 +21,8 @@ export const warehousesApi = {
   },
   getAllStockByWarehouse: async (warehouseId: number, silent = false): Promise<StockLevel[]> => {
     const res = await apiClient.get<ApiResponse<StockLevel[]>>(`/warehouses/${warehouseId}/stock`, {
-      // @ts-ignore
       silent
-    });
+    } as any);
     return res.data.data;
   },
   create: async (payload: WarehouseRequest): Promise<Warehouse> => {
@@ -49,8 +48,7 @@ export const warehousesApi = {
   getStock: async (warehouseId: number, productId: number, silent = false): Promise<StockLevel> => {
     const res = await apiClient.get<ApiResponse<StockLevel>>(
       `/warehouses/${warehouseId}/stock/${productId}`,
-      // @ts-ignore
-      { silent }
+      { silent } as any
     );
     return res.data.data;
   },
