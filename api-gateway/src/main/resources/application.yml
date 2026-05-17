@@ -2,14 +2,19 @@ server:
   port: ${GATEWAY_PORT:8080}
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:api-gateway/.env[.properties]
   application:
     name: api-gateway
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   main:
-    banner-mode: off
+    banner-mode: "off"
 
   cloud:
     gateway:
-      # ── CORS (Handled centrally at Gateway level) ───────────────────────────────
       globalcors:
         cors-configurations:
           '[/**]':
@@ -22,9 +27,6 @@ spring:
             allow-credentials: false
             max-age: 3600
       
-      # ── Route Definitions ────────────────────────────────────────────────────────
-      # All routes follow /api/v1/service-name pattern
-      # We use StripPrefix=2 to remove /api/v1 before forwarding to downstream
       routes:
         # Auth Service — Public (login only; no public signup)
         - id: auth-service-public
@@ -108,15 +110,6 @@ spring:
           filters:
             - name: AuthenticationFilter
             - StripPrefix=2
-
-# ── Eureka Service Discovery ────────────────────────────────────────────────
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: ${EUREKA_SERVER:http://localhost:8761/eureka/}
-  instance:
-    prefer-ip-address: false
-    hostname: localhost
 
 # ── JWT Secret (must match auth-service) ───────────────────────────────────
 jwt:

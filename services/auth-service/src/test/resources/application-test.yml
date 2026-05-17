@@ -1,0 +1,28 @@
+# ============================================================
+#  Test Profile — uses H2 in-memory DB, no real MySQL needed
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: false
+  flyway:
+    enabled: false
+
+# JWT test values
+jwt:
+  secret: TestSecretKeyForJwtUnitTests1234567890ABCDEF
+  expiration: 3600000
+
+# Suppress logging noise during tests
+logging:
+  level:
+    root: WARN
+    com.stockpro: DEBUG

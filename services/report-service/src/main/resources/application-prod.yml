@@ -1,0 +1,20 @@
+# ==========================================
+#  Production Profile Configuration
+# ==========================================
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: ${JPA_SHOW_SQL:false}
+  flyway:
+    clean-disabled: true
+    out-of-order: false
+
+eureka:
+  instance:
+    prefer-ip-address: true

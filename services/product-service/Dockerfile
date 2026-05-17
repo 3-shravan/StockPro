@@ -1,5 +1,5 @@
 # ============================================================
-#  auth-service Dockerfile — Multi-Stage Build
+#  product-service Dockerfile — Multi-Stage Build
 # ============================================================
 
 # ── Stage 1: Build ───────────────────────────────────────────
@@ -18,18 +18,18 @@ FROM eclipse-temurin:21-jre-alpine AS runtime
 
 WORKDIR /app
 
-# Create a non-root user — never run as root in production
-RUN addgroup -S stockpro && adduser -S authsvc -G stockpro
+# Create a non-root user
+RUN addgroup -S stockpro && adduser -S productsvc -G stockpro
 
 # Copy only the fat JAR from the builder stage
 COPY --from=builder /build/target/*.jar app.jar
 
 # Set ownership
-RUN chown authsvc:stockpro app.jar
+RUN chown productsvc:stockpro app.jar
 
-USER authsvc
+USER productsvc
 
-EXPOSE 8081
+EXPOSE 8082
 
 # JVM tuning for containers
 ENTRYPOINT ["java", \
