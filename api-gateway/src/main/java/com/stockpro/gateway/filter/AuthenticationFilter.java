@@ -80,6 +80,16 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                 return chain.filter(exchange);
             }
 
+            // Bypass JWT check for API documentation requests
+            String path = request.getURI().getPath();
+            if (path.contains("/v3/api-docs") || path.contains("/swagger-ui")) {
+                ServerHttpRequest enrichedRequest = request.mutate()
+                        .headers(h -> h.remove(GATEWAY_SECRET_HEADER))
+                        .header(GATEWAY_SECRET_HEADER, gatewaySecret)
+                        .build();
+                return chain.filter(exchange.mutate().request(enrichedRequest).build());
+            }
+
             // Strip any client-supplied internal secret (prevent spoofing)
             ServerHttpRequest sanitizedRequest = request.mutate()
                     .headers(h -> h.remove(GATEWAY_SECRET_HEADER))

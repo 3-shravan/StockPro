@@ -170,3 +170,28 @@ info:
   app:
     name: api-gateway
     version: 1.0.0
+
+# ── Springdoc / Swagger UI Aggregation ───────────────────────────────────────
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - name: Auth Service
+        url: /api/v1/auth/v3/api-docs
+      - name: Product Service
+        url: /api/v1/products/v3/api-docs
+      - name: Supplier Service
+        url: /api/v1/suppliers/v3/api-docs
+      - name: Warehouse Service
+        url: /api/v1/warehouses/v3/api-docs
+      - name: Purchase Service
+        url: /api/v1/purchase-orders/v3/api-docs
+      - name: Movement Service
+        url: /api/v1/movements/v3/api-docs
+      - name: Alert Service
+        url: /api/v1/alerts/v3/api-docs
+      - name: Report Service
+        url: /api/v1/reports/v3/api-docs

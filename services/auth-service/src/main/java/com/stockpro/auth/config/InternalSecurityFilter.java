@@ -54,8 +54,8 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
         
-        // Skip security check for actuator endpoints
-        if (path.startsWith("/actuator")) {
+        // Skip security check for actuator and OpenAPI/Swagger endpoints
+        if (path.startsWith("/actuator") || path.endsWith("/v3/api-docs") || path.contains("/v3/api-docs/") || path.contains("/swagger-ui")) {
             filterChain.doFilter(request, response);
             return;
         }
