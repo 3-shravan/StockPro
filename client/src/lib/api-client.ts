@@ -20,7 +20,8 @@ import { useAuthStore } from '@/stores/auth.store';
 const apiClient = axios.create({
   baseURL: env.API_URL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15_000, // 15 seconds max
+  // 2 minutes
+  timeout: 120000,
 });
 
 // ── Request Interceptor: Attach JWT ─────────────────────────────────────────
