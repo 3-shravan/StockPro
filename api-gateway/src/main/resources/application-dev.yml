@@ -1,0 +1,11 @@
+# ==========================================
+#  Development Profile Configuration
+# ==========================================
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: false
+    hostname: localhost

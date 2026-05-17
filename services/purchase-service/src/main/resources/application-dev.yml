@@ -1,0 +1,21 @@
+# ==========================================
+#  Development Profile Configuration
+# ==========================================
+
+spring:
+  datasource:
+    url: ${LOCAL_DB_URL}
+    username: ${LOCAL_DB_USERNAME}
+    password: ${LOCAL_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: ${LOCAL_JPA_SHOW_SQL:false}
+  flyway:
+    clean-disabled: false
+    out-of-order: false
+
+eureka:
+  instance:
+    prefer-ip-address: false
+    hostname: localhost

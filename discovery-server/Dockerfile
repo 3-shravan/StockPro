@@ -1,5 +1,5 @@
 # ============================================================
-#  auth-service Dockerfile — Multi-Stage Build
+#  discovery-server Dockerfile — Multi-Stage Build
 # ============================================================
 
 # ── Stage 1: Build ───────────────────────────────────────────
@@ -18,18 +18,18 @@ FROM eclipse-temurin:21-jre-alpine AS runtime
 
 WORKDIR /app
 
-# Create a non-root user — never run as root in production
-RUN addgroup -S stockpro && adduser -S authsvc -G stockpro
+# Create non-root user
+RUN addgroup -S stockpro && adduser -S discoverysvc -G stockpro
 
-# Copy only the fat JAR from the builder stage
+# Copy artifact from builder
 COPY --from=builder /build/target/*.jar app.jar
 
 # Set ownership
-RUN chown authsvc:stockpro app.jar
+RUN chown discoverysvc:stockpro app.jar
 
-USER authsvc
+USER discoverysvc
 
-EXPOSE 8081
+EXPOSE 8761
 
 # JVM tuning for containers
 ENTRYPOINT ["java", \

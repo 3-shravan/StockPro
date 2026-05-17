@@ -1,0 +1,102 @@
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:services/purchase-service/.env[.properties]
+  application:
+    name: ${APP_NAME:purchase-service}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: ${JPA_FORMAT_SQL:true}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+  main:
+    banner-mode: "off"
+
+server:
+  port: ${SERVER_PORT:8084}
+
+# Eureka Discovery
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER:http://localhost:8761/eureka/}
+
+# Logging
+logging:
+  level:
+    root: WARN
+    org.springframework: WARN
+    org.apache: WARN
+    com.zaxxer: WARN
+    org.hibernate: WARN
+    com.stockpro: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{1}) : %msg%n"
+    file: "%d{HH:mm:ss.SSS} %-5level %logger{1} : %msg%n"
+  file:
+    name: logs/purchase-service.log
+  logback:
+    rollingpolicy:
+      file-name-pattern: logs/purchase-service-%d{yyyy-MM-dd}.%i.log.gz
+      max-file-size: 2MB
+      max-history: 3
+      total-size-cap: 50MB
+
+# Actuator & Info
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: 1.0.0
+
+# External service integration
+services:
+  warehouse:
+    url: ${WAREHOUSE_SERVICE_URL:http://localhost:8083}
+  product:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
+  alert:
+    url: ${ALERT_SERVICE_URL:http://localhost:8087}
+  movement:
+    url: ${MOVEMENT_SERVICE_URL:http://localhost:8086}
+  supplier:
+    url: ${SUPPLIER_SERVICE_URL:http://localhost:8085}
+
+# Daily check for overdue approved POs
+purchase:
+  alert:
+    overdue:
+      cron: ${PURCHASE_ALERT_OVERDUE_CRON:0 0 9 * * *}
+
+# Internal Gateway Security
+stockpro:
+  security:
+    internal-secret: ${INTERNAL_GATEWAY_SECRET:StockProGateway2024}
