@@ -46,6 +46,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return "/auth/login".equals(path) || path.startsWith("/actuator");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
