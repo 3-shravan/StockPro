@@ -94,3 +94,8 @@ services:
 stockpro:
   security:
     internal-secret: ${INTERNAL_GATEWAY_SECRET:StockProGateway2024}
+
+# Springdoc / OpenAPI Custom Path
+springdoc:
+  api-docs:
+    path: /reports/v3/api-docs
