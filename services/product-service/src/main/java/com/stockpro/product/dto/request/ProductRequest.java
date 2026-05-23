@@ -19,40 +19,40 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProductRequest {
 
-    @NotBlank(message = "SKU is required", groups = ValidationGroups.OnCreate.class)
+    @NotBlank(message = "SKU is require", groups = ValidationGroups.OnCreate.class)
     private String sku;
 
-    @NotBlank(message = "Name is required", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
+    @NotBlank(message = "Name is require", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private String name;
 
     private String description;
 
-    @NotBlank(message = "Category is required", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
+    @NotBlank(message = "Category is require", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private String category;
 
     private String brand;
 
-    @NotBlank(message = "Unit of measure is required", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
+    @NotBlank(message = "Unit of measure is require", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private String unitOfMeasure;
 
-    @PositiveOrZero(message = "Cost price cannot be negative")
+    @PositiveOrZero(message = "Cost price cannot be negative", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private double costPrice;
 
-    @PositiveOrZero(message = "Selling price cannot be negative")
+    @PositiveOrZero(message = "Selling price cannot be negative", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private double sellingPrice;
 
-    @PositiveOrZero(message = "Reorder level cannot be negative")
+    @PositiveOrZero(message = "Reorder level cannot be negative", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private int reorderLevel;
 
-    @PositiveOrZero(message = "Max stock level cannot be negative")
+    @PositiveOrZero(message = "Max stock level cannot be negative", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private int maxStockLevel;
 
-    @PositiveOrZero(message = "Lead time days cannot be negative")
+    @PositiveOrZero(message = "Lead time days cannot be negative", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private int leadTimeDays;
 
     private String imageUrl;
     private String barcode;
 
-    @PositiveOrZero(message = "Current quantity cannot be negative")
+    @PositiveOrZero(message = "Current quantity cannot be negative", groups = {ValidationGroups.OnCreate.class, ValidationGroups.OnUpdate.class})
     private int currentQuantity;
 }
