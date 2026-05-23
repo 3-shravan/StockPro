@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.stockpro.auth.common.response.ApiResponse;
 import com.stockpro.auth.dto.AuthResponse;
+import com.stockpro.auth.dto.LoginRequest;
 import com.stockpro.auth.dto.RegisterRequest;
 import com.stockpro.auth.dto.TokenRequest;
 import com.stockpro.auth.dto.UserUpdateRequest;
@@ -60,9 +61,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody Map<String, String> credentials) {
-        log.info("POST /auth/login — email={}", credentials.get("email"));
-        AuthResponse response = authService.login(credentials.get("email"), credentials.get("password"));
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+        log.info("POST /auth/login — email={}", request.getEmail());
+        AuthResponse response = authService.login(request.getEmail(), request.getPassword());
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
