@@ -521,4 +521,11 @@ public class AlertServiceImpl implements AlertService {
       log.info("Capped alerts count. Deleted {} oldest alerts.", excess);
     }
   }
+
+  @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+  @Transactional
+  public void onApplicationReady() {
+    log.info("Application ready. Running startup alert capping check...");
+    capAlertsCount();
+  }
 }
