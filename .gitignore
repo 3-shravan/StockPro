@@ -20,3 +20,5 @@ dist/
 .DS_Store
 **/.DS_Store
 assets/
+.agents/
+skills-lock.json

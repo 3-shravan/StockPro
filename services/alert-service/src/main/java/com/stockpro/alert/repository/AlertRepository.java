@@ -38,4 +38,7 @@ public interface AlertRepository extends JpaRepository<Alert, Integer> {
   void deleteByTypeAndRelatedWarehouseId(AlertType type, Integer relatedWarehouseId);
 
   void deleteByAlertId(int alertId);
+
+  boolean existsByTypeAndRelatedProductIdAndRelatedWarehouseIdAndAcknowledgedFalse(
+      AlertType type, Integer relatedProductId, Integer relatedWarehouseId);
 }

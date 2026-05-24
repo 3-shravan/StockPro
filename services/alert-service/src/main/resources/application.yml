@@ -62,15 +62,6 @@ logging:
     com.stockpro: INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{1}) : %msg%n"
-    file: "%d{HH:mm:ss.SSS} %-5level %logger{1} : %msg%n"
-  file:
-    name: logs/alert-service.log
-  logback:
-    rollingpolicy:
-      file-name-pattern: logs/alert-service-%d{yyyy-MM-dd}.%i.log.gz
-      max-file-size: 2MB
-      max-history: 3
-      total-size-cap: 50MB
 
 # Actuator & Info
 management:

@@ -289,19 +289,20 @@ public class PurchaseServiceImpl implements PurchaseService {
     /**
      * Internal helper to synchronize global stock levels with the Product Service.
      */
-    private void adjustProductGlobalStock(int productId, int quantity) {
-        log.info("Adjusting global stock for product {}: +{}", productId, quantity);
-        String url = productServiceUrl + "/products/" + productId + "/stock?quantity=" + quantity;
+    
+    // private void adjustProductGlobalStock(int productId, int quantity) {
+    //     log.info("Adjusting global stock for product {}: +{}", productId, quantity);
+    //     String url = productServiceUrl + "/products/" + productId + "/stock?quantity=" + quantity;
 
-        try {
-            restTemplate.exchange(url, HttpMethod.PUT, org.springframework.http.HttpEntity.EMPTY, Void.class);
-        } catch (Exception e) {
-            log.error("Failed to update global product stock: {}", e.getMessage());
-            // We don't necessarily want to fail the whole receipt if just the catalogue cache update fails,
-            // but in this system we treat it as required for UI consistency.
-            throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "External Product Service Error: " + e.getMessage());
-        }
-    }
+    //     try { 
+    //         restTemplate.exchange(url, HttpMethod.PUT, org.springframework.http.HttpEntity.EMPTY, Void.class);
+    //     } catch (Exception e) {
+    //         log.error("Failed to update global product stock: {}", e.getMessage());
+    //         // We don't necessarily want to fail the whole receipt if just the catalogue cache update fails,
+    //         // but in this system we treat it as required for UI consistency.
+    //         throw new CustomException(HttpStatus.INTERNAL_SERVER_ERROR, "External Product Service Error: " + e.getMessage());
+    //     }
+    // }
 
     /**
      * Terminates a Purchase Order.

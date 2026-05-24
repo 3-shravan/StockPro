@@ -64,6 +64,8 @@ public class AlertServiceImpl implements AlertService {
     Alert alert = alertMapper.toEntity(alertRequest);
     Alert saved = alertRepository.save(alert);
 
+    capAlertsCount();
+
     if (saved.getSeverity() == AlertSeverity.CRITICAL
         && (saved.getChannel() == AlertChannel.EMAIL || saved.getChannel() == AlertChannel.BOTH)) {
       sendEmail(defaultEmailTo, "CRITICAL: " + saved.getTitle(), saved.getMessage());
@@ -75,6 +77,13 @@ public class AlertServiceImpl implements AlertService {
   @Override
   @Transactional
   public void sendLowStockAlert(int productId, int warehouseId, int currentQty) {
+    if (alertRepository.existsByTypeAndRelatedProductIdAndRelatedWarehouseIdAndAcknowledgedFalse(
+        AlertType.LOW_STOCK, productId, warehouseId)) {
+      log.info("Low stock alert already exists and is unacknowledged for product {} in warehouse {}. Skipping.",
+          productId, warehouseId);
+      return;
+    }
+
     String productName = getProductName(productId);
     String warehouseName = getWarehouseName(warehouseId);
 
@@ -121,6 +130,8 @@ public class AlertServiceImpl implements AlertService {
       throw e;
     }
 
+    capAlertsCount();
+
     if (severity == AlertSeverity.CRITICAL) {
       sendEmailToRole("MANAGER", warehouseId, "CRITICAL LOW STOCK: " + productName,
           String.format("Low stock warning for %s in %s. Only %d units left.", productName, warehouseName, currentQty));
@@ -132,6 +143,13 @@ public class AlertServiceImpl implements AlertService {
   @Override
   @Transactional
   public void sendOverstockAlert(int productId, int warehouseId, int currentQty) {
+    if (alertRepository.existsByTypeAndRelatedProductIdAndRelatedWarehouseIdAndAcknowledgedFalse(
+        AlertType.OVERSTOCK, productId, warehouseId)) {
+      log.info("Overstock alert already exists and is unacknowledged for product {} in warehouse {}. Skipping.",
+          productId, warehouseId);
+      return;
+    }
+
     String productName = getProductName(productId);
     String warehouseName = getWarehouseName(warehouseId);
 
@@ -174,6 +192,8 @@ public class AlertServiceImpl implements AlertService {
       log.error("Failed to save ADMIN overstock alert: {}", e.getMessage());
       throw e;
     }
+
+    capAlertsCount();
   }
 
   @Override
@@ -201,6 +221,8 @@ public class AlertServiceImpl implements AlertService {
         .channel(AlertChannel.BOTH)
         .build();
     alertRepository.save(adminAlert);
+
+    capAlertsCount();
 
     sendEmailToRole("MANAGER", null, "CRITICAL OVERDUE PO: " + referenceNumber,
         String.format("PO %s from %s is past its expected delivery date.", referenceNumber, supplierName));
@@ -257,6 +279,8 @@ public class AlertServiceImpl implements AlertService {
         .toList();
 
     alertRepository.saveAll(alerts);
+
+    capAlertsCount();
 
     if (severity == AlertSeverity.CRITICAL && (channel == AlertChannel.EMAIL || channel == AlertChannel.BOTH)) {
       sendEmail(defaultEmailTo, "CRITICAL BULK ALERT: " + request.getTitle(), request.getMessage());
@@ -483,6 +507,18 @@ public class AlertServiceImpl implements AlertService {
       return AlertChannel.valueOf(channel.trim().toUpperCase());
     } catch (Exception ex) {
       throw new CustomException("Invalid channel: " + channel, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private void capAlertsCount() {
+    long count = alertRepository.count();
+    if (count > 100) {
+      int excess = (int) (count - 100);
+      org.springframework.data.domain.Pageable pageable = 
+          org.springframework.data.domain.PageRequest.of(0, excess, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "createdAt", "alertId"));
+      List<Alert> oldestAlerts = alertRepository.findAll(pageable).getContent();
+      alertRepository.deleteAllInBatch(oldestAlerts);
+      log.info("Capped alerts count. Deleted {} oldest alerts.", excess);
     }
   }
 }

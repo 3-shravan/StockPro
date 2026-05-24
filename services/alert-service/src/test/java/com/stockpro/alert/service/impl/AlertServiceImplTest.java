@@ -401,4 +401,55 @@ class AlertServiceImplTest {
             assertThat(ex.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
         }
     }
+
+    @Nested
+    @DisplayName("deduplication & capping logic")
+    class DeduplicationAndCapping {
+
+        @Test
+        @DisplayName("skips low stock alert when unacknowledged alert of same product and warehouse exists")
+        void skipLowStockAlertIfUnacknowledgedExists() {
+            when(alertRepository.existsByTypeAndRelatedProductIdAndRelatedWarehouseIdAndAcknowledgedFalse(
+                    AlertType.LOW_STOCK, 10, 5)).thenReturn(true);
+
+            alertService.sendLowStockAlert(10, 5, 2);
+
+            verify(alertRepository, never()).save(any(Alert.class));
+            verify(restTemplate, never()).exchange(any(), any(), any(), any(ParameterizedTypeReference.class));
+        }
+
+        @Test
+        @DisplayName("skips overstock alert when unacknowledged alert of same product and warehouse exists")
+        void skipOverstockAlertIfUnacknowledgedExists() {
+            when(alertRepository.existsByTypeAndRelatedProductIdAndRelatedWarehouseIdAndAcknowledgedFalse(
+                    AlertType.OVERSTOCK, 10, 5)).thenReturn(true);
+
+            alertService.sendOverstockAlert(10, 5, 250);
+
+            verify(alertRepository, never()).save(any(Alert.class));
+        }
+
+        @Test
+        @DisplayName("caps alert history by deleting oldest alerts when count exceeds 100")
+        void capsAlertHistoryExceedingLimit() {
+            when(alertMapper.toEntity(any(AlertRequest.class))).thenReturn(alert);
+            when(alertRepository.save(any(Alert.class))).thenReturn(alert);
+            when(alertMapper.toResponse(any(Alert.class))).thenReturn(response);
+
+            // Mock database having 102 alerts after save
+            when(alertRepository.count()).thenReturn(102L);
+
+            // Setup PageRequest and Page content mock
+            List<Alert> oldestAlerts = List.of(
+                Alert.builder().alertId(10).build(),
+                Alert.builder().alertId(11).build()
+            );
+            org.springframework.data.domain.Page<Alert> mockPage = new org.springframework.data.domain.PageImpl<>(oldestAlerts);
+            when(alertRepository.findAll(any(org.springframework.data.domain.Pageable.class))).thenReturn(mockPage);
+
+            alertService.sendAlert(request);
+
+            verify(alertRepository).deleteAllInBatch(oldestAlerts);
+        }
+    }
 }

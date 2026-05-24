@@ -3,8 +3,6 @@ package com.stockpro.warehouse.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -30,7 +28,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +39,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
+import com.stockpro.warehouse.common.response.ApiResponse;
 import com.stockpro.warehouse.dto.request.StockUpdateRequest;
 import com.stockpro.warehouse.dto.request.WarehouseRequest;
 import com.stockpro.warehouse.dto.response.StockLevelResponse;
@@ -54,7 +52,6 @@ import com.stockpro.warehouse.mapper.StockMapper;
 import com.stockpro.warehouse.mapper.WarehouseMapper;
 import com.stockpro.warehouse.repository.StockLevelRepository;
 import com.stockpro.warehouse.repository.WarehouseRepository;
-import com.stockpro.warehouse.common.response.ApiResponse;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("WarehouseServiceImpl")
