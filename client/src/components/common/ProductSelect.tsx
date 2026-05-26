@@ -36,9 +36,7 @@ export const ProductSelect = ({
           stats.topProducts.forEach(p => {
             stockMap[p.productId] = p.quantity;
           });
-          // Note: stats might only have top products. 
-          // For a full list, we might need a different endpoint or just show what we have.
-          // Better: just fetch the stock for each product or have an endpoint for all stock in a warehouse.
+
           setWarehouseStock(stockMap);
         }
       } catch (error) {
