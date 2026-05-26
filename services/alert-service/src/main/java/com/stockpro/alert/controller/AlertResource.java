@@ -39,7 +39,7 @@ public class AlertResource {
       @RequestParam int userId,
       @RequestParam String role,
       @RequestParam(required = false) Integer warehouseId) {
-    return ResponseEntity.ok(ApiResponse.success("Alerts retrieved successfully", 
+    return ResponseEntity.ok(ApiResponse.success("Alerts retrieved successfully",
         alertService.getByContext(userId, role, warehouseId)));
   }
 
@@ -48,7 +48,7 @@ public class AlertResource {
       @RequestParam int userId,
       @RequestParam String role,
       @RequestParam(required = false) Integer warehouseId) {
-    return ResponseEntity.ok(ApiResponse.success("Unread count retrieved", 
+    return ResponseEntity.ok(ApiResponse.success("Unread count retrieved",
         alertService.getUnreadCountByContext(userId, role, warehouseId)));
   }
 
@@ -64,7 +64,7 @@ public class AlertResource {
   public ResponseEntity<ApiResponse<Void>> sendOverstockAlert(@RequestParam int productId,
       @RequestParam int warehouseId,
       @RequestParam int currentQty) {
-    log.info("API: Processing overstock alert for product {} in warehouse {} (currentQty: {})", 
+    log.info("API: Processing overstock alert for product {} in warehouse {} (currentQty: {})",
         productId, warehouseId, currentQty);
     alertService.sendOverstockAlert(productId, warehouseId, currentQty);
     return ResponseEntity.ok(ApiResponse.success("Overstock alert processed", null));
@@ -153,7 +153,8 @@ public class AlertResource {
       String dept = getCurrentUserDepartment();
       Integer warehouseId = resolveWarehouseIdByName(dept);
       return alerts.stream()
-          .filter(a -> a.getRelatedWarehouseId() == null || (warehouseId != null && a.getRelatedWarehouseId().equals(warehouseId)))
+          .filter(a -> a.getRelatedWarehouseId() == null
+              || (warehouseId != null && a.getRelatedWarehouseId().equals(warehouseId)))
           .toList();
     }
 
@@ -196,21 +197,25 @@ public class AlertResource {
   @Value("${services.warehouse.url}")
   private String warehouseServiceUrl;
 
+  @Value("${stockpro.security.internal-secret:your_internal_gateway_secret}")
+  private String internalGatewaySecret;
+
   private final org.springframework.web.client.RestTemplate restTemplate;
 
   private List<Integer> getManagedWarehouseIds(int managerId) {
     try {
       String url = warehouseServiceUrl + "/warehouses";
       HttpHeaders headers = new HttpHeaders();
-      headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+      headers.set("X-Internal-Gateway-Secret", internalGatewaySecret);
       headers.set("X-User-Name", "system");
       headers.set("X-User-Roles", "ADMIN");
       HttpEntity<Void> entity = new HttpEntity<>(headers);
-      
-      ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> res = 
-          restTemplate.exchange(url, HttpMethod.GET, entity, 
-          new ParameterizedTypeReference<ApiResponse<List<java.util.Map<String, Object>>>>() {});
-      
+
+      ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> res = restTemplate.exchange(url, HttpMethod.GET,
+          entity,
+          new ParameterizedTypeReference<ApiResponse<List<java.util.Map<String, Object>>>>() {
+          });
+
       if (res.getBody() != null && res.getBody().getData() != null) {
         return res.getBody().getData().stream()
             .filter(w -> {
@@ -227,17 +232,19 @@ public class AlertResource {
   }
 
   private Integer resolveWarehouseIdByName(String name) {
-    if (name == null || name.isBlank()) return null;
+    if (name == null || name.isBlank())
+      return null;
     try {
       String url = warehouseServiceUrl + "/warehouses/name/" + name;
       HttpHeaders headers = new HttpHeaders();
-      headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+      headers.set("X-Internal-Gateway-Secret", internalGatewaySecret);
       HttpEntity<Void> entity = new HttpEntity<>(headers);
-      
-      ResponseEntity<ApiResponse<java.util.Map<String, Object>>> res = 
-          restTemplate.exchange(url, HttpMethod.GET, entity, 
-          new ParameterizedTypeReference<ApiResponse<java.util.Map<String, Object>>>() {});
-          
+
+      ResponseEntity<ApiResponse<java.util.Map<String, Object>>> res = restTemplate.exchange(url, HttpMethod.GET,
+          entity,
+          new ParameterizedTypeReference<ApiResponse<java.util.Map<String, Object>>>() {
+          });
+
       if (res.getBody() != null && res.getBody().getData() != null) {
         return (Integer) res.getBody().getData().get("warehouseId");
       }
@@ -246,10 +253,11 @@ public class AlertResource {
     }
     return null;
   }
-  
+
   @GetMapping("/test-email")
   public ResponseEntity<ApiResponse<String>> testEmail() {
     alertService.sendTestEmail();
-    return ResponseEntity.ok(ApiResponse.success("Test email dispatch initiated. Check logs and inbox.", "Check your email."));
+    return ResponseEntity
+        .ok(ApiResponse.success("Test email dispatch initiated. Check logs and inbox.", "Check your email."));
   }
 }

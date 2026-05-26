@@ -18,7 +18,7 @@ spring:
 
 # JWT test values
 jwt:
-  secret: TestSecretKeyForJwtUnitTests1234567890ABCDEF
+  secret: 
   expiration: 3600000
 
 # Suppress logging noise during tests

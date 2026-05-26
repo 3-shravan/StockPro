@@ -16,16 +16,15 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("JwtUtil")
 class JwtUtilTest {
 
-    private static final String SECRET =
-            "TestSecretKeyForJwtUnitTests1234567890ABCDEF";
-    private static final long   EXPIRY  = 3_600_000L; // 1 hour
+    private static final String SECRET = "test_jwt_secret_for_unit_tests_only_32_chars";
+    private static final long EXPIRY = 3_600_000L; // 1 hour
 
     private JwtUtil jwtUtil;
 
     @BeforeEach
     void setUp() {
         jwtUtil = new JwtUtil();
-        ReflectionTestUtils.setField(jwtUtil, "jwtSecret",  SECRET);
+        ReflectionTestUtils.setField(jwtUtil, "jwtSecret", SECRET);
         ReflectionTestUtils.setField(jwtUtil, "tokenExpiry", EXPIRY);
     }
 

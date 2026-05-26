@@ -132,12 +132,12 @@ spring:
 
 # ── JWT Secret (must match auth-service) ───────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:4f6b6a6c6d6e6f707172737475767778797a3132333435363738393061626364}
+  secret: ${JWT_SECRET:your_jwt_secret_at_least_32_chars}
 
 # ── Internal Gateway Security ──────────────────────────────────────────────
 stockpro:
   security:
-    internal-secret: ${INTERNAL_GATEWAY_SECRET:StockProGateway2024}
+    internal-secret: ${INTERNAL_GATEWAY_SECRET:your_internal_gateway_secret}
 
 # ── Logging ────────────────────────────────────────────────────────────────
 logging:

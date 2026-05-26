@@ -58,6 +58,9 @@ public class AlertServiceImpl implements AlertService {
   @Value("${spring.mail.from:noreply@stockpro.local}")
   private String emailFrom;
 
+  @Value("${stockpro.security.internal-secret:your_internal_gateway_secret}")
+  private String internalGatewaySecret;
+
   @Override
   @Transactional
   public AlertResponse sendAlert(AlertRequest alertRequest) {
@@ -122,7 +125,7 @@ public class AlertServiceImpl implements AlertService {
         .relatedWarehouseId(warehouseId)
         .channel(channel)
         .build();
-    
+
     try {
       alertRepository.save(adminAlert);
     } catch (Exception e) {
@@ -136,7 +139,8 @@ public class AlertServiceImpl implements AlertService {
       sendEmailToRole("MANAGER", warehouseId, "CRITICAL LOW STOCK: " + productName,
           String.format("Low stock warning for %s in %s. Only %d units left.", productName, warehouseName, currentQty));
       sendEmailToRole("ADMIN", null, "CRITICAL LOW STOCK: " + productName,
-          String.format("Network-wide low stock event: %s in %s. Only %d units left.", productName, warehouseName, currentQty));
+          String.format("Network-wide low stock event: %s in %s. Only %d units left.", productName, warehouseName,
+              currentQty));
     }
   }
 
@@ -184,7 +188,7 @@ public class AlertServiceImpl implements AlertService {
         .relatedWarehouseId(warehouseId)
         .channel(AlertChannel.IN_APP)
         .build();
-    
+
     try {
       alertRepository.save(adminAlert);
       log.info("Overstock alerts broadcasted to MANAGER and ADMIN for product {}", productId);
@@ -233,16 +237,17 @@ public class AlertServiceImpl implements AlertService {
   private void sendEmailToRole(String role, Integer warehouseId, String subject, String body) {
     try {
       String url = authServiceUrl + "/auth/users";
-      
+
       // Add internal security headers
       org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-      headers.set("X-Internal-Gateway-Secret", "StockProGateway2024");
+      headers.set("X-Internal-Gateway-Secret", internalGatewaySecret);
       headers.set("X-User-Roles", "ADMIN"); // Act as admin for user lookup
       org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
 
       ResponseEntity<ApiResponse<List<java.util.Map<String, Object>>>> response = restTemplate.exchange(
-          url, HttpMethod.GET, entity, new ParameterizedTypeReference<ApiResponse<List<java.util.Map<String, Object>>>>() {}
-      );
+          url, HttpMethod.GET, entity,
+          new ParameterizedTypeReference<ApiResponse<List<java.util.Map<String, Object>>>>() {
+          });
 
       if (response.getBody() != null && response.getBody().getData() != null) {
         List<java.util.Map<String, Object>> users = response.getBody().getData();
@@ -406,8 +411,8 @@ public class AlertServiceImpl implements AlertService {
           url,
           HttpMethod.GET,
           null,
-          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
-      );
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {
+          });
       ApiResponse<Map<String, Object>> apiResponse = response.getBody();
       if (apiResponse != null && apiResponse.getData() != null) {
         Map<String, Object> data = apiResponse.getData();
@@ -426,8 +431,8 @@ public class AlertServiceImpl implements AlertService {
           url,
           HttpMethod.GET,
           null,
-          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
-      );
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {
+          });
       ApiResponse<Map<String, Object>> apiResponse = response.getBody();
       if (apiResponse != null && apiResponse.getData() != null) {
         Map<String, Object> data = apiResponse.getData();
@@ -446,8 +451,8 @@ public class AlertServiceImpl implements AlertService {
           url,
           HttpMethod.GET,
           null,
-          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
-      );
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {
+          });
       ApiResponse<Map<String, Object>> apiResponse = response.getBody();
       if (apiResponse != null && apiResponse.getData() != null) {
         Map<String, Object> data = apiResponse.getData();
@@ -462,13 +467,13 @@ public class AlertServiceImpl implements AlertService {
   private String getSupplierName(int supplierId) {
     try {
       String url = supplierServiceUrl + "/suppliers/" + supplierId;
-      
+
       ResponseEntity<ApiResponse<Map<String, Object>>> response = restTemplate.exchange(
           url,
           HttpMethod.GET,
           null,
-          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {}
-      );
+          new ParameterizedTypeReference<ApiResponse<Map<String, Object>>>() {
+          });
 
       ApiResponse<Map<String, Object>> apiResponse = response.getBody();
       if (apiResponse != null && apiResponse.getData() != null) {
@@ -514,8 +519,9 @@ public class AlertServiceImpl implements AlertService {
     long count = alertRepository.count();
     if (count > 100) {
       int excess = (int) (count - 100);
-      org.springframework.data.domain.Pageable pageable = 
-          org.springframework.data.domain.PageRequest.of(0, excess, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "createdAt", "alertId"));
+      org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, excess,
+          org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "createdAt",
+              "alertId"));
       List<Alert> oldestAlerts = alertRepository.findAll(pageable).getContent();
       alertRepository.deleteAllInBatch(oldestAlerts);
       log.info("Capped alerts count. Deleted {} oldest alerts.", excess);

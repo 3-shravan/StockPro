@@ -78,7 +78,7 @@ services:
 # Internal Gateway Security
 stockpro:
   security:
-    internal-secret: ${INTERNAL_GATEWAY_SECRET:StockProGateway2024}
+    internal-secret: ${INTERNAL_GATEWAY_SECRET:your_internal_gateway_secret}
 
 # Springdoc / OpenAPI Custom Path
 springdoc:
